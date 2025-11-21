@@ -1,0 +1,362 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useMutation } from 'react-query';
+import { getMe } from '../api/auth';
+import { getMessages, sendMessage, getMyConversation, listConversations } from '../api/chat';
+import { getSocket } from '../socket';
+import { useNavigate } from 'react-router-dom';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+
+export const ChatPage: React.FC = () => {
+  const navigate = useNavigate();
+  const accessToken = localStorage.getItem('accessToken');
+  
+  useEffect(() => {
+    if (!accessToken) {
+      navigate('/login');
+    }
+  }, [accessToken, navigate]);
+  
+  const { data: me, isLoading: meLoading } = useQuery('me', getMe, {
+    enabled: !!accessToken,
+    onError: () => {
+      localStorage.removeItem('accessToken');
+      navigate('/login');
+    },
+  });
+
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [filteredMessages, setFilteredMessages] = useState<any[]>([]);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [input, setInput] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const notificationSound = useRef<HTMLAudioElement | null>(null);
+
+  const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
+
+  useEffect(() => {
+    notificationSound.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE=');
+  }, []);
+
+  const { data: convData } = useQuery(
+    ['conversation', me?.isAdmin],
+    () => (me?.isAdmin ? listConversations() : getMyConversation()),
+    { enabled: !!me },
+  );
+
+  useEffect(() => {
+    if (!me || !convData) return;
+    if (!me.isAdmin) {
+      setActiveConversationId(convData.id);
+    }
+  }, [me, convData]);
+
+  const { refetch: refetchMessages } = useQuery(
+    ['messages', activeConversationId],
+    () => getMessages(activeConversationId!),
+    {
+      enabled: !!activeConversationId,
+      onSuccess: (data) => {
+        setMessages(data.reverse());
+        setFilteredMessages(data.reverse());
+      },
+      refetchOnMount: true,
+    },
+  );
+
+  useEffect(() => {
+    if (activeConversationId) {
+      refetchMessages();
+      setSearchQuery('');
+    }
+  }, [activeConversationId, refetchMessages]);
+
+  useEffect(() => {
+    if (!socket || !activeConversationId) return;
+    socket.emit('conversation:join', { conversationId: activeConversationId });
+
+    socket.on('message:new', (msg: any) => {
+      if (msg.conversationId === activeConversationId) {
+        setMessages((prev) => [...prev, msg]);
+        setFilteredMessages((prev) => [...prev, msg]);
+        if (msg.senderId !== me?.id && notificationSound.current) {
+          notificationSound.current.play().catch(() => {});
+        }
+      }
+    });
+
+    socket.on('typing', (payload: any) => {
+      setIsTyping(payload.isTyping);
+    });
+
+    return () => {
+      socket.off('message:new');
+      socket.off('typing');
+    };
+  }, [socket, activeConversationId, me?.id]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [filteredMessages]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredMessages(messages);
+    } else {
+      const filtered = messages.filter((m) =>
+        m.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredMessages(filtered);
+    }
+  }, [searchQuery, messages]);
+
+  const mutation = useMutation((content: string) => sendMessage(activeConversationId!, content), {
+    onSuccess: (msg) => {
+      setMessages((prev) => [...prev, msg]);
+      setFilteredMessages((prev) => [...prev, msg]);
+    },
+  });
+
+  const handleSend = () => {
+    if (!input.trim() || !activeConversationId) return;
+    mutation.mutate(input);
+    setInput('');
+    setShowEmojiPicker(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setInput((prev) => prev + emojiData.emoji);
+  };
+
+  const handleCopyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    navigate('/login');
+  };
+
+  if (meLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <p className="text-gray-300">Betöltés...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex bg-gray-900">
+      {me?.isAdmin && (
+        <aside className="w-80 border-r border-gray-800 bg-gray-950 shadow-2xl">
+          <div className="p-4 border-b border-gray-800 bg-gradient-to-r from-cyan-600 to-teal-600 text-white">
+            <h2 className="font-bold text-xl">💬 Beszélgetések</h2>
+            <p className="text-sm opacity-90">Admin panel</p>
+          </div>
+          <div className="overflow-y-auto h-[calc(100vh-140px)]">
+            {Array.isArray(convData) && convData.length === 0 && (
+              <div className="p-4 text-center text-gray-500">
+                <p>Még nincsenek beszélgetések</p>
+              </div>
+            )}
+            {Array.isArray(convData) &&
+              convData.map((conv: any) => (
+                <div
+                  key={conv.id}
+                  className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
+                    activeConversationId === conv.id ? 'bg-gray-800 border-l-4 border-cyan-500' : ''
+                  }`}
+                  onClick={() => setActiveConversationId(conv.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
+                      {conv.user.username[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-100">{conv.user.username}</p>
+                      <p className="text-xs text-gray-400">{conv.user.email}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div className="p-4 border-t border-gray-800">
+            <button
+              onClick={handleLogout}
+              className="w-full py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+            >
+              Kijelentkezés
+            </button>
+          </div>
+        </aside>
+      )}
+      <main className="flex-1 flex flex-col">
+        {!activeConversationId ? (
+          <div className="flex-1 flex items-center justify-center bg-gray-850">
+            <div className="text-center">
+              <div className="text-6xl mb-4">💬</div>
+              <p className="text-xl text-gray-300 mb-2">Válassz egy beszélgetést</p>
+              <p className="text-sm text-gray-500">vagy várj amíg az admin válaszol</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="border-b border-gray-700 bg-gray-800 shadow-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold shadow-lg">
+                    {me?.isAdmin ? 'A' : 'U'}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-100">
+                      {me?.isAdmin ? 'Admin Chat' : 'Ügyfélszolgálat'}
+                    </h3>
+                    <p className="text-xs text-green-400">● Online</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="🔍 Keresés..."
+                    className="px-3 py-1 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {!me?.isAdmin && (
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-1 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+                    >
+                      Kilépés
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-850">
+              {filteredMessages.length === 0 && searchQuery && (
+                <div className="text-center text-gray-400 mt-8">
+                  <p>Nincs találat: "{searchQuery}"</p>
+                </div>
+              )}
+              {filteredMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`mb-4 flex ${m.senderId === me?.id ? 'justify-end' : 'justify-start'}`}
+                  onMouseEnter={() => setHoveredMessageId(m.id)}
+                  onMouseLeave={() => setHoveredMessageId(null)}
+                >
+                  <div className="max-w-md">
+                    <div
+                      className={`px-4 py-3 rounded-2xl shadow-xl break-words relative group ${
+                        m.senderId === me?.id
+                          ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-br-none'
+                          : 'bg-gray-700 text-gray-100 rounded-bl-none'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                      <p
+                        className={`text-xs mt-1 ${
+                          m.senderId === me?.id ? 'text-cyan-200' : 'text-gray-400'
+                        }`}
+                      >
+                        {formatTime(m.createdAt)}
+                      </p>
+                      
+                      {hoveredMessageId === m.id && (
+                        <div
+                          className={`absolute top-0 ${
+                            m.senderId === me?.id ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'
+                          } flex gap-1 px-2`}
+                        >
+                          <button
+                            onClick={() => handleCopyMessage(m.content)}
+                            className="p-1 bg-gray-600 text-white rounded hover:bg-gray-500 text-xs shadow-lg"
+                            title="Másolás"
+                          >
+                            📋
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="mb-3 flex justify-start">
+                  <div className="px-4 py-3 rounded-2xl rounded-bl-none bg-gray-700 shadow-xl">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></span>
+                      <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                      <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            <div className="border-t border-gray-700 bg-gray-800 shadow-2xl p-4">
+              <div className="flex gap-2 items-end">
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-xl shadow-lg"
+                  title="Emoji"
+                >
+                  😊
+                </button>
+                <div className="flex-1 relative">
+                  <textarea
+                    className="w-full bg-gray-700 border-2 border-gray-600 rounded-lg px-4 py-3 resize-none text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    rows={2}
+                    placeholder="Írj üzenetet... (Enter = küldés, Shift+Enter = új sor)"
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      socket?.emit('typing', {
+                        conversationId: activeConversationId,
+                        isTyping: e.target.value.length > 0,
+                      });
+                    }}
+                    onKeyDown={handleKeyDown}
+                  />
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-full mb-2 right-0 z-10">
+                      <EmojiPicker onEmojiClick={handleEmojiClick} theme={'dark' as any} />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || mutation.isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg hover:from-cyan-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl font-semibold"
+                >
+                  {mutation.isLoading ? '⏳' : '📤'} Küldés
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+};

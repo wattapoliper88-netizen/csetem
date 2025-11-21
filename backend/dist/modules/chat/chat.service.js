@@ -1,0 +1,221 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ChatService = void 0;
+const common_1 = require("@nestjs/common");
+const prisma_service_1 = require("../../prisma/prisma.service");
+let ChatService = class ChatService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async getOrCreateUserConversation(userId, adminId) {
+        let conv = await this.prisma.conversation.findFirst({
+            where: { userId, adminId },
+        });
+        if (!conv) {
+            conv = await this.prisma.conversation.create({
+                data: { userId, adminId },
+            });
+        }
+        return conv;
+    }
+    async getMyConversation(userId, isAdmin) {
+        if (isAdmin) {
+            throw new common_1.ForbiddenException('Use GET /conversations for admin');
+        }
+        const admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
+        if (!admin) {
+            throw new common_1.NotFoundException('Admin not configured');
+        }
+        const conv = await this.getOrCreateUserConversation(userId, admin.id);
+        console.log('getMyConversation:', { userId, adminId: admin.id, conversationId: conv.id });
+        return conv;
+    }
+    async listConversationsForAdmin(adminId) {
+        console.log('listConversationsForAdmin called with adminId:', adminId);
+        const conversations = await this.prisma.conversation.findMany({
+            where: { adminId },
+            include: { user: { select: { id: true, email: true, username: true } } },
+            orderBy: { createdAt: 'desc' },
+        });
+        console.log('Found conversations:', conversations);
+        return conversations;
+    }
+    async getMessages(conversationId, userId, isAdmin, limit = 50, cursor) {
+        const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
+        if (!conv)
+            throw new common_1.NotFoundException();
+        if (!isAdmin && conv.userId !== userId) {
+            throw new common_1.ForbiddenException();
+        }
+        if (isAdmin && conv.adminId !== userId) {
+            throw new common_1.ForbiddenException();
+        }
+        return this.prisma.message.findMany({
+            where: {
+                conversationId
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: cursor ? 1 : 0,
+            cursor: cursor ? { id: cursor } : undefined,
+            include: {
+                sender: {
+                    select: { id: true, username: true, email: true, avatarImage: true, lastSeen: true }
+                }
+            }
+        });
+    }
+    async createMessage(conversationId, senderId, content, isAdmin, file, audioThumbnail) {
+        const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
+        if (!conv)
+            throw new common_1.NotFoundException();
+        if (!isAdmin && conv.userId !== senderId) {
+            throw new common_1.ForbiddenException();
+        }
+        if (isAdmin && conv.adminId !== senderId) {
+            throw new common_1.ForbiddenException();
+        }
+        const messageData = {
+            conversationId,
+            senderId,
+            content: content || (file ? `📎 ${file.originalname}` : '')
+        };
+        if (file) {
+            messageData.fileUrl = `/uploads/${file.filename}`;
+            messageData.fileName = file.originalname;
+            messageData.fileType = file.mimetype;
+            if (audioThumbnail && file.mimetype.startsWith('audio/')) {
+                messageData.audioThumbnail = audioThumbnail;
+            }
+        }
+        return this.prisma.message.create({
+            data: messageData,
+            include: {
+                sender: {
+                    select: { id: true, username: true, email: true, avatarImage: true, lastSeen: true }
+                }
+            }
+        });
+    }
+    async getLinkPreview(url) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
+            const html = await response.text();
+            const titleMatch = html.match(/<meta\s+(?:property|name)=["'](?:og:title|twitter:title)["']\s+content=["']([^"']+)["']/i)
+                || html.match(/<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["'](?:og:title|twitter:title)["']/i)
+                || html.match(/<title>([^<]+)<\/title>/i);
+            const descriptionMatch = html.match(/<meta\s+(?:property|name)=["'](?:og:description|description|twitter:description)["']\s+content=["']([^"']+)["']/i)
+                || html.match(/<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["'](?:og:description|description|twitter:description)["']/i);
+            const imageMatch = html.match(/<meta\s+(?:property|name)=["'](?:og:image|twitter:image|og:image:url)["']\s+content=["']([^"']+)["']/i)
+                || html.match(/<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["'](?:og:image|twitter:image|og:image:url)["']/i);
+            const siteNameMatch = html.match(/<meta\s+(?:property|name)=["'](?:og:site_name|twitter:site)["']\s+content=["']([^"']+)["']/i)
+                || html.match(/<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["'](?:og:site_name|twitter:site)["']/i);
+            return {
+                url,
+                title: titleMatch ? titleMatch[1] : new URL(url).hostname,
+                description: descriptionMatch ? descriptionMatch[1] : null,
+                image: imageMatch ? imageMatch[1] : null,
+                siteName: siteNameMatch ? siteNameMatch[1] : new URL(url).hostname,
+            };
+        }
+        catch (error) {
+            return {
+                url,
+                title: new URL(url).hostname,
+                description: null,
+                image: null,
+                siteName: new URL(url).hostname,
+            };
+        }
+    }
+    async getFolders(conversationId, userId) {
+        const folders = await this.prisma.folder.findMany({
+            where: { conversationId },
+            include: {
+                messages: {
+                    select: { messageId: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        return folders.map(folder => ({
+            id: folder.id,
+            name: folder.name,
+            icon: folder.icon,
+            visibility: folder.visibility,
+            createdBy: folder.createdBy,
+            closedBy: JSON.parse(folder.closedBy || '[]'),
+            messageIds: folder.messages.map(m => m.messageId),
+        }));
+    }
+    async closeFolder(folderId, userId) {
+        const folder = await this.prisma.folder.findUnique({
+            where: { id: folderId }
+        });
+        if (!folder) {
+            throw new common_1.NotFoundException('Folder not found');
+        }
+        const closedBy = JSON.parse(folder.closedBy || '[]');
+        if (!closedBy.includes(userId)) {
+            closedBy.push(userId);
+        }
+        return this.prisma.folder.update({
+            where: { id: folderId },
+            data: { closedBy: JSON.stringify(closedBy) }
+        });
+    }
+    async deleteMessages(messageIds, userId, isAdmin) {
+        const messages = await this.prisma.message.findMany({
+            where: { id: { in: messageIds } },
+            include: { conversation: true }
+        });
+        for (const msg of messages) {
+            if (!isAdmin && msg.conversation.userId !== userId) {
+                throw new common_1.ForbiddenException('Not authorized to delete these messages');
+            }
+            if (isAdmin && msg.conversation.adminId !== userId) {
+                throw new common_1.ForbiddenException('Not authorized to delete these messages');
+            }
+        }
+        const updates = await Promise.all(messageIds.map(async (messageId) => {
+            const message = messages.find(m => m.id === messageId);
+            if (!message)
+                return null;
+            const deletedBy = JSON.parse(message.deletedBy || '[]');
+            if (!deletedBy.includes(userId)) {
+                deletedBy.push(userId);
+            }
+            const conversation = message.conversation;
+            const bothUserIds = [conversation.userId, conversation.adminId];
+            if (deletedBy.length >= 2 && bothUserIds.every(id => deletedBy.includes(id))) {
+                return this.prisma.message.delete({
+                    where: { id: messageId }
+                });
+            }
+            return this.prisma.message.update({
+                where: { id: messageId },
+                data: { deletedBy: JSON.stringify(deletedBy) }
+            });
+        }));
+        return updates.filter(Boolean);
+    }
+};
+exports.ChatService = ChatService;
+exports.ChatService = ChatService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+], ChatService);
+//# sourceMappingURL=chat.service.js.map

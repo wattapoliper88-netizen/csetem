@@ -1,0 +1,94 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  avatarImage  String?
+  verified     Boolean  @default(false)
+  isAdmin      Boolean  @default(false)
+  lastSeen     DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  conversationsUser  Conversation[] @relation("UserConversation")
+  conversationsAdmin Conversation[] @relation("AdminConversation")
+  messages           Message[]
+  verificationCodes  VerificationCode[]
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  codeHash  String
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String
+  createdAt DateTime @default(now())
+
+  user   User @relation("UserConversation", fields: [userId], references: [id])
+  admin  User @relation("AdminConversation", fields: [adminId], references: [id])
+  messages Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  fileUrl        String?
+  fileName       String?
+  fileType       String?
+  audioThumbnail String?  // Base64 encoded image for audio files
+  createdAt      DateTime @default(now())
+  readAt         DateTime?
+  deleted        Boolean  @default(false)
+  deletedBy      String   @default("[]") // JSON array of user IDs who deleted this message for themselves
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User        @relation(fields: [senderId], references: [id])
+  folders      FolderMessage[]
+}
+
+model Folder {
+  id             String   @id @default(cuid())
+  name           String
+  icon           String
+  conversationId String
+  visibility     String   // 'private' or 'shared'
+  createdBy      String
+  closedBy       String   @default("[]") // JSON array of user IDs who closed this folder
+  createdAt      DateTime @default(now())
+
+  messages FolderMessage[]
+
+  @@index([conversationId])
+  @@index([createdBy])
+}
+
+model FolderMessage {
+  id        String @id @default(cuid())
+  folderId  String
+  messageId String
+
+  folder  Folder  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, messageId])
+  @@index([folderId])
+  @@index([messageId])
+}
