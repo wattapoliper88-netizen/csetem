@@ -21,21 +21,15 @@ async function bootstrap() {
   const corsOriginValue =
     configService.get<string>('CORS_ORIGIN') || process.env.CORS_ORIGIN;
 
-  // Produkciós default: csak a Vercel domain
+  // Produkciós default: csak a Vercel domain + localhost fejlesztéshez
   const defaultOrigins = [
     'https://csetem.vercel.app',
+    'http://localhost:5173',
   ];
 
-  let corsOrigins = corsOriginValue
+  const corsOrigins = corsOriginValue
     ? corsOriginValue.split(',').map((o) => o.trim())
     : defaultOrigins;
-
-  // Fejlesztés alatt engedjük a localhost:5173 origin-t
-  const isDev = process.env.NODE_ENV !== 'production';
-  const allowLocalhost = process.env.ALLOW_DEV_ORIGIN === 'true' || isDev;
-  if (allowLocalhost && !corsOrigins.includes('http://localhost:5173')) {
-    corsOrigins.push('http://localhost:5173');
-  }
 
   console.log('✅ Final CORS origins:', corsOrigins);
 
