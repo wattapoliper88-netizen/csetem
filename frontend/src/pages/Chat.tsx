@@ -683,9 +683,9 @@ export const ChatPage: React.FC = () => {
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const previousMessagesLengthRef = useRef(0);
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
-  const [linkPreviews, setLinkPreviews] = useState<Record<string, any>>({});
   const linkPreviewsRef = useRef<Record<string, any>>({});
   const processedLinksRef = useRef<Set<string>>(new Set());
+  const [updateTrigger, setUpdateTrigger] = useState(0);
   const [inputLinkPreview, setInputLinkPreview] = useState<any>(null);
   const [editableTitle, setEditableTitle] = useState<string>('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -723,10 +723,7 @@ export const ChatPage: React.FC = () => {
         // Elsőként azonnali minimal preview beállítás hogy kártya megjelenjen
         const initialPreview = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true };
         linkPreviewsRef.current[link] = initialPreview;
-        setLinkPreviews(prev => ({
-          ...prev,
-          [link]: initialPreview
-        }));
+        setUpdateTrigger(prev => prev + 1);
         // Részletesebb adat lekérése noembed szolgáltatásból (ha elérhető)
         fetch(`https://noembed.com/embed?url=${encodeURIComponent(link)}`)
           .then(r => r.ok ? r.json() : Promise.reject())
@@ -739,19 +736,13 @@ export const ChatPage: React.FC = () => {
               pending: false
             };
             linkPreviewsRef.current[link] = previewData;
-            setLinkPreviews(prev => ({
-              ...prev,
-              [link]: previewData
-            }));
+            setUpdateTrigger(prev => prev + 1);
           })
           .catch(() => {
             // Marad a minimál preview; jelöljük nem pending
             const fallbackData = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: false };
             linkPreviewsRef.current[link] = fallbackData;
-            setLinkPreviews(prev => ({
-              ...prev,
-              [link]: fallbackData
-            }));
+            setUpdateTrigger(prev => prev + 1);
           });
       });
     }, [messages]);
@@ -1354,13 +1345,11 @@ export const ChatPage: React.FC = () => {
     
     // If there's a link preview with edited title, update the preview in cache
     if (inputLinkPreview && editableTitle !== inputLinkPreview.title) {
-      setLinkPreviews(prev => ({
-        ...prev,
-        [inputLinkPreview.url]: {
-          ...inputLinkPreview,
-          title: editableTitle
-        }
-      }));
+      linkPreviewsRef.current[inputLinkPreview.url] = {
+        ...inputLinkPreview,
+        title: editableTitle
+      };
+      setUpdateTrigger(prev => prev + 1);
     }
     
     mutation.mutate(messageToSend);
@@ -2682,7 +2671,7 @@ export const ChatPage: React.FC = () => {
                             
                             if (firstLink) {
                               const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
-                              const preview = linkPreviews[firstLink];
+                              const preview = linkPreviewsRef.current[firstLink];
                               const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
                               const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
                               
@@ -2825,7 +2814,7 @@ export const ChatPage: React.FC = () => {
                         
                         if (firstLink) {
                           const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
-                          const preview = linkPreviews[firstLink];
+                          const preview = linkPreviewsRef.current[firstLink];
                           const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
                           const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
                           
@@ -3525,7 +3514,7 @@ export const ChatPage: React.FC = () => {
                             
                             {/* Link previews */}
                             {!editingMessageId && extractLinks(m.content).map((link: string, i: number) => {
-                              const preview = linkPreviews[link];
+                              const preview = linkPreviewsRef.current[link];
                               if (!preview) {
                                 // Fetch preview if not yet loaded
                                 fetch(`${API_URL}/link-preview?url=${encodeURIComponent(link)}`, {
@@ -3535,11 +3524,13 @@ export const ChatPage: React.FC = () => {
                                 })
                                   .then(res => res.json())
                                   .then(data => {
-                                    setLinkPreviews(prev => ({ ...prev, [link]: data }));
+                                    linkPreviewsRef.current[link] = data;
+                                    setUpdateTrigger(prev => prev + 1);
                                   })
                                   .catch((err) => {
                                     console.error('Link preview error:', err);
-                                    setLinkPreviews(prev => ({ ...prev, [link]: { error: true } }));
+                                    linkPreviewsRef.current[link] = { error: true };
+                                    setUpdateTrigger(prev => prev + 1);
                                   });
                                 return (
                                   <div key={i} className="mt-2 p-3 bg-gray-800/50 rounded-lg animate-pulse">
