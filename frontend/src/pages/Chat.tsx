@@ -717,7 +717,7 @@ export const ChatPage: React.FC = () => {
       try {
         await deleteUser(userId);
         setUserContextMenu(null);
-        window.location.reload();
+        await refetchConversations();
       } catch (error) {
         alert('Hiba történt a felhasználó törlésekor');
       }
@@ -730,7 +730,7 @@ export const ChatPage: React.FC = () => {
       try {
         await toggleBanUser(userId, currentVerified);
         setUserContextMenu(null);
-        window.location.reload();
+        await refetchConversations();
       } catch (error) {
         alert('Hiba történt a művelet végrehajtásakor');
       }
@@ -743,7 +743,7 @@ export const ChatPage: React.FC = () => {
       try {
         await toggleAdmin(userId, !currentIsAdmin);
         setUserContextMenu(null);
-        window.location.reload();
+        await refetchConversations();
       } catch (error) {
         alert('Hiba történt az admin jog módosításakor');
       }
@@ -847,7 +847,7 @@ export const ChatPage: React.FC = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showAvatarMenu]);
 
-  const { data: convData, refetch: _refetchConversations } = useQuery(
+  const { data: convData, refetch: refetchConversations } = useQuery(
     ['conversation', me?.isAdmin],
     () => (me?.isAdmin ? listConversations() : getMyConversation()),
     { enabled: !!me },
