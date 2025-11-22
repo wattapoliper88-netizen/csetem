@@ -43,11 +43,11 @@ export class UserController {
   }
 
   @Put('admin/user/:userId/ban')
-  async banUser(@Req() req: any, @Param('userId') userId: string) {
+  async toggleBanUser(@Req() req: any, @Param('userId') userId: string, @Body() body: { banned: boolean }) {
     await this.checkAdmin(req.user.userId);
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { verified: false },
+      data: { verified: !body.banned },
     });
     return user;
   }
