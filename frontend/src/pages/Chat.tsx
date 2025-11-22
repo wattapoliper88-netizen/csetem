@@ -693,6 +693,57 @@ export const ChatPage: React.FC = () => {
   const [showCustomFilter, setShowCustomFilter] = useState(false);
   const [customFilterDomain, setCustomFilterDomain] = useState<string>('');
   const [avatarImage, setAvatarImage] = useState<string>('');
+    // Fallback YouTube (watch / youtu.be / shorts / live) preview betöltés ha hiányzik
+    useEffect(() => {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const allContents: string[] = messages.map(m => m.content).filter(Boolean);
+      const youtubeLinks: string[] = [];
+      allContents.forEach(content => {
+        const links = content.match(urlRegex);
+        if (links) {
+          links.forEach(l => {
+            if ((l.includes('youtube.com') || l.includes('youtu.be')) && !linkPreviews[l]) {
+              youtubeLinks.push(l);
+            }
+          });
+        }
+      });
+      if (youtubeLinks.length === 0) return;
+
+      // Legfeljebb 5 új lekérés egyszerre hogy ne terheljük
+      const toFetch = youtubeLinks.slice(0, 5);
+      toFetch.forEach(link => {
+        const vid = extractYouTubeVideoId(link);
+        const thumb = vid ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg` : undefined;
+        // Elsőként azonnali minimal preview beállítás hogy kártya megjelenjen
+        setLinkPreviews(prev => ({
+          ...prev,
+          [link]: prev[link] || { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true }
+        }));
+        // Részletesebb adat lekérése noembed szolgáltatásból (ha elérhető)
+        fetch(`https://noembed.com/embed?url=${encodeURIComponent(link)}`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            setLinkPreviews(prev => ({
+              ...prev,
+              [link]: {
+                image: data.thumbnail_url || thumb,
+                title: data.title || 'YouTube videó',
+                siteName: 'YouTube',
+                author: data.author_name || undefined,
+                pending: false
+              }
+            }));
+          })
+          .catch(() => {
+            // Marad a minimál preview; jelöljük nem pending
+            setLinkPreviews(prev => ({
+              ...prev,
+              [link]: { ...(prev[link] || {}), pending: false }
+            }));
+          });
+      });
+    }, [messages, linkPreviews]);
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [viewingAvatar, setViewingAvatar] = useState<string | null>(null);
