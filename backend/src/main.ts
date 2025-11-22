@@ -8,6 +8,8 @@ import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Debug: print CORS_ORIGIN value
+  console.log('CORS_ORIGIN:', process.env.CORS_ORIGIN);
   const configService = app.get(ConfigService);
   
   app.use(cookieParser());
@@ -16,10 +18,18 @@ async function bootstrap() {
   console.log('🔍 CORS_ORIGIN from process.env:', process.env.CORS_ORIGIN);
   console.log('🔍 All env keys:', Object.keys(process.env).filter(k => k.includes('CORS')));
   
-  const corsOriginValue = configService.get('CORS_ORIGIN') || process.env.CORS_ORIGIN;
+  const corsOriginValue =
+    configService.get<string>('CORS_ORIGIN') || process.env.CORS_ORIGIN;
+
+  // Produkciós default: csak a Vercel domain
+  const defaultOrigins = [
+    'https://csetem.vercel.app',
+  ];
+
   const corsOrigins = corsOriginValue
-    ? corsOriginValue.split(',').map((o: string) => o.trim())
-    : ['http://localhost:5173', 'http://localhost:5174'];
+    ? corsOriginValue.split(',').map((o) => o.trim())
+    : defaultOrigins;
+
   console.log('✅ Final CORS origins:', corsOrigins);
 
   app.use((req, res, next) => {

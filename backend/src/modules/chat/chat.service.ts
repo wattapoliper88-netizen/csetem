@@ -21,12 +21,28 @@ export class ChatService {
     if (isAdmin) {
       throw new ForbiddenException('Use GET /conversations for admin');
     }
-    const admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
+
+    // Próbálunk admin usert keresni
+    let admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
+
+    // Ha nincs admin, akkor a jelenlegi usert kinevezzük adminnak
     if (!admin) {
-      throw new NotFoundException('Admin not configured');
+      admin = await this.prisma.user.update({
+        where: { id: userId },
+        data: { isAdmin: true },
+      });
+      console.log('⚠️ No admin found, promoted current user to admin:', {
+        userId,
+      });
     }
+
     const conv = await this.getOrCreateUserConversation(userId, admin.id);
-    console.log('getMyConversation:', { userId, adminId: admin.id, conversationId: conv.id });
+    console.log('getMyConversation:', {
+      userId,
+      adminId: admin.id,
+      conversationId: conv.id,
+    });
+
     return conv;
   }
 

@@ -7,6 +7,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { socketCorsConfig } from './socket-cors.config';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
@@ -15,7 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:5173',
+    origin: ['https://csetem.vercel.app'],
     credentials: true,
   },
 })
@@ -29,6 +30,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private config: ConfigService,
     private prisma: PrismaService,
   ) {}
+
+  afterInit() {
+    // ...existing code...
+    // A CORS beállításokat csak a WebSocketGateway dekorátorban szabad megadni.
+  }
 
   async handleConnection(client: Socket) {
     try {
