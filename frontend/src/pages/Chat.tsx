@@ -1123,6 +1123,12 @@ export const ChatPage: React.FC = () => {
     if (!socket || !activeConversationId) return;
     socket.emit('conversation:join', { conversationId: activeConversationId });
 
+    // Re-join conversation on reconnect
+    const handleConnect = () => {
+      socket.emit('conversation:join', { conversationId: activeConversationId });
+    };
+    socket.on('connect', handleConnect);
+
     // Send heartbeat every 20 seconds to keep online status active
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
@@ -1277,6 +1283,7 @@ export const ChatPage: React.FC = () => {
 
     return () => {
       clearInterval(heartbeatInterval);
+      socket.off('connect', handleConnect);
       socket.off('message:new');
       socket.off('typing');
       socket.off('user:online');
