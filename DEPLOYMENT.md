@@ -74,7 +74,7 @@ Kattints: **"Environment Variables"**
 
 | Változó neve | Érték |
 |-------------|-------|
-| `VITE_API_URL` | `https://csetem-production.up.railway.app` (a Railway URL amit kimásoltál) |
+| `VITE_API_URL` | `https://csetem.onrender.com` (a Render backend URL-je) |
 
 ### 5. Deploy
 Kattints: **"Deploy"** gombra és várj 2-3 percet
