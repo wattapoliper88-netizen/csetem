@@ -32,7 +32,6 @@ const formatDuration = (time: number) => {
 // YouTube video ID extractor supporting multiple share URL formats
 const extractYouTubeVideoId = (url: string): string | null => {
   try {
-    // Remove potential tracking params
     const cleaned = url.split('&list=')[0];
     const u = new URL(cleaned);
     const host = u.hostname.replace(/^www\./, '');
@@ -40,19 +39,15 @@ const extractYouTubeVideoId = (url: string): string | null => {
       return u.pathname.slice(1) || null;
     }
     if (host === 'youtube.com' || host === 'm.youtube.com') {
-      // /watch?v=ID
       if (u.pathname === '/watch') {
         return u.searchParams.get('v');
       }
-      // /shorts/ID
       if (u.pathname.startsWith('/shorts/')) {
         return u.pathname.split('/')[2] || null;
       }
-      // /live/ID
       if (u.pathname.startsWith('/live/')) {
         return u.pathname.split('/')[2] || null;
       }
-      // /embed/ID
       if (u.pathname.startsWith('/embed/')) {
         return u.pathname.split('/')[2] || null;
       }
@@ -63,20 +58,35 @@ const extractYouTubeVideoId = (url: string): string | null => {
   }
 };
 
-const CustomAudioPlayer: React.FC<{ 
-  src: string; 
-  type: string; 
-  thumbnail?: string;
+// Audio player component props
+interface AudioPlayerProps {
   messageId?: string;
   conversationId?: string;
-  otherUserPlaying?: { userId: string; position: number; username: string } | null;
+  src?: string;
+  type?: string;
+  fileName?: string;
+  thumbnail?: string;
+  playlist?: { url: string; fileName: string }[];
+  otherUserPlaying?: { position: number } | null;
   onDisconnectOtherUser?: () => void;
   isCollapsedFirstAudio?: boolean;
-  fileName?: string;
-  playlist?: Array<{ url: string; fileName: string }>;
-}> = ({ src, type, thumbnail, messageId, conversationId, otherUserPlaying, onDisconnectOtherUser, isCollapsedFirstAudio, fileName, playlist }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+}
+
+// Reconstructed AudioPlayer component (was accidentally unwrapped during patch)
+const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
+  messageId,
+  conversationId,
+  src,
+  type = 'audio/mpeg',
+  fileName,
+  thumbnail,
+  playlist,
+  otherUserPlaying,
+  onDisconnectOtherUser,
+  isCollapsedFirstAudio
+}) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | undefined>(undefined);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -3522,7 +3532,30 @@ export const ChatPage: React.FC = () => {
                               const key = canonicalizeLink(link);
                               const preview = linkPreviews[key];
                               if (!preview) {
-                                // Fetch preview if not yet loaded
+                                const isYT = link.includes('youtube.com') || link.includes('youtu.be') || link.includes('/shorts/');
+                                if (isYT) {
+                                  const vid = extractYouTubeVideoId(link);
+                                  if (vid) {
+                                    setLinkPreviews(prev => ({
+                                      ...prev,
+                                      [key]: {
+                                        pending: true,
+                                        siteName: 'YouTube',
+                                        image: `https://img.youtube.com/vi/${vid}/hqdefault.jpg`,
+                                        title: '',
+                                        url: key
+                                      }
+                                    }));
+                                  }
+                                  return (
+                                    <div key={i} className="mt-2 p-3 bg-gray-800/50 rounded-lg animate-pulse">
+                                      <div className="h-20 w-32 bg-gray-700 rounded mb-2" />
+                                      <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                                    </div>
+                                  );
+                                }
+                                // Fetch preview for non-YouTube links if not yet loaded
                                 fetch(`${API_URL}/link-preview?url=${encodeURIComponent(link)}`, {
                                   headers: {
                                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
