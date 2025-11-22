@@ -4012,7 +4012,10 @@ export const ChatPage: React.FC = () => {
               )}
               
               {/* Tiltott felhasználók számára engedély kérés gomb */}
-              {me && !me.verified ? (
+              {(() => {
+                console.log('🔍 User status check:', { me, verified: me?.verified, isAdmin: me?.isAdmin });
+                return me && !me.verified && !me.isAdmin;
+              })() ? (
                 <div className="flex justify-center">
                   <button
                     onClick={async () => {
