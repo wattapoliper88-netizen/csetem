@@ -691,6 +691,8 @@ export const ChatPage: React.FC = () => {
     // Reset scroll flag
     setIsUserScrolling(false);
     scrollStartRef.current = window.scrollY;
+    // Disable text selection globally during potential long press
+    document.body.classList.add('noTextSelect');
     // Store start position for move threshold
     if ('touches' in e && e.touches[0]) {
       setLongPressStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -722,6 +724,10 @@ export const ChatPage: React.FC = () => {
         if (scrollDelta > 2) {
           clearTimeout(longPressTimer);
           setLongPressTimer(null);
+          // Clear any selection highlight
+          const sel = window.getSelection();
+          if (sel) sel.removeAllRanges();
+          document.body.classList.remove('noTextSelect');
         }
       }
     };
@@ -729,6 +735,9 @@ export const ChatPage: React.FC = () => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         setLongPressTimer(null);
+        const sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+        document.body.classList.remove('noTextSelect');
       }
     };
     window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
@@ -752,6 +761,11 @@ export const ChatPage: React.FC = () => {
     if (longPressCleanupRef.current) {
       longPressCleanupRef.current();
     }
+    // Remove noSelect class
+    document.body.classList.remove('noTextSelect');
+    // Clear selection highlight if any
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
     // Prevent click event if long press was triggered
     if (userContextMenu) {
       e.preventDefault();
@@ -788,6 +802,9 @@ export const ChatPage: React.FC = () => {
     if (dx > 8 || dy > 8) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
+      const sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+      document.body.classList.remove('noTextSelect');
     }
   };
 
