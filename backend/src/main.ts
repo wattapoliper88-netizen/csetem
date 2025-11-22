@@ -8,8 +8,22 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
+  const corsOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : ['http://localhost:5173', 'http://localhost:5174'];
+
   app.use((req, res, next) => {
     if (req.method === 'OPTIONS') {
+      const origin = req.headers.origin;
+      if (origin && corsOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+      }
+      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+      res.header(
+        'Access-Control-Allow-Headers',
+        req.headers['access-control-request-headers'] || 'Content-Type, Authorization',
+      );
+      res.header('Access-Control-Allow-Credentials', 'true');
       return res.sendStatus(204);
     }
     next();
@@ -23,9 +37,7 @@ async function bootstrap() {
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
   app.enableCors({
-    origin: process.env.CORS_ORIGIN 
-      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-      : ['http://localhost:5173', 'http://localhost:5174'],
+    origin: corsOrigins,
     credentials: true,
   });
 
