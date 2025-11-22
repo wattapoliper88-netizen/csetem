@@ -21,10 +21,12 @@ async function bootstrap() {
   const corsOriginValue =
     configService.get<string>('CORS_ORIGIN') || process.env.CORS_ORIGIN;
 
-  // Produkciós default: csak a Vercel domain + localhost fejlesztéshez
+  // Alap engedélyezett origin lista (prod + fejlesztés)
   const defaultOrigins = [
     'https://csetem.vercel.app',
+    'http://localhost:3000',
     'http://localhost:5173',
+    'http://127.0.0.1:5173',
   ];
 
   const corsOrigins = corsOriginValue
@@ -33,18 +35,17 @@ async function bootstrap() {
 
   console.log('✅ Final CORS origins:', corsOrigins);
 
+  // Globális CORS header beállítás (nem csak OPTIONS)
   app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && corsOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Vary', 'Origin');
+    }
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     if (req.method === 'OPTIONS') {
-      const origin = req.headers.origin;
-      if (origin && corsOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-      }
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-      res.header(
-        'Access-Control-Allow-Headers',
-        req.headers['access-control-request-headers'] || 'Content-Type, Authorization',
-      );
-      res.header('Access-Control-Allow-Credentials', 'true');
       return res.sendStatus(204);
     }
     next();
@@ -58,8 +59,16 @@ async function bootstrap() {
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin || corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
+    methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
+    exposedHeaders: ['Content-Type','Authorization'],
   });
 
   app.useGlobalPipes(
