@@ -724,10 +724,9 @@ export const ChatPage: React.FC = () => {
         if (scrollDelta > 2) {
           clearTimeout(longPressTimer);
           setLongPressTimer(null);
-          // Clear any selection highlight
+          // Csak az időzítőt töröljük, a noTextSelect osztály marad amíg a pointer fel nem enged
           const sel = window.getSelection();
           if (sel) sel.removeAllRanges();
-          document.body.classList.remove('noTextSelect');
         }
       }
     };
@@ -737,7 +736,6 @@ export const ChatPage: React.FC = () => {
         setLongPressTimer(null);
         const sel = window.getSelection();
         if (sel) sel.removeAllRanges();
-        document.body.classList.remove('noTextSelect');
       }
     };
     window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
