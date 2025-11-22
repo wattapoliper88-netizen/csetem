@@ -14,9 +14,16 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
+const socketOrigins = [
+  'https://csetem.vercel.app',
+];
+if ((process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_ORIGIN === 'true') && !socketOrigins.includes('http://localhost:5173')) {
+  socketOrigins.push('http://localhost:5173');
+}
+
 @WebSocketGateway({
   cors: {
-    origin: ['https://csetem.vercel.app'],
+    origin: socketOrigins,
     credentials: true,
   },
 })
