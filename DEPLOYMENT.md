@@ -177,6 +177,24 @@ Most az alkalmazásod elérhető a világ bármely pontjáról:
 
 ---
 
+## 🌐 Render-specifikus megjegyzés
+
+Amennyiben Renderen hosztolod a frontend statikus site-ot, adj a `frontend/static.json` fájlhoz egy catch-all rewrite szabályt:
+
+```json
+{
+   "routes": [
+      { "src": "/.*", "dest": "/index.html" }
+   ]
+}
+```
+
+Ez biztosítja, hogy a React Router útvonalai (pl. `/register`, `/chat`) akkor is működjenek, ha a felhasználó közvetlenül az URL-t nyitja meg, mert minden kérés az `index.html`-re irányítódik.
+
+Ne felejtsd el Renderen az `Environment Variables` között a `VITE_API_URL`-t `https://csetem.onrender.com` értékre állítani, és a backend `CORS_ORIGIN` változóban a Render frontend URL-jét szerepeltetni.
+
+---
+
 ## 📞 Segítség
 
 Ha elakadsz:
