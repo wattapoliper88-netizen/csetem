@@ -65,7 +65,22 @@ export class ChatService {
       },
       orderBy: { createdAt: 'desc' },
     });
-    console.log('Found conversations:', conversations);
+    // Avoid logging full base64 avatar blobs – just lengths for diagnostics
+    console.log('Found conversations (sanitized):', conversations.map(c => ({
+      id: c.id,
+      userId: c.userId,
+      adminId: c.adminId,
+      createdAt: c.createdAt,
+      user: {
+        id: c.user.id,
+        email: c.user.email,
+        username: c.user.username,
+        isAdmin: c.user.isAdmin,
+        verified: c.user.verified,
+        lastSeen: c.user.lastSeen,
+        avatarImageLength: c.user.avatarImage ? c.user.avatarImage.length : 0
+      }
+    })));
     return conversations;
   }
 
