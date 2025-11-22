@@ -564,18 +564,6 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
 
       {/* Volume Controls - Desktop always visible, Mobile collapsible */}
       <div className="flex flex-col gap-2 flex-shrink-0">
-        {/* Mobile: Toggle button for controls */}
-        {isMobileViewport && (
-          <button
-            onClick={() => setShowMobileControls(!showMobileControls)}
-            className="sm:hidden px-2 py-1 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded border border-gray-600/30 transition-colors flex items-center gap-1"
-            title="Vezérlők"
-          >
-            <span>⚙️</span>
-            <span>{showMobileControls ? '▲' : '▼'}</span>
-          </button>
-        )}
-
         {/* Desktop or expanded mobile controls */}
         <div className={`flex flex-col gap-2 ${isMobileViewport && !showMobileControls ? 'hidden' : ''}`}>
           <div className="flex items-center gap-2">
@@ -728,6 +716,7 @@ export const ChatPage: React.FC = () => {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
+  const [showMobileControls, setShowMobileControls] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showCreateNewFolder, setShowCreateNewFolder] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -3151,10 +3140,21 @@ export const ChatPage: React.FC = () => {
                 <React.Fragment key={group.id}>
                   {/* Date separator */}
                   {shouldShowDateSeparator(firstMsg, prevGroup?.messages[prevGroup.messages.length - 1]) && (
-                    <div className="date-separator my-6 sticky top-0 z-10">
+                    <div className="date-separator my-6 sticky top-0 z-10 flex items-center justify-center gap-2">
                       <span className="bg-gray-800 px-3 py-1 rounded-full text-xs text-gray-400 shadow-lg">
                         {formatDate(firstMsg.createdAt)}
                       </span>
+                      {/* Mobile: Toggle button for audio controls */}
+                      {isMobile && (
+                        <button
+                          onClick={() => setShowMobileControls(!showMobileControls)}
+                          className="px-2 py-1 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded-full border border-gray-600/30 transition-colors flex items-center gap-1 shadow-lg"
+                          title="Audio vezérlők"
+                        >
+                          <span>⚙️</span>
+                          <span className="text-[10px]">{showMobileControls ? '▲' : '▼'}</span>
+                        </button>
+                      )}
                     </div>
                   )}
                   
