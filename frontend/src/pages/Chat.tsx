@@ -683,23 +683,29 @@ export const ChatPage: React.FC = () => {
 
   // Long press handlers for user management
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
-    e.preventDefault();
     const timer = window.setTimeout(() => {
-      const rect = (e.target as HTMLElement).getBoundingClientRect();
+      const target = e.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
       setUserContextMenu({
         userId: user.id,
-        x: rect.left,
+        x: rect.left + rect.width / 2,
         y: rect.bottom + 5,
         user,
       });
+      console.log('Context menu opened for:', user.username);
     }, 500);
     setLongPressTimer(timer);
   };
 
-  const handleUserLongPressEnd = () => {
+  const handleUserLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
+    }
+    // Prevent click event if long press was triggered
+    if (userContextMenu) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
@@ -1736,12 +1742,32 @@ export const ChatPage: React.FC = () => {
                       {conv.user.username[0].toUpperCase()}
                     </div>
                     <div 
-                      className="flex-1"
-                      onTouchStart={(e) => handleUserLongPressStart(e, conv.user)}
-                      onTouchEnd={handleUserLongPressEnd}
-                      onMouseDown={(e) => handleUserLongPressStart(e, conv.user)}
-                      onMouseUp={handleUserLongPressEnd}
-                      onMouseLeave={handleUserLongPressEnd}
+                      className="flex-1 select-none"
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        handleUserLongPressStart(e, conv.user);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        handleUserLongPressEnd(e);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        handleUserLongPressStart(e, conv.user);
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        handleUserLongPressEnd(e);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.stopPropagation();
+                        handleUserLongPressEnd(e);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        handleUserLongPressStart(e, conv.user);
+                        setTimeout(() => setLongPressTimer(null), 0);
+                      }}
                     >
                       <p className="font-semibold text-gray-100">{conv.user.username}</p>
                       <p className="text-xs text-gray-400">{conv.user.email}</p>
@@ -4023,42 +4049,50 @@ export const ChatPage: React.FC = () => {
 
     {/* User Context Menu */}
     {userContextMenu && (
-      <div
-        className="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden"
-        style={{
-          top: userContextMenu.y,
-          left: userContextMenu.x,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-2 border-b border-gray-700 bg-gray-900">
-          <p className="text-sm font-semibold text-white">{userContextMenu.user.username}</p>
-          <p className="text-xs text-gray-400">{userContextMenu.user.email}</p>
+      <>
+        {/* Backdrop to close menu */}
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setUserContextMenu(null)}
+        />
+        <div
+          className="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden min-w-[200px]"
+          style={{
+            top: `${Math.min(userContextMenu.y, window.innerHeight - 200)}px`,
+            left: `${Math.min(userContextMenu.x, window.innerWidth - 220)}px`,
+            transform: 'translateX(-50%)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-3 border-b border-gray-700 bg-gray-900">
+            <p className="text-sm font-semibold text-white">{userContextMenu.user.username}</p>
+            <p className="text-xs text-gray-400">{userContextMenu.user.email}</p>
+          </div>
+          <div className="py-1">
+            <button
+              onClick={() => handleToggleAdmin(userContextMenu.userId, userContextMenu.user.isAdmin)}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-white flex items-center gap-2"
+            >
+              <span>{userContextMenu.user.isAdmin ? '👤' : '👑'}</span>
+              <span>{userContextMenu.user.isAdmin ? 'Admin jog eltávolítása' : 'Admin jogosultság'}</span>
+            </button>
+            <button
+              onClick={() => handleBanUser(userContextMenu.userId)}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-orange-400 flex items-center gap-2"
+            >
+              <span>🚫</span>
+              <span>Felhasználó tiltása</span>
+            </button>
+            <button
+              onClick={() => handleDeleteUser(userContextMenu.userId)}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-red-400 flex items-center gap-2"
+            >
+              <span>🗑️</span>
+              <span>Felhasználó törlése</span>
+            </button>
+          </div>
         </div>
-        <div className="py-1">
-          <button
-            onClick={() => handleToggleAdmin(userContextMenu.userId, userContextMenu.user.isAdmin)}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-white flex items-center gap-2"
-          >
-            <span>{userContextMenu.user.isAdmin ? '👤' : '👑'}</span>
-            <span>{userContextMenu.user.isAdmin ? 'Admin jog eltávolítása' : 'Admin jogosultság'}</span>
-          </button>
-          <button
-            onClick={() => handleBanUser(userContextMenu.userId)}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-orange-400 flex items-center gap-2"
-          >
-            <span>🚫</span>
-            <span>Felhasználó tiltása</span>
-          </button>
-          <button
-            onClick={() => handleDeleteUser(userContextMenu.userId)}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-red-400 flex items-center gap-2"
-          >
-            <span>🗑️</span>
-            <span>Felhasználó törlése</span>
-          </button>
-        </div>
-      </div>
+      </>
     )}
     </>
   );
