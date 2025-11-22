@@ -8,9 +8,12 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
+  
+  console.log('🔍 CORS_ORIGIN env:', process.env.CORS_ORIGIN);
   const corsOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
     : ['http://localhost:5173', 'http://localhost:5174'];
+  console.log('✅ Allowed CORS origins:', corsOrigins);
 
   app.use((req, res, next) => {
     if (req.method === 'OPTIONS') {
