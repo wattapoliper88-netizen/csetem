@@ -27,3 +27,18 @@ export async function getMe() {
   const res = await api.get('/me');
   return res.data;
 }
+
+export async function deleteUser(userId: string) {
+  const res = await api.delete(`/me/admin/user/${userId}`);
+  return res.data;
+}
+
+export async function banUser(userId: string) {
+  const res = await api.put(`/me/admin/user/${userId}/ban`);
+  return res.data;
+}
+
+export async function toggleAdmin(userId: string, isAdmin: boolean) {
+  const res = await api.put(`/me/admin/user/${userId}/admin`, { isAdmin });
+  return res.data;
+}

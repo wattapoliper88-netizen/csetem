@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'react-query';
-import { getMe } from '../api/auth';
+import { getMe, deleteUser, banUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 import { getSocket } from '../socket';
 import { useNavigate } from 'react-router-dom';
@@ -676,8 +676,80 @@ export const ChatPage: React.FC = () => {
   const [playlistTicker, setPlaylistTicker] = useState(0);
   const [expandedAudioGroups, setExpandedAudioGroups] = useState<Set<string>>(new Set());
   const [rotatingFileNameIndex, setRotatingFileNameIndex] = useState<Record<string, number>>({});
+  const [userContextMenu, setUserContextMenu] = useState<{ userId: string; x: number; y: number; user: any } | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<number | null>(null);
 
   const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
+
+  // Long press handlers for user management
+  const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
+    e.preventDefault();
+    const timer = window.setTimeout(() => {
+      const rect = (e.target as HTMLElement).getBoundingClientRect();
+      setUserContextMenu({
+        userId: user.id,
+        x: rect.left,
+        y: rect.bottom + 5,
+        user,
+      });
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handleUserLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Biztosan törölni szeretnéd ezt a felhasználót?')) {
+      try {
+        await deleteUser(userId);
+        setUserContextMenu(null);
+        window.location.reload();
+      } catch (error) {
+        alert('Hiba történt a felhasználó törlésekor');
+      }
+    }
+  };
+
+  const handleBanUser = async (userId: string) => {
+    if (confirm('Biztosan tiltani szeretnéd ezt a felhasználót?')) {
+      try {
+        await banUser(userId);
+        setUserContextMenu(null);
+        alert('Felhasználó sikeresen tiltva');
+      } catch (error) {
+        alert('Hiba történt a felhasználó tiltásakor');
+      }
+    }
+  };
+
+  const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    const action = currentIsAdmin ? 'eltávolítani az admin jogot' : 'admin jogot adni';
+    if (confirm(`Biztosan ${action} szeretnél?`)) {
+      try {
+        await toggleAdmin(userId, !currentIsAdmin);
+        setUserContextMenu(null);
+        window.location.reload();
+      } catch (error) {
+        alert('Hiba történt az admin jog módosításakor');
+      }
+    }
+  };
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (userContextMenu) {
+        setUserContextMenu(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [userContextMenu]);
 
   // Save last message panel state to localStorage
   useEffect(() => {
@@ -1663,7 +1735,14 @@ export const ChatPage: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
                       {conv.user.username[0].toUpperCase()}
                     </div>
-                    <div className="flex-1">
+                    <div 
+                      className="flex-1"
+                      onTouchStart={(e) => handleUserLongPressStart(e, conv.user)}
+                      onTouchEnd={handleUserLongPressEnd}
+                      onMouseDown={(e) => handleUserLongPressStart(e, conv.user)}
+                      onMouseUp={handleUserLongPressEnd}
+                      onMouseLeave={handleUserLongPressEnd}
+                    >
                       <p className="font-semibold text-gray-100">{conv.user.username}</p>
                       <p className="text-xs text-gray-400">{conv.user.email}</p>
                     </div>
@@ -3941,6 +4020,46 @@ export const ChatPage: React.FC = () => {
         )}
       </main>
     </div>
+
+    {/* User Context Menu */}
+    {userContextMenu && (
+      <div
+        className="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden"
+        style={{
+          top: userContextMenu.y,
+          left: userContextMenu.x,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-2 border-b border-gray-700 bg-gray-900">
+          <p className="text-sm font-semibold text-white">{userContextMenu.user.username}</p>
+          <p className="text-xs text-gray-400">{userContextMenu.user.email}</p>
+        </div>
+        <div className="py-1">
+          <button
+            onClick={() => handleToggleAdmin(userContextMenu.userId, userContextMenu.user.isAdmin)}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-white flex items-center gap-2"
+          >
+            <span>{userContextMenu.user.isAdmin ? '👤' : '👑'}</span>
+            <span>{userContextMenu.user.isAdmin ? 'Admin jog eltávolítása' : 'Admin jogosultság'}</span>
+          </button>
+          <button
+            onClick={() => handleBanUser(userContextMenu.userId)}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-orange-400 flex items-center gap-2"
+          >
+            <span>🚫</span>
+            <span>Felhasználó tiltása</span>
+          </button>
+          <button
+            onClick={() => handleDeleteUser(userContextMenu.userId)}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-red-400 flex items-center gap-2"
+          >
+            <span>🗑️</span>
+            <span>Felhasználó törlése</span>
+          </button>
+        </div>
+      </div>
+    )}
     </>
   );
 };
