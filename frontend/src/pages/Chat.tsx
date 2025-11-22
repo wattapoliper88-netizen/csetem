@@ -692,6 +692,7 @@ export const ChatPage: React.FC = () => {
 
   // Long press handlers for user management
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
+    console.log('⏱️ Long press started for:', user.username);
     // Reset scroll flag
     setIsUserScrolling(false);
     scrollStartRef.current = window.scrollY;
@@ -712,8 +713,10 @@ export const ChatPage: React.FC = () => {
     }
     
     // Show countdown popup at pointer position
+    console.log('📍 Setting countdown position:', { x: clientX, y: clientY });
     setCountdownPosition({ x: clientX, y: clientY });
     setLongPressCountdown(3.0);
+    console.log('⏳ Countdown set to 3.0s');
     
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
@@ -1908,7 +1911,15 @@ export const ChatPage: React.FC = () => {
                   className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
                     activeConversationId === conv.id ? 'bg-gray-800 border-l-4 border-cyan-500' : ''
                   }`}
-                  onClick={() => setActiveConversationId(conv.id)}
+                  onClick={(e) => {
+                    // Don't switch conversation if long press is in progress
+                    if (longPressTimer) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    setActiveConversationId(conv.id);
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
