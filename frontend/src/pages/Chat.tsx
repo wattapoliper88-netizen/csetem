@@ -330,7 +330,7 @@ const CustomAudioPlayer: React.FC<{
   };
 
   return (
-    <div className={`w-full rounded-lg p-2 md:p-3 transition-all duration-300 overflow-hidden ${
+    <div className={`w-full max-w-[360px] sm:max-w-full rounded-lg p-2 md:p-3 transition-all duration-300 overflow-hidden ${
       isCollapsedFirstAudio 
         ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-cyan-500/20' 
         : 'bg-transparent'
@@ -375,13 +375,13 @@ const CustomAudioPlayer: React.FC<{
       )}
       
       {/* Controls Container */}
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:gap-3">
         {/* Audio Thumbnail */}
         {thumbnail ? (
           <img 
             src={thumbnail} 
             alt="Audio thumbnail"
-            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
+            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
@@ -391,7 +391,7 @@ const CustomAudioPlayer: React.FC<{
           <img 
             src="/assets/zene.gif" 
             alt="Audio"
-            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
+            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
@@ -402,23 +402,23 @@ const CustomAudioPlayer: React.FC<{
         {/* Play/Pause Button */}
         <button
           onClick={togglePlay}
-          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border-2 border-cyan-500/30 hover:border-cyan-400/50"
+          className="w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border-2 border-cyan-500/30 hover:border-cyan-400/50"
         >
         {isPlaying ? (
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
           </svg>
         ) : (
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         )}
       </button>
 
       {/* File name and Progress Bar */}
-      <div className="flex-1 flex flex-col gap-1">
+      <div className="flex-1 flex flex-col gap-1 mt-2 sm:mt-0">
         {fileName && (
-          <p className="text-xs md:text-sm text-cyan-300 font-medium truncate px-1">
+          <p className="text-[11px] sm:text-xs md:text-sm text-cyan-300 font-medium truncate px-1 max-w-[200px] sm:max-w-none">
             🎵 {(playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].fileName : fileName).split(' ').slice(0, 5).join(' ')}{(playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].fileName : fileName).split(' ').length > 5 ? '...' : ''}
             {playlist && playlist.length > 1 && <span className="text-xs text-gray-400 ml-2">({currentPlaylistIndex + 1}/{playlist.length})</span>}
           </p>
