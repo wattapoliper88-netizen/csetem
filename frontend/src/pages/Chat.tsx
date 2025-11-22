@@ -757,7 +757,7 @@ export const ChatPage: React.FC = () => {
     // Global listeners to cancel long press if user starts scrolling or performing large movements
     const cancelOnInteraction = () => {
       const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
-      if (scrollDelta > 2) {
+      if (scrollDelta > 1) {
         if (longPressTimer) {
           clearTimeout(longPressTimer);
           setLongPressTimer(null);
@@ -768,6 +768,7 @@ export const ChatPage: React.FC = () => {
         }
         setLongPressCountdown(null);
         setCountdownPosition(null);
+        longPressTargetUserRef.current = null;
       }
     };
     const cancelOnWheel = () => {
@@ -839,7 +840,7 @@ export const ChatPage: React.FC = () => {
     return () => document.removeEventListener('scroll', onScroll, true);
   }, [longPressTimer]);
 
-  // Cancel on move threshold > 8px
+  // Cancel on move threshold > 5px
   const handleUserLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
     if (!longPressTimer || !longPressStartPos) return;
     let cx: number, cy: number;
@@ -850,15 +851,18 @@ export const ChatPage: React.FC = () => {
     } else return;
     const dx = Math.abs(cx - longPressStartPos.x);
     const dy = Math.abs(cy - longPressStartPos.y);
-    if (dx > 8 || dy > 8) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
+    if (dx > 5 || dy > 5) {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+      }
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
       setLongPressCountdown(null);
       setCountdownPosition(null);
+      longPressTargetUserRef.current = null;
     }
   };
 
@@ -4249,7 +4253,7 @@ export const ChatPage: React.FC = () => {
     {/* Long Press Countdown Indicator */}
     {longPressCountdown !== null && countdownPosition && (
       <div
-        className="fixed z-50 pointer-events-none"
+        className="fixed z-[60] pointer-events-none"
         style={{
           top: `${countdownPosition.y - 40}px`,
           left: `${countdownPosition.x}px`,
