@@ -678,24 +678,36 @@ export const ChatPage: React.FC = () => {
   const [rotatingFileNameIndex, setRotatingFileNameIndex] = useState<Record<string, number>>({});
   const [userContextMenu, setUserContextMenu] = useState<{ userId: string; x: number; y: number; user: any } | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<number | null>(null);
+  const [longPressStartPos, setLongPressStartPos] = useState<{x: number; y: number} | null>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
 
   // Long press handlers for user management
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
+    // Reset scroll flag
+    setIsUserScrolling(false);
+    // Store start position for move threshold
+    if ('touches' in e && e.touches[0]) {
+      setLongPressStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    } else if ('clientX' in e) {
+      setLongPressStartPos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
+    }
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.bottom + 5;
     
     const timer = window.setTimeout(() => {
-      setUserContextMenu({
-        userId: user.id,
-        x,
-        y,
-        user,
-      });
-      console.log('Context menu opened for:', user.username);
+      if (!isUserScrolling) {
+        setUserContextMenu({
+          userId: user.id,
+          x,
+          y,
+          user,
+        });
+        console.log('Context menu opened for:', user.username);
+      }
     }, 500);
     setLongPressTimer(timer);
   };
@@ -709,6 +721,38 @@ export const ChatPage: React.FC = () => {
     if (userContextMenu) {
       e.preventDefault();
       e.stopPropagation();
+    }
+    setLongPressStartPos(null);
+  };
+
+  // Cancel long press on scroll
+  useEffect(() => {
+    const onScroll = () => {
+      if (longPressTimer) {
+        setIsUserScrolling(true);
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+      }
+    };
+    // Use capturing to catch early
+    document.addEventListener('scroll', onScroll, true);
+    return () => document.removeEventListener('scroll', onScroll, true);
+  }, [longPressTimer]);
+
+  // Cancel on move threshold > 8px
+  const handleUserLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!longPressTimer || !longPressStartPos) return;
+    let cx: number, cy: number;
+    if ('touches' in e && e.touches[0]) {
+      cx = e.touches[0].clientX; cy = e.touches[0].clientY;
+    } else if ('clientX' in e) {
+      cx = (e as React.MouseEvent).clientX; cy = (e as React.MouseEvent).clientY;
+    } else return;
+    const dx = Math.abs(cx - longPressStartPos.x);
+    const dy = Math.abs(cy - longPressStartPos.y);
+    if (dx > 8 || dy > 8) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
     }
   };
 
@@ -1774,6 +1818,8 @@ export const ChatPage: React.FC = () => {
                         e.stopPropagation();
                         handleUserLongPressStart(e, conv.user);
                       }}
+                      onMouseMove={(e) => handleUserLongPressMove(e)}
+                      onTouchMove={(e) => handleUserLongPressMove(e)}
                       onMouseUp={(e) => {
                         e.stopPropagation();
                         handleUserLongPressEnd(e);
