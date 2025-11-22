@@ -683,9 +683,9 @@ export const ChatPage: React.FC = () => {
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const previousMessagesLengthRef = useRef(0);
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
-  const linkPreviewsRef = useRef<Record<string, any>>({});
+  // Állapot alapú link preview cache (stabil re-render)
+  const [linkPreviews, setLinkPreviews] = useState<Record<string, any>>({});
   const processedLinksRef = useRef<Set<string>>(new Set());
-  const [linkPreviewTrigger, setLinkPreviewTrigger] = useState(0);
   const [inputLinkPreview, setInputLinkPreview] = useState<any>(null);
   const [editableTitle, setEditableTitle] = useState<string>('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -695,63 +695,60 @@ export const ChatPage: React.FC = () => {
   const [showCustomFilter, setShowCustomFilter] = useState(false);
   const [customFilterDomain, setCustomFilterDomain] = useState<string>('');
   const [avatarImage, setAvatarImage] = useState<string>('');
-    // Fallback YouTube (watch / youtu.be / shorts / live) preview betöltés ha hiányzik
-    useEffect(() => {
-      console.log('📺 YouTube useEffect fut, messages count:', messages.length);
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const allContents: string[] = messages.map(m => m.content).filter(Boolean);
-      const youtubeLinks: string[] = [];
-      allContents.forEach(content => {
-        const links = content.match(urlRegex);
-        if (links) {
-          links.forEach(l => {
-            console.log('📺 Link found:', l, 'processed?', processedLinksRef.current.has(l));
-            if ((l.includes('youtube.com') || l.includes('youtu.be')) && !processedLinksRef.current.has(l)) {
-              youtubeLinks.push(l);
-            }
-          });
+  // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
+  const canonicalizeLink = (link: string): string => {
+    const vid = extractYouTubeVideoId(link);
+    if (vid) return `https://youtube.com/watch?v=${vid}`;
+    return link;
+  };
+
+  // YouTube fallback előnézet betöltés (watch / youtu.be / shorts / live)
+  useEffect(() => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const contents: string[] = messages.map(m => m.content).filter(Boolean);
+    const needed: string[] = [];
+    contents.forEach(c => {
+      const links = c.match(urlRegex);
+      if (!links) return;
+      links.forEach(l => {
+        if (l.includes('youtube.com') || l.includes('youtu.be')) {
+          const key = canonicalizeLink(l);
+          if (!processedLinksRef.current.has(key)) needed.push(l);
         }
       });
-      console.log('📺 YouTube links to process:', youtubeLinks.length, youtubeLinks);
-      if (youtubeLinks.length === 0) return;
-
-      // Legfeljebb 5 új lekérés egyszerre hogy ne terheljük
-      const toFetch = youtubeLinks.slice(0, 5);
-      toFetch.forEach(link => {
-        // Jelöljük feldolgozottnak AZONNAL hogy ne fusson újra
-        processedLinksRef.current.add(link);
-        
-        const vid = extractYouTubeVideoId(link);
-        const thumb = vid ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg` : undefined;
-        // Elsőként azonnali minimal preview beállítás hogy kártya megjelenjen
-        const initialPreview = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true };
-        linkPreviewsRef.current[link] = initialPreview;
-        setLinkPreviewTrigger(prev => prev + 1);
-        console.log('📺 YouTube preview set immediately:', link);
-        // Részletesebb adat lekérése noembed szolgáltatásból (ha elérhető)
-        fetch(`https://noembed.com/embed?url=${encodeURIComponent(link)}`)
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => {
-            const previewData = {
+    });
+    if (needed.length === 0) return;
+    needed.slice(0,5).forEach(raw => {
+      const key = canonicalizeLink(raw);
+      processedLinksRef.current.add(key);
+      const vid = extractYouTubeVideoId(raw);
+      const thumb = vid ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg` : undefined;
+      setLinkPreviews(prev => ({
+        ...prev,
+        [key]: prev[key] || { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true }
+      }));
+      fetch(`https://noembed.com/embed?url=${encodeURIComponent(raw)}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          setLinkPreviews(prev => ({
+            ...prev,
+            [key]: {
               image: data.thumbnail_url || thumb,
               title: data.title || 'YouTube videó',
               siteName: 'YouTube',
               author: data.author_name || undefined,
               pending: false
-            };
-            linkPreviewsRef.current[link] = previewData;
-            setLinkPreviewTrigger(prev => prev + 1);
-            console.log('📺 YouTube preview updated with noembed data:', link, data.title);
-          })
-          .catch(() => {
-            // Marad a minimál preview; jelöljük nem pending
-            const fallbackData = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: false };
-            linkPreviewsRef.current[link] = fallbackData;
-            setLinkPreviewTrigger(prev => prev + 1);
-            console.log('📺 YouTube preview fallback:', link);
-          });
-      });
-    }, [messages]);
+            }
+          }));
+        })
+        .catch(() => {
+          setLinkPreviews(prev => ({
+            ...prev,
+            [key]: { ...(prev[key] || {}), pending: false }
+          }));
+        });
+    });
+  }, [messages]);
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [viewingAvatar, setViewingAvatar] = useState<string | null>(null);
@@ -1349,12 +1346,13 @@ export const ChatPage: React.FC = () => {
     
     let messageToSend = input;
     
-    // If there's a link preview with edited title, update the preview in cache
+    // Szerkesztett cím mentése
     if (inputLinkPreview && editableTitle !== inputLinkPreview.title) {
-      linkPreviewsRef.current[inputLinkPreview.url] = {
-        ...inputLinkPreview,
-        title: editableTitle
-      };
+      const key = canonicalizeLink(inputLinkPreview.url);
+      setLinkPreviews(prev => ({
+        ...prev,
+        [key]: { ...(prev[key] || {}), title: editableTitle }
+      }));
     }
     
     mutation.mutate(messageToSend);
@@ -2676,10 +2674,10 @@ export const ChatPage: React.FC = () => {
                             
                             if (firstLink) {
                               const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
-                              const preview = linkPreviewsRef.current[firstLink];
+                              const key = canonicalizeLink(firstLink);
+                              const preview = linkPreviews[key];
                               const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
                               const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
-                              const _ = linkPreviewTrigger; // Force re-render on preview update
                               
                               if (preview && !preview.error) {
                                 return isYouTube && (preview && !preview.error || ytId) ? (
@@ -2820,7 +2818,8 @@ export const ChatPage: React.FC = () => {
                         
                         if (firstLink) {
                           const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
-                          const preview = linkPreviewsRef.current[firstLink];
+                          const key = canonicalizeLink(firstLink);
+                          const preview = linkPreviews[key];
                           const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
                           const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
                           
@@ -3520,8 +3519,8 @@ export const ChatPage: React.FC = () => {
                             
                             {/* Link previews */}
                             {!editingMessageId && extractLinks(m.content).map((link: string, i: number) => {
-                                                            const _ = linkPreviewTrigger; // Force re-render on preview update
-                              const preview = linkPreviewsRef.current[link];
+                              const key = canonicalizeLink(link);
+                              const preview = linkPreviews[key];
                               if (!preview) {
                                 // Fetch preview if not yet loaded
                                 fetch(`${API_URL}/link-preview?url=${encodeURIComponent(link)}`, {
@@ -3531,11 +3530,11 @@ export const ChatPage: React.FC = () => {
                                 })
                                   .then(res => res.json())
                                   .then(data => {
-                                    linkPreviewsRef.current[link] = data;
+                                    setLinkPreviews(prev => ({ ...prev, [key]: data }));
                                   })
                                   .catch((err) => {
                                     console.error('Link preview error:', err);
-                                    linkPreviewsRef.current[link] = { error: true };
+                                    setLinkPreviews(prev => ({ ...prev, [key]: { error: true } }));
                                   });
                                 return (
                                   <div key={i} className="mt-2 p-3 bg-gray-800/50 rounded-lg animate-pulse">
