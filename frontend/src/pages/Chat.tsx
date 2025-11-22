@@ -3140,21 +3140,10 @@ export const ChatPage: React.FC = () => {
                 <React.Fragment key={group.id}>
                   {/* Date separator */}
                   {shouldShowDateSeparator(firstMsg, prevGroup?.messages[prevGroup.messages.length - 1]) && (
-                    <div className="date-separator my-6 sticky top-0 z-10 flex items-center justify-center gap-2">
+                    <div className="date-separator my-6 sticky top-0 z-10">
                       <span className="bg-gray-800 px-3 py-1 rounded-full text-xs text-gray-400 shadow-lg">
                         {formatDate(firstMsg.createdAt)}
                       </span>
-                      {/* Mobile: Toggle button for audio controls */}
-                      {isMobile && (
-                        <button
-                          onClick={() => setShowMobileControls(!showMobileControls)}
-                          className="px-2 py-1 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded-full border border-gray-600/30 transition-colors flex items-center gap-1 shadow-lg"
-                          title="Audio vezérlők"
-                        >
-                          <span>⚙️</span>
-                          <span className="text-[10px]">{showMobileControls ? '▲' : '▼'}</span>
-                        </button>
-                      )}
                     </div>
                   )}
                   
@@ -3859,6 +3848,20 @@ export const ChatPage: React.FC = () => {
                           >
                             {formatTime(group.messages[group.messages.length - 1].createdAt)}
                           </p>
+                          {/* Mobile: Toggle button for audio controls (only if group has audio) */}
+                          {isMobile && group.messages.some((m: any) => m.fileType?.startsWith('audio/')) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowMobileControls(!showMobileControls);
+                              }}
+                              className="px-1.5 py-0.5 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded-full border border-gray-600/30 transition-colors flex items-center gap-0.5"
+                              title="Audio vezérlők"
+                            >
+                              <span className="text-[10px]">⚙️</span>
+                              <span className="text-[9px]">{showMobileControls ? '▲' : '▼'}</span>
+                            </button>
+                          )}
                           {(() => {
                             const messageFolders = folders.filter(f => 
                               !f.closedBy.includes(me?.id || '') && 
