@@ -684,6 +684,7 @@ export const ChatPage: React.FC = () => {
   const previousMessagesLengthRef = useRef(0);
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
   const [linkPreviews, setLinkPreviews] = useState<Record<string, any>>({});
+  const linkPreviewsRef = useRef<Record<string, any>>({});
   const [inputLinkPreview, setInputLinkPreview] = useState<any>(null);
   const [editableTitle, setEditableTitle] = useState<string>('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -702,7 +703,7 @@ export const ChatPage: React.FC = () => {
         const links = content.match(urlRegex);
         if (links) {
           links.forEach(l => {
-            if ((l.includes('youtube.com') || l.includes('youtu.be')) && !linkPreviews[l]) {
+            if ((l.includes('youtube.com') || l.includes('youtu.be')) && !linkPreviewsRef.current[l]) {
               youtubeLinks.push(l);
             }
           });
@@ -716,34 +717,39 @@ export const ChatPage: React.FC = () => {
         const vid = extractYouTubeVideoId(link);
         const thumb = vid ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg` : undefined;
         // Elsőként azonnali minimal preview beállítás hogy kártya megjelenjen
+        linkPreviewsRef.current[link] = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true };
         setLinkPreviews(prev => ({
           ...prev,
-          [link]: prev[link] || { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true }
+          [link]: { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true }
         }));
         // Részletesebb adat lekérése noembed szolgáltatásból (ha elérhető)
         fetch(`https://noembed.com/embed?url=${encodeURIComponent(link)}`)
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(data => {
+            const previewData = {
+              image: data.thumbnail_url || thumb,
+              title: data.title || 'YouTube videó',
+              siteName: 'YouTube',
+              author: data.author_name || undefined,
+              pending: false
+            };
+            linkPreviewsRef.current[link] = previewData;
             setLinkPreviews(prev => ({
               ...prev,
-              [link]: {
-                image: data.thumbnail_url || thumb,
-                title: data.title || 'YouTube videó',
-                siteName: 'YouTube',
-                author: data.author_name || undefined,
-                pending: false
-              }
+              [link]: previewData
             }));
           })
           .catch(() => {
             // Marad a minimál preview; jelöljük nem pending
+            const fallbackData = { ...linkPreviewsRef.current[link], pending: false };
+            linkPreviewsRef.current[link] = fallbackData;
             setLinkPreviews(prev => ({
               ...prev,
-              [link]: { ...(prev[link] || {}), pending: false }
+              [link]: fallbackData
             }));
           });
       });
-    }, [messages, linkPreviews]);
+    }, [messages]);
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [viewingAvatar, setViewingAvatar] = useState<string | null>(null);
