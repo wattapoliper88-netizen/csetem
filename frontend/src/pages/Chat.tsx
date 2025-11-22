@@ -375,7 +375,7 @@ const CustomAudioPlayer: React.FC<{
       )}
       
       {/* Controls Container */}
-      <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+      <div className="flex items-center gap-2 md:gap-3">
         {/* Audio Thumbnail */}
         {thumbnail ? (
           <img 
@@ -416,7 +416,7 @@ const CustomAudioPlayer: React.FC<{
       </button>
 
       {/* File name and Progress Bar */}
-      <div className="flex-1 flex flex-col gap-1 mt-2 sm:mt-0">
+      <div className="flex-1 flex flex-col gap-1">
         {fileName && (
           <p className="text-[11px] sm:text-xs md:text-sm text-cyan-300 font-medium truncate px-1 max-w-[200px] sm:max-w-none">
             🎵 {(playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].fileName : fileName).split(' ').slice(0, 5).join(' ')}{(playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].fileName : fileName).split(' ').length > 5 ? '...' : ''}
