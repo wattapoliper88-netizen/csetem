@@ -697,6 +697,7 @@ export const ChatPage: React.FC = () => {
   const [avatarImage, setAvatarImage] = useState<string>('');
     // Fallback YouTube (watch / youtu.be / shorts / live) preview betöltés ha hiányzik
     useEffect(() => {
+      console.log('📺 YouTube useEffect fut, messages count:', messages.length);
       const urlRegex = /(https?:\/\/[^\s]+)/g;
       const allContents: string[] = messages.map(m => m.content).filter(Boolean);
       const youtubeLinks: string[] = [];
@@ -704,12 +705,14 @@ export const ChatPage: React.FC = () => {
         const links = content.match(urlRegex);
         if (links) {
           links.forEach(l => {
+            console.log('📺 Link found:', l, 'processed?', processedLinksRef.current.has(l));
             if ((l.includes('youtube.com') || l.includes('youtu.be')) && !processedLinksRef.current.has(l)) {
               youtubeLinks.push(l);
             }
           });
         }
       });
+      console.log('📺 YouTube links to process:', youtubeLinks.length, youtubeLinks);
       if (youtubeLinks.length === 0) return;
 
       // Legfeljebb 5 új lekérés egyszerre hogy ne terheljük
