@@ -683,6 +683,10 @@ export const ChatPage: React.FC = () => {
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const scrollStartRef = useRef<number>(0);
   const longPressCleanupRef = useRef<() => void>(() => {});
+  const [longPressCountdown, setLongPressCountdown] = useState<number | null>(null);
+  const [countdownPosition, setCountdownPosition] = useState<{x: number; y: number} | null>(null);
+  const countdownIntervalRef = useRef<number | null>(null);
+  const longPressTargetUserRef = useRef<any>(null);
 
   const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
 
@@ -691,52 +695,92 @@ export const ChatPage: React.FC = () => {
     // Reset scroll flag
     setIsUserScrolling(false);
     scrollStartRef.current = window.scrollY;
-    // Disable text selection globally during potential long press
-    document.body.classList.add('noTextSelect');
+    longPressTargetUserRef.current = user;
+    
     // Store start position for move threshold
+    let clientX: number, clientY: number;
     if ('touches' in e && e.touches[0]) {
-      setLongPressStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+      setLongPressStartPos({ x: clientX, y: clientY });
     } else if ('clientX' in e) {
-      setLongPressStartPos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
+      setLongPressStartPos({ x: clientX, y: clientY });
+    } else {
+      return;
     }
+    
+    // Show countdown popup at pointer position
+    setCountdownPosition({ x: clientX, y: clientY });
+    setLongPressCountdown(3.0);
+    
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.bottom + 5;
+    const menuX = rect.left + rect.width / 2;
+    const menuY = rect.bottom + 5;
     
-    const timer = window.setTimeout(() => {
-      if (!isUserScrolling) {
-        setUserContextMenu({
-          userId: user.id,
-          x,
-          y,
-          user,
-        });
-        console.log('Context menu opened for:', user.username);
+    // Start countdown interval (update every 100ms)
+    const startTime = Date.now();
+    const interval = window.setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const remaining = Math.max(0, 3.0 - elapsed);
+      setLongPressCountdown(remaining);
+      
+      if (remaining <= 0) {
+        clearInterval(interval);
       }
-    }, 500);
+    }, 100);
+    countdownIntervalRef.current = interval;
+    
+    // Main timer: open context menu after 3 seconds
+    const timer = window.setTimeout(() => {
+      if (!isUserScrolling && longPressTargetUserRef.current) {
+        setUserContextMenu({
+          userId: longPressTargetUserRef.current.id,
+          x: menuX,
+          y: menuY,
+          user: longPressTargetUserRef.current,
+        });
+        console.log('Context menu opened for:', longPressTargetUserRef.current.username);
+      }
+      // Clear countdown
+      setLongPressCountdown(null);
+      setCountdownPosition(null);
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    }, 3000);
     setLongPressTimer(timer);
 
     // Global listeners to cancel long press if user starts scrolling or performing large movements
     const cancelOnInteraction = () => {
-      if (longPressTimer) {
-        const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
-        if (scrollDelta > 2) {
+      const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
+      if (scrollDelta > 2) {
+        if (longPressTimer) {
           clearTimeout(longPressTimer);
           setLongPressTimer(null);
-          // Csak az időzítőt töröljük, a noTextSelect osztály marad amíg a pointer fel nem enged
-          const sel = window.getSelection();
-          if (sel) sel.removeAllRanges();
         }
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        setLongPressCountdown(null);
+        setCountdownPosition(null);
       }
     };
     const cancelOnWheel = () => {
       if (longPressTimer) {
         clearTimeout(longPressTimer);
         setLongPressTimer(null);
-        const sel = window.getSelection();
-        if (sel) sel.removeAllRanges();
       }
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      setLongPressCountdown(null);
+      setCountdownPosition(null);
     };
     window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
     window.addEventListener('touchmove', cancelOnInteraction, { passive: true, capture: true });
@@ -755,15 +799,18 @@ export const ChatPage: React.FC = () => {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setLongPressCountdown(null);
+    setCountdownPosition(null);
+    longPressTargetUserRef.current = null;
+    
     // Cleanup global listeners
     if (longPressCleanupRef.current) {
       longPressCleanupRef.current();
     }
-    // Remove noSelect class
-    document.body.classList.remove('noTextSelect');
-    // Clear selection highlight if any
-    const sel = window.getSelection();
-    if (sel) sel.removeAllRanges();
     // Prevent click event if long press was triggered
     if (userContextMenu) {
       e.preventDefault();
@@ -779,6 +826,12 @@ export const ChatPage: React.FC = () => {
         setIsUserScrolling(true);
         clearTimeout(longPressTimer);
         setLongPressTimer(null);
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+        setLongPressCountdown(null);
+        setCountdownPosition(null);
       }
     };
     // Use capturing to catch early
@@ -800,9 +853,12 @@ export const ChatPage: React.FC = () => {
     if (dx > 8 || dy > 8) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
-      const sel = window.getSelection();
-      if (sel) sel.removeAllRanges();
-      document.body.classList.remove('noTextSelect');
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      setLongPressCountdown(null);
+      setCountdownPosition(null);
     }
   };
 
@@ -4189,6 +4245,22 @@ export const ChatPage: React.FC = () => {
         )}
       </main>
     </div>
+
+    {/* Long Press Countdown Indicator */}
+    {longPressCountdown !== null && countdownPosition && (
+      <div
+        className="fixed z-50 pointer-events-none"
+        style={{
+          top: `${countdownPosition.y - 40}px`,
+          left: `${countdownPosition.x}px`,
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <div className="bg-cyan-600 text-white px-3 py-2 rounded-full shadow-2xl border-2 border-cyan-400 animate-pulse">
+          <span className="font-bold text-lg">{longPressCountdown.toFixed(1)}s</span>
+        </div>
+      </div>
+    )}
 
     {/* User Context Menu */}
     {userContextMenu && (
