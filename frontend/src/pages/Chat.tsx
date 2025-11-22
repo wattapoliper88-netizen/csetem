@@ -3153,8 +3153,48 @@ export const ChatPage: React.FC = () => {
                     }`}
                     style={{ maxWidth: isMobile ? '95%' : isTablet ? '90%' : '75%' }}
                     onMouseEnter={() => setHoveredMessageId(group.lastMessageId)}
-                    onTouchStart={() => {
-                      longPressTimerRef.current = window.setTimeout(() => {
+                    onTouchStart={(e) => {
+                      const touch = e.touches[0];
+                      if (!touch) return;
+                      const target = e.currentTarget as HTMLElement;
+                      target.dataset.swipeStart = String(touch.clientX);
+                      target.dataset.swiping = '1';
+                      target.style.transition = 'none';
+                    }}
+                    onTouchMove={(e) => {
+                      const touch = e.touches[0];
+                      const target = e.currentTarget as HTMLElement;
+                      const start = Number(target.dataset.swipeStart || touch?.clientX || 0);
+                      const dx = Math.max(0, (touch?.clientX || 0) - start);
+                      if (dx > 6) {
+                        e.preventDefault();
+                      }
+                      const clamped = Math.min(dx, 120);
+                      target.style.transform = `translateX(${clamped}px)`;
+                      target.style.boxShadow = clamped > 8 ? '0 10px 25px rgba(6,182,212,0.35)' : '';
+                      // Add visual feedback for selection
+                      if (clamped > 20) {
+                        target.style.backgroundColor = 'rgba(6,182,212,0.1)';
+                        target.style.borderColor = 'rgba(6,182,212,0.5)';
+                      } else {
+                        target.style.backgroundColor = '';
+                        target.style.borderColor = '';
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      const target = e.currentTarget as HTMLElement;
+                      const endX = e.changedTouches[0]?.clientX || 0;
+                      const start = Number(target.dataset.swipeStart || endX);
+                      const dx = Math.max(0, endX - start);
+                      const shouldToggle = dx > 40;
+                      target.style.transition = 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease';
+                      target.style.transform = '';
+                      target.style.boxShadow = '';
+                      target.style.backgroundColor = '';
+                      target.style.borderColor = '';
+                      delete target.dataset.swiping;
+                      delete target.dataset.swipeStart;
+                      if (shouldToggle) {
                         setSelectedMessages(prev => {
                           const newSet = new Set(prev);
                           if (newSet.has(group.lastMessageId)) {
@@ -3164,41 +3204,17 @@ export const ChatPage: React.FC = () => {
                           }
                           return newSet;
                         });
-                      }, 500);
-                    }}
-                    onTouchEnd={() => {
-                      if (longPressTimerRef.current) {
-                        clearTimeout(longPressTimerRef.current);
-                        longPressTimerRef.current = null;
                       }
                     }}
-                    onMouseDown={() => {
-                      longPressTriggeredRef.current = false;
-                      longPressTimerRef.current = window.setTimeout(() => {
-                        longPressTriggeredRef.current = true;
-                        setSelectedMessages(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(group.lastMessageId)) {
-                            newSet.delete(group.lastMessageId);
-                          } else {
-                            newSet.add(group.lastMessageId);
-                          }
-                          return newSet;
-                        });
-                      }, 500);
-                    }}
-                    onMouseUp={() => {
-                      if (longPressTimerRef.current && !longPressTriggeredRef.current) {
-                        clearTimeout(longPressTimerRef.current);
-                      }
-                      longPressTimerRef.current = null;
-                    }}
-                    onMouseLeave={() => {
-                      if (longPressTimerRef.current && !longPressTriggeredRef.current) {
-                        clearTimeout(longPressTimerRef.current);
-                      }
-                      longPressTimerRef.current = null;
-                      setHoveredMessageId(null);
+                    onTouchCancel={(e) => {
+                      const target = e.currentTarget as HTMLElement;
+                      target.style.transition = 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease';
+                      target.style.transform = '';
+                      target.style.boxShadow = '';
+                      target.style.backgroundColor = '';
+                      target.style.borderColor = '';
+                      delete target.dataset.swiping;
+                      delete target.dataset.swipeStart;
                     }}
                     onClick={(e) => {
                       if (selectedMessages.size > 0 && !longPressTriggeredRef.current) {
