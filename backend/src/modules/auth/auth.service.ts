@@ -100,7 +100,7 @@ export class AuthService {
     });
     console.log('User found:', user ? { id: user.id, username: user.username, verified: user.verified } : null);
     if (!user) throw new UnauthorizedException('Invalid credentials');
-    if (!user.verified) throw new UnauthorizedException('Account not verified');
+    // Eltávolítva a verified ellenőrzés - tiltott userek is be tudnak jelentkezni
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     console.log('Password valid:', valid);

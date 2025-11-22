@@ -4011,59 +4011,80 @@ export const ChatPage: React.FC = () => {
                 </div>
               )}
               
-              <div className="flex gap-1 sm:gap-1.5 md:gap-2 items-end">
-                <button
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="p-1.5 sm:p-2 md:p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-base sm:text-lg md:text-xl shadow-lg flex-shrink-0"
-                  title="Emoji"
-                >
-                  😊
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-1.5 sm:p-2 md:p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-base sm:text-lg md:text-xl shadow-lg flex-shrink-0"
-                  title="Fájl csatolása"
-                >
-                  📎
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.zip,.rar"
-                  multiple
-                />
-                <div className="flex-1 relative min-w-0">
-                  <textarea
-                    className="w-full bg-gray-700 border-2 border-gray-600 rounded-lg px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 resize-none text-xs sm:text-sm md:text-base text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                    rows={isMobile ? 1 : 2}
-                    placeholder={isMobile ? "Üzenet..." : "Írj üzenetet... (Enter = küldés, Shift+Enter = új sor)"}
-                    value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value);
-                      socket?.emit('typing', {
-                        conversationId: activeConversationId,
-                        isTyping: e.target.value.length > 0,
-                        textLength: e.target.value.length,
-                      });
+              {/* Tiltott felhasználók számára engedély kérés gomb */}
+              {me && !me.verified ? (
+                <div className="flex justify-center">
+                  <button
+                    onClick={async () => {
+                      if (!activeConversationId) return;
+                      try {
+                        await sendMessage(activeConversationId, '🔒 Engedélyt kérek a csetfalra íráshoz');
+                        // Refetch messages to show the new request
+                        refetchMessages();
+                      } catch (error) {
+                        console.error('Hiba az engedély kérése során:', error);
+                      }
                     }}
-                    onKeyDown={handleKeyDown}
-                  />
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-full mb-2 right-0 z-10">
-                      <EmojiPicker onEmojiClick={handleEmojiClick} theme={'dark' as any} />
-                    </div>
-                  )}
+                    className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 transition-all shadow-xl font-semibold text-sm flex items-center gap-2"
+                  >
+                    🔒 Engedély kérése
+                  </button>
                 </div>
-                <button
-                  onClick={selectedFile ? handleSendWithFile : handleSend}
-                  disabled={(!input.trim() && !selectedFile) || mutation.isLoading || isUploadingFile}
-                  className="px-2 sm:px-3 md:px-6 py-1.5 sm:py-2 md:py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg hover:from-cyan-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl font-semibold text-xs sm:text-sm md:text-base whitespace-nowrap flex-shrink-0"
-                >
-                  {(mutation.isLoading || isUploadingFile) ? '⏳' : isMobile ? '📤' : '📤 Küldés'}
-                </button>
-              </div>
+              ) : (
+                <div className="flex gap-1 sm:gap-1.5 md:gap-2 items-end">
+                  <button
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="p-1.5 sm:p-2 md:p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-base sm:text-lg md:text-xl shadow-lg flex-shrink-0"
+                    title="Emoji"
+                  >
+                    😊
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 sm:p-2 md:p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-base sm:text-lg md:text-xl shadow-lg flex-shrink-0"
+                    title="Fájl csatolása"
+                  >
+                    📎
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+                    multiple
+                  />
+                  <div className="flex-1 relative min-w-0">
+                    <textarea
+                      className="w-full bg-gray-700 border-2 border-gray-600 rounded-lg px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 resize-none text-xs sm:text-sm md:text-base text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                      rows={isMobile ? 1 : 2}
+                      placeholder={isMobile ? "Üzenet..." : "Írj üzenetet... (Enter = küldés, Shift+Enter = új sor)"}
+                      value={input}
+                      onChange={(e) => {
+                        setInput(e.target.value);
+                        socket?.emit('typing', {
+                          conversationId: activeConversationId,
+                          isTyping: e.target.value.length > 0,
+                          textLength: e.target.value.length,
+                        });
+                      }}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full mb-2 right-0 z-10">
+                        <EmojiPicker onEmojiClick={handleEmojiClick} theme={'dark' as any} />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={selectedFile ? handleSendWithFile : handleSend}
+                    disabled={(!input.trim() && !selectedFile) || mutation.isLoading || isUploadingFile}
+                    className="px-2 sm:px-3 md:px-6 py-1.5 sm:py-2 md:py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg hover:from-cyan-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl font-semibold text-xs sm:text-sm md:text-base whitespace-nowrap flex-shrink-0"
+                  >
+                    {(mutation.isLoading || isUploadingFile) ? '⏳' : isMobile ? '📤' : '📤 Küldés'}
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}

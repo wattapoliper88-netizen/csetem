@@ -114,6 +114,16 @@ export class ChatService {
       throw new ForbiddenException();
     }
 
+    // Ellenőrizzük, hogy a user tiltva van-e
+    const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
+    if (sender && !sender.verified && !sender.isAdmin) {
+      // Csak az engedély kérő üzenetet engedjük
+      const isPermissionRequest = content?.includes('Engedélyt kérek a csetfalra íráshoz');
+      if (!isPermissionRequest) {
+        throw new ForbiddenException('Nincs jogosultságod üzenetet küldeni. Kérj engedélyt az adminisztrátoroktól!');
+      }
+    }
+
     const messageData: any = { 
       conversationId, 
       senderId, 
