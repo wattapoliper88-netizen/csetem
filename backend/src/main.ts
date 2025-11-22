@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
@@ -7,13 +8,19 @@ import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+  
   app.use(cookieParser());
   
-  console.log('🔍 CORS_ORIGIN env:', process.env.CORS_ORIGIN);
-  const corsOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  console.log('🔍 CORS_ORIGIN from ConfigService:', configService.get('CORS_ORIGIN'));
+  console.log('🔍 CORS_ORIGIN from process.env:', process.env.CORS_ORIGIN);
+  console.log('🔍 All env keys:', Object.keys(process.env).filter(k => k.includes('CORS')));
+  
+  const corsOriginValue = configService.get('CORS_ORIGIN') || process.env.CORS_ORIGIN;
+  const corsOrigins = corsOriginValue
+    ? corsOriginValue.split(',').map((o: string) => o.trim())
     : ['http://localhost:5173', 'http://localhost:5174'];
-  console.log('✅ Allowed CORS origins:', corsOrigins);
+  console.log('✅ Final CORS origins:', corsOrigins);
 
   app.use((req, res, next) => {
     if (req.method === 'OPTIONS') {
