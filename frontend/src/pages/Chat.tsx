@@ -375,7 +375,7 @@ const CustomAudioPlayer: React.FC<{
       )}
       
       {/* Controls Container */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:gap-3">
+      <div className="flex items-center gap-2 md:gap-3 flex-wrap">
         {/* Audio Thumbnail */}
         {thumbnail ? (
           <img 
