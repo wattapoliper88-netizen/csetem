@@ -850,15 +850,30 @@ export const ChatPage: React.FC = () => {
   const { data: convData, refetch: refetchConversations } = useQuery(
     ['conversation', me?.isAdmin],
     () => (me?.isAdmin ? listConversations() : getMyConversation()),
-    { enabled: !!me },
+    { 
+      enabled: !!me, 
+      retry: false,
+      cacheTime: 0,
+      staleTime: 0,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+    },
   );
 
+  // For non-admin users, set their single conversation ID
   useEffect(() => {
     if (!me || !convData) return;
-    if (!me.isAdmin) {
-      setActiveConversationId(convData.id);
+    if (!me.isAdmin && convData && (convData as any).id) {
+      setActiveConversationId((convData as any).id);
     }
   }, [me, convData]);
+
+  // For admin users, auto-select first conversation if none selected yet
+  useEffect(() => {
+    if (me?.isAdmin && Array.isArray(convData) && convData.length > 0 && !activeConversationId) {
+      setActiveConversationId(convData[0].id);
+    }
+  }, [me?.isAdmin, convData, activeConversationId]);
 
   const { refetch: refetchMessages } = useQuery(
     ['messages', activeConversationId],

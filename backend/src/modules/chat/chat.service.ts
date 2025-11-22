@@ -50,7 +50,19 @@ export class ChatService {
     console.log('listConversationsForAdmin called with adminId:', adminId);
     const conversations = await this.prisma.conversation.findMany({
       where: { adminId },
-      include: { user: { select: { id: true, email: true, username: true } } },
+      include: { 
+        user: { 
+          select: { 
+            id: true, 
+            email: true, 
+            username: true, 
+            isAdmin: true, 
+            verified: true, 
+            lastSeen: true,
+            avatarImage: true
+          } 
+        } 
+      },
       orderBy: { createdAt: 'desc' },
     });
     console.log('Found conversations:', conversations);

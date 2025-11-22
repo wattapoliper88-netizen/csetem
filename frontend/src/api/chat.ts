@@ -1,8 +1,16 @@
 import api from './client';
 
 export async function getMyConversation() {
-  const res = await api.get('/conversations/me');
-  return res.data;
+  try {
+    const res = await api.get('/conversations/me');
+    return res.data;
+  } catch (err: any) {
+    if (err.response?.status === 403) {
+      // Admin users calling this endpoint will get 403; treat as null
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function listConversations() {
