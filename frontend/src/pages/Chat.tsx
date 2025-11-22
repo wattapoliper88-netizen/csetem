@@ -381,7 +381,7 @@ const CustomAudioPlayer: React.FC<{
           <img 
             src={thumbnail} 
             alt="Audio thumbnail"
-            className={`w-28 h-28 md:w-32 md:h-32 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
+            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
@@ -391,7 +391,7 @@ const CustomAudioPlayer: React.FC<{
           <img 
             src="/assets/zene.gif" 
             alt="Audio"
-            className={`w-28 h-28 md:w-32 md:h-32 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
+            className={`w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
@@ -402,14 +402,14 @@ const CustomAudioPlayer: React.FC<{
         {/* Play/Pause Button */}
         <button
           onClick={togglePlay}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border-2 border-cyan-500/30 hover:border-cyan-400/50"
+          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border-2 border-cyan-500/30 hover:border-cyan-400/50"
         >
         {isPlaying ? (
-          <svg className="w-5 h-5 md:w-6 md:h-6 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
           </svg>
         ) : (
-          <svg className="w-5 h-5 md:w-6 md:h-6 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         )}
