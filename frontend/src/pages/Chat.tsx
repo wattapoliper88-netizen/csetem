@@ -115,6 +115,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   const [shareLivePosition, setShareLivePosition] = useState(true);
   const livePositionIntervalRef = useRef<number | null>(null);
   const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+  const [showMobileControls, setShowMobileControls] = useState(false);
 
   // Register this audio player in the global map with seek and pause callbacks
   useEffect(() => {
@@ -188,6 +189,14 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       loadDurations();
     }
   }, [playlist]);
+
+  // Reload audio when fallback mode activates
+  useEffect(() => {
+    if (fallbackMode && audioRef.current) {
+      console.log('🔄 Reloading audio in fallback mode (no MIME type)');
+      audioRef.current.load();
+    }
+  }, [fallbackMode]);
 
   // Draw animated circular waveform
   const drawWaveform = () => {
@@ -402,7 +411,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         data-message-id={messageId}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onError={(e) => {
+        onError={() => {
           console.error('🔴 Audio load error, trying fallback (no type):', { src: effectiveSrc, type: effectiveMime });
           if (!fallbackMode) {
             setFallbackMode(true);
@@ -432,14 +441,14 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         )}
       </audio>
       
-      {/* Waveform Visualizer - Only shown when playing */}
-      {(isPlaying || isClosing) && !isMobileViewport && (
+      {/* Waveform Visualizer - shown when playing on all screen sizes */}
+      {(isPlaying || isClosing) && (
         <div className={`mb-2 ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
           <canvas
             ref={canvasRef}
             width={600}
             height={60}
-            className={`w-full h-14 md:h-20 rounded-lg ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+            className={`w-full h-10 sm:h-14 md:h-20 rounded-lg ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
             style={{ display: 'block' }}
           />
         </div>
@@ -553,9 +562,23 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         </div>
       </div>
 
-      {/* Volume Controls */}
+      {/* Volume Controls - Desktop always visible, Mobile collapsible */}
       <div className="flex flex-col gap-2 flex-shrink-0">
-        <div className="flex items-center gap-2">
+        {/* Mobile: Toggle button for controls */}
+        {isMobileViewport && (
+          <button
+            onClick={() => setShowMobileControls(!showMobileControls)}
+            className="sm:hidden px-2 py-1 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded border border-gray-600/30 transition-colors flex items-center gap-1"
+            title="Vezérlők"
+          >
+            <span>⚙️</span>
+            <span>{showMobileControls ? '▲' : '▼'}</span>
+          </button>
+        )}
+
+        {/* Desktop or expanded mobile controls */}
+        <div className={`flex flex-col gap-2 ${isMobileViewport && !showMobileControls ? 'hidden' : ''}`}>
+          <div className="flex items-center gap-2">
           <button
             onClick={toggleMute}
             className="w-8 h-8 flex items-center justify-center text-cyan-500 hover:text-cyan-400 transition-colors"
@@ -655,6 +678,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
             📍 Pozíció küldése
           </button>
         )}
+        </div>
       </div>
       </div>
     </div>
