@@ -685,7 +685,7 @@ export const ChatPage: React.FC = () => {
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
   const linkPreviewsRef = useRef<Record<string, any>>({});
   const processedLinksRef = useRef<Set<string>>(new Set());
-  const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [linkPreviewTrigger, setLinkPreviewTrigger] = useState(0);
   const [inputLinkPreview, setInputLinkPreview] = useState<any>(null);
   const [editableTitle, setEditableTitle] = useState<string>('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -723,7 +723,8 @@ export const ChatPage: React.FC = () => {
         // Elsőként azonnali minimal preview beállítás hogy kártya megjelenjen
         const initialPreview = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: true };
         linkPreviewsRef.current[link] = initialPreview;
-        setUpdateTrigger(prev => prev + 1);
+        setLinkPreviewTrigger(prev => prev + 1);
+        console.log('📺 YouTube preview set immediately:', link);
         // Részletesebb adat lekérése noembed szolgáltatásból (ha elérhető)
         fetch(`https://noembed.com/embed?url=${encodeURIComponent(link)}`)
           .then(r => r.ok ? r.json() : Promise.reject())
@@ -736,13 +737,15 @@ export const ChatPage: React.FC = () => {
               pending: false
             };
             linkPreviewsRef.current[link] = previewData;
-            setUpdateTrigger(prev => prev + 1);
+            setLinkPreviewTrigger(prev => prev + 1);
+            console.log('📺 YouTube preview updated with noembed data:', link, data.title);
           })
           .catch(() => {
             // Marad a minimál preview; jelöljük nem pending
             const fallbackData = { image: thumb, title: 'YouTube videó', siteName: 'YouTube', pending: false };
             linkPreviewsRef.current[link] = fallbackData;
-            setUpdateTrigger(prev => prev + 1);
+            setLinkPreviewTrigger(prev => prev + 1);
+            console.log('📺 YouTube preview fallback:', link);
           });
       });
     }, [messages]);
@@ -1349,7 +1352,6 @@ export const ChatPage: React.FC = () => {
         ...inputLinkPreview,
         title: editableTitle
       };
-      setUpdateTrigger(prev => prev + 1);
     }
     
     mutation.mutate(messageToSend);
@@ -2674,6 +2676,7 @@ export const ChatPage: React.FC = () => {
                               const preview = linkPreviewsRef.current[firstLink];
                               const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
                               const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
+                              const _ = linkPreviewTrigger; // Force re-render on preview update
                               
                               if (preview && !preview.error) {
                                 return isYouTube && (preview && !preview.error || ytId) ? (
@@ -3525,12 +3528,10 @@ export const ChatPage: React.FC = () => {
                                   .then(res => res.json())
                                   .then(data => {
                                     linkPreviewsRef.current[link] = data;
-                                    setUpdateTrigger(prev => prev + 1);
                                   })
                                   .catch((err) => {
                                     console.error('Link preview error:', err);
                                     linkPreviewsRef.current[link] = { error: true };
-                                    setUpdateTrigger(prev => prev + 1);
                                   });
                                 return (
                                   <div key={i} className="mt-2 p-3 bg-gray-800/50 rounded-lg animate-pulse">
