@@ -33,8 +33,8 @@ export async function deleteUser(userId: string) {
   return res.data;
 }
 
-export async function banUser(userId: string) {
-  const res = await api.put(`/me/admin/user/${userId}/ban`);
+export async function toggleBanUser(userId: string, banned: boolean) {
+  const res = await api.put(`/me/admin/user/${userId}/ban`, { banned });
   return res.data;
 }
 

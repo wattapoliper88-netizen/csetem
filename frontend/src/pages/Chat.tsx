@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'react-query';
-import { getMe, deleteUser, banUser, toggleAdmin } from '../api/auth';
+import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 import { getSocket } from '../socket';
 import { useNavigate } from 'react-router-dom';
@@ -724,14 +724,15 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  const handleBanUser = async (userId: string) => {
-    if (confirm('Biztosan tiltani szeretnéd ezt a felhasználót?')) {
+  const handleToggleBan = async (userId: string, currentVerified: boolean) => {
+    const action = currentVerified ? 'tiltani' : 'tiltás feloldása';
+    if (confirm(`Biztosan ${action} szeretnéd ezt a felhasználót?`)) {
       try {
-        await banUser(userId);
+        await toggleBanUser(userId, currentVerified);
         setUserContextMenu(null);
-        alert('Felhasználó sikeresen tiltva');
+        window.location.reload();
       } catch (error) {
-        alert('Hiba történt a felhasználó tiltásakor');
+        alert('Hiba történt a művelet végrehajtásakor');
       }
     }
   };
@@ -1772,7 +1773,11 @@ export const ChatPage: React.FC = () => {
                         setTimeout(() => setLongPressTimer(null), 0);
                       }}
                     >
-                      <p className="font-semibold text-gray-100">{conv.user.username}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-100">{conv.user.username}</p>
+                        {conv.user.isAdmin && <span className="text-xs bg-yellow-600 px-1.5 py-0.5 rounded">👑 Admin</span>}
+                        {!conv.user.verified && <span className="text-xs bg-red-600 px-1.5 py-0.5 rounded">🚫 Tiltva</span>}
+                      </div>
                       <p className="text-xs text-gray-400">{conv.user.email}</p>
                     </div>
                   </div>
@@ -4068,7 +4073,11 @@ export const ChatPage: React.FC = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-3 border-b border-gray-700 bg-gray-900">
-            <p className="text-sm font-semibold text-white">{userContextMenu.user.username}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-white">{userContextMenu.user.username}</p>
+              {userContextMenu.user.isAdmin && <span className="text-xs bg-yellow-600 px-1.5 py-0.5 rounded">👑</span>}
+              {!userContextMenu.user.verified && <span className="text-xs bg-red-600 px-1.5 py-0.5 rounded">🚫</span>}
+            </div>
             <p className="text-xs text-gray-400">{userContextMenu.user.email}</p>
           </div>
           <div className="py-1">
@@ -4077,14 +4086,16 @@ export const ChatPage: React.FC = () => {
               className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-white flex items-center gap-2"
             >
               <span>{userContextMenu.user.isAdmin ? '👤' : '👑'}</span>
-              <span>{userContextMenu.user.isAdmin ? 'Admin jog eltávolítása' : 'Admin jogosultság'}</span>
+              <span>{userContextMenu.user.isAdmin ? 'Admin jog eltávolítása' : 'Admin jog adása'}</span>
             </button>
             <button
-              onClick={() => handleBanUser(userContextMenu.userId)}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-orange-400 flex items-center gap-2"
+              onClick={() => handleToggleBan(userContextMenu.userId, userContextMenu.user.verified)}
+              className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 ${
+                userContextMenu.user.verified ? 'text-orange-400' : 'text-green-400'
+              }`}
             >
-              <span>🚫</span>
-              <span>Felhasználó tiltása</span>
+              <span>{userContextMenu.user.verified ? '🚫' : '✅'}</span>
+              <span>{userContextMenu.user.verified ? 'Felhasználó tiltása' : 'Tiltás feloldása'}</span>
             </button>
             <button
               onClick={() => handleDeleteUser(userContextMenu.userId)}
