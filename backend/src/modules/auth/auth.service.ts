@@ -48,6 +48,18 @@ export class AuthService {
       },
     });
 
+    // Automatically create conversation with admin
+    const admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
+    if (admin) {
+      await this.prisma.conversation.create({
+        data: {
+          userId: user.id,
+          adminId: admin.id,
+        },
+      });
+      console.log('✅ Conversation created for new user with admin:', { userId: user.id, adminId: admin.id });
+    }
+
     const tokens = this.issueTokens(user.id, user.isAdmin);
     return { user: { id: user.id, email: user.email, username: user.username }, ...tokens };
   }
