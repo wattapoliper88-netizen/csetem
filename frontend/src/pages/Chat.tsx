@@ -3557,8 +3557,8 @@ export const ChatPage: React.FC = () => {
                                   </div>
                                 )}
                                 
-                                {/* Don't show content text for audio files - filename is shown in player */}
-                                {!m.fileType?.startsWith('audio/') && (
+                                {/* Don't show content text for audio files - filename is shown in player, and for images - filename is not needed */}
+                                {!m.fileType?.startsWith('audio/') && !m.fileType?.startsWith('image/') && (
                                   <p className={`whitespace-pre-wrap text-cyan-100 font-light ${isLastMessage && msgIndex === group.messages.length - 1 ? `typewriter-text ${isScrolling ? 'hidden-text' : ''}` : ''}`}>
                                     {isLastMessage && msgIndex === group.messages.length - 1 ? (
                                       (extractLinks(m.content).length > 0 
