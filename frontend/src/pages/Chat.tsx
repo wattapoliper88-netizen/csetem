@@ -85,13 +85,29 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   onDisconnectOtherUser,
   isCollapsedFirstAudio
 }) => {
+  // Normalize incoming MIME or extension to a browser supported MIME
+  const normalizeMime = (raw?: string): string | undefined => {
+    if (!raw) return undefined;
+    const lower = raw.toLowerCase();
+    if (lower.includes('audio/mp3') || lower.endsWith('.mp3')) return 'audio/mpeg';
+    if (lower.includes('audio/mpeg')) return 'audio/mpeg';
+    if (lower.includes('audio/wav') || lower.endsWith('.wav')) return 'audio/wav';
+    if (lower.includes('audio/ogg') || lower.endsWith('.ogg')) return 'audio/ogg';
+    if (lower.includes('audio/webm') || lower.endsWith('.webm')) return 'audio/webm';
+    if (lower.includes('audio/x-m4a') || lower.endsWith('.m4a') || lower.endsWith('.mp4')) return 'audio/mp4';
+    if (lower.includes('audio/aac') || lower.endsWith('.aac')) return 'audio/aac';
+    return undefined; // Let browser sniff if unknown
+  };
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
+  const effectiveSrc = playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].url : src;
+  const effectiveMime = normalizeMime(type);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | undefined>(undefined);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
   const [playlistDurations, setPlaylistDurations] = useState<number[]>([]);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -382,10 +398,16 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     }`}>
       <audio
         ref={audioRef}
-        src={playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].url : src}
+        src={effectiveSrc}
         data-message-id={messageId}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
+        onError={(e) => {
+          console.error('🔴 Audio load error, trying fallback (no type):', { src: effectiveSrc, type: effectiveMime });
+          if (!fallbackMode) {
+            setFallbackMode(true);
+          }
+        }}
         onEnded={() => {
           if (playlist && playlist.length > 0 && currentPlaylistIndex < playlist.length - 1) {
             // Play next track in playlist
@@ -403,7 +425,11 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
           }
         }}
       >
-        <source src={playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].url : src} type={type} />
+        {fallbackMode ? (
+          <source src={effectiveSrc} />
+        ) : (
+          <source src={effectiveSrc} {...(effectiveMime ? { type: effectiveMime } : {})} />
+        )}
       </audio>
       
       {/* Waveform Visualizer - Only shown when playing */}
