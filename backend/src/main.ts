@@ -8,6 +8,8 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
+  const server = app.getHttpAdapter().getInstance();
+  server.options('*', (_req, res) => res.sendStatus(204));
   
   // Increase payload size limit for file uploads (3GB)
   app.use(express.json({ limit: '3gb' }));
