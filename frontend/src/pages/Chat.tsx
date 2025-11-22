@@ -29,6 +29,40 @@ const formatDuration = (time: number) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
+// YouTube video ID extractor supporting multiple share URL formats
+const extractYouTubeVideoId = (url: string): string | null => {
+  try {
+    // Remove potential tracking params
+    const cleaned = url.split('&list=')[0];
+    const u = new URL(cleaned);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') {
+      return u.pathname.slice(1) || null;
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      // /watch?v=ID
+      if (u.pathname === '/watch') {
+        return u.searchParams.get('v');
+      }
+      // /shorts/ID
+      if (u.pathname.startsWith('/shorts/')) {
+        return u.pathname.split('/')[2] || null;
+      }
+      // /live/ID
+      if (u.pathname.startsWith('/live/')) {
+        return u.pathname.split('/')[2] || null;
+      }
+      // /embed/ID
+      if (u.pathname.startsWith('/embed/')) {
+        return u.pathname.split('/')[2] || null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 const CustomAudioPlayer: React.FC<{ 
   src: string; 
   type: string; 
@@ -683,95 +717,46 @@ export const ChatPage: React.FC = () => {
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const scrollStartRef = useRef<number>(0);
   const longPressCleanupRef = useRef<() => void>(() => {});
-  const [longPressCountdown, setLongPressCountdown] = useState<number | null>(null);
-  const [countdownPosition, setCountdownPosition] = useState<{x: number; y: number} | null>(null);
-  const countdownIntervalRef = useRef<number | null>(null);
-  const longPressTargetUserRef = useRef<any>(null);
 
   const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
 
   // Long press handlers for user management
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
-    console.log('⏱️ Long press started for:', user.username);
     // Reset scroll flag
     setIsUserScrolling(false);
     scrollStartRef.current = window.scrollY;
-    longPressTargetUserRef.current = user;
-    
     // Store start position for move threshold
-    let clientX: number, clientY: number;
     if ('touches' in e && e.touches[0]) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-      setLongPressStartPos({ x: clientX, y: clientY });
+      setLongPressStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
     } else if ('clientX' in e) {
-      clientX = (e as React.MouseEvent).clientX;
-      clientY = (e as React.MouseEvent).clientY;
-      setLongPressStartPos({ x: clientX, y: clientY });
-    } else {
-      return;
+      setLongPressStartPos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
     }
-    
-    // Show countdown popup at pointer position
-    console.log('📍 Setting countdown position:', { x: clientX, y: clientY });
-    setCountdownPosition({ x: clientX, y: clientY });
-    setLongPressCountdown(3.0);
-    console.log('⏳ Countdown set to 3.0s');
-    
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-    const menuX = rect.left + rect.width / 2;
-    const menuY = rect.bottom + 5;
+    const x = rect.left + rect.width / 2;
+    const y = rect.bottom + 5;
     
-    // Start countdown interval (update every 100ms)
-    const startTime = Date.now();
-    const interval = window.setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      const remaining = Math.max(0, 3.0 - elapsed);
-      setLongPressCountdown(remaining);
-      
-      if (remaining <= 0) {
-        clearInterval(interval);
-      }
-    }, 100);
-    countdownIntervalRef.current = interval;
-    
-    // Main timer: open context menu after 3 seconds
     const timer = window.setTimeout(() => {
-      if (!isUserScrolling && longPressTargetUserRef.current) {
+      if (!isUserScrolling) {
         setUserContextMenu({
-          userId: longPressTargetUserRef.current.id,
-          x: menuX,
-          y: menuY,
-          user: longPressTargetUserRef.current,
+          userId: user.id,
+          x,
+          y,
+          user,
         });
-        console.log('Context menu opened for:', longPressTargetUserRef.current.username);
+        console.log('Context menu opened for:', user.username);
       }
-      // Clear countdown
-      setLongPressCountdown(null);
-      setCountdownPosition(null);
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-    }, 3000);
+    }, 500);
     setLongPressTimer(timer);
 
     // Global listeners to cancel long press if user starts scrolling or performing large movements
     const cancelOnInteraction = () => {
-      const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
-      if (scrollDelta > 1) {
-        if (longPressTimer) {
+      if (longPressTimer) {
+        const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
+        if (scrollDelta > 2) {
           clearTimeout(longPressTimer);
           setLongPressTimer(null);
         }
-        if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
-        }
-        setLongPressCountdown(null);
-        setCountdownPosition(null);
-        longPressTargetUserRef.current = null;
       }
     };
     const cancelOnWheel = () => {
@@ -779,12 +764,6 @@ export const ChatPage: React.FC = () => {
         clearTimeout(longPressTimer);
         setLongPressTimer(null);
       }
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-      setLongPressCountdown(null);
-      setCountdownPosition(null);
     };
     window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
     window.addEventListener('touchmove', cancelOnInteraction, { passive: true, capture: true });
@@ -803,14 +782,6 @@ export const ChatPage: React.FC = () => {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-    setLongPressCountdown(null);
-    setCountdownPosition(null);
-    longPressTargetUserRef.current = null;
-    
     // Cleanup global listeners
     if (longPressCleanupRef.current) {
       longPressCleanupRef.current();
@@ -830,12 +801,6 @@ export const ChatPage: React.FC = () => {
         setIsUserScrolling(true);
         clearTimeout(longPressTimer);
         setLongPressTimer(null);
-        if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
-        }
-        setLongPressCountdown(null);
-        setCountdownPosition(null);
       }
     };
     // Use capturing to catch early
@@ -843,7 +808,7 @@ export const ChatPage: React.FC = () => {
     return () => document.removeEventListener('scroll', onScroll, true);
   }, [longPressTimer]);
 
-  // Cancel on move threshold > 5px
+  // Cancel on move threshold > 8px
   const handleUserLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
     if (!longPressTimer || !longPressStartPos) return;
     let cx: number, cy: number;
@@ -854,18 +819,9 @@ export const ChatPage: React.FC = () => {
     } else return;
     const dx = Math.abs(cx - longPressStartPos.x);
     const dy = Math.abs(cy - longPressStartPos.y);
-    if (dx > 5 || dy > 5) {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        setLongPressTimer(null);
-      }
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-      setLongPressCountdown(null);
-      setCountdownPosition(null);
-      longPressTargetUserRef.current = null;
+    if (dx > 8 || dy > 8) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
     }
   };
 
@@ -1911,15 +1867,7 @@ export const ChatPage: React.FC = () => {
                   className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
                     activeConversationId === conv.id ? 'bg-gray-800 border-l-4 border-cyan-500' : ''
                   }`}
-                  onClick={(e) => {
-                    // Don't switch conversation if long press is in progress
-                    if (longPressTimer) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
-                    setActiveConversationId(conv.id);
-                  }}
+                  onClick={() => setActiveConversationId(conv.id)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
@@ -2671,11 +2619,13 @@ export const ChatPage: React.FC = () => {
                             const firstLink = links?.[0];
                             
                             if (firstLink) {
-                              const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be');
+                              const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
                               const preview = linkPreviews[firstLink];
+                              const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
+                              const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
                               
                               if (preview && !preview.error) {
-                                return isYouTube ? (
+                                return isYouTube && (preview && !preview.error || ytId) ? (
                                   /* YouTube link card */
                                   <a
                                     href={firstLink}
@@ -2683,9 +2633,9 @@ export const ChatPage: React.FC = () => {
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-xs hover:border-red-500/60 hover:scale-105 transition-all"
                                   >
-                                    {preview.image && (
+                                    {thumbUrl && (
                                       <img 
-                                        src={preview.image}
+                                        src={thumbUrl}
                                         alt="YouTube thumbnail"
                                         className="w-12 h-9 rounded object-cover border border-red-500/30"
                                       />
@@ -2694,7 +2644,7 @@ export const ChatPage: React.FC = () => {
                                       <div className="flex items-start gap-1">
                                         <span className="text-red-400 text-xs flex-shrink-0">🎥</span>
                                         <span className="text-red-300 text-xs font-medium break-words line-clamp-2">
-                                          {preview.title || preview.siteName || 'YouTube'}
+                                          {(preview && (preview.title || preview.siteName)) || 'YouTube videó'}
                                         </span>
                                       </div>
                                       <span className="text-gray-400 text-xs">YouTube videó</span>
@@ -2812,11 +2762,13 @@ export const ChatPage: React.FC = () => {
                         const firstLink = links?.[0];
                         
                         if (firstLink) {
-                          const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be');
+                          const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
                           const preview = linkPreviews[firstLink];
+                          const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
+                          const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
                           
                           if (preview && !preview.error) {
-                            return isYouTube ? (
+                            return isYouTube && (preview && !preview.error || ytId) ? (
                               /* YouTube link card - clickable */
                               <a
                                 href={firstLink}
@@ -2824,9 +2776,9 @@ export const ChatPage: React.FC = () => {
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-md hover:border-red-500/60 hover:scale-105 transition-all mx-auto"
                               >
-                                {preview.image && (
+                                {thumbUrl && (
                                   <img 
-                                    src={preview.image}
+                                    src={thumbUrl}
                                     alt="YouTube thumbnail"
                                     className="w-16 h-12 rounded object-cover border border-red-500/30"
                                   />
@@ -2835,7 +2787,7 @@ export const ChatPage: React.FC = () => {
                                   <div className="flex items-start gap-1.5">
                                     <span className="text-red-400 text-sm flex-shrink-0">🎥</span>
                                     <span className="text-red-300 text-xs md:text-sm font-medium break-words line-clamp-2">
-                                      {preview.title || 'YouTube video'}
+                                      {(preview && preview.title) || 'YouTube videó'}
                                     </span>
                                   </div>
                                   <span className="text-gray-400 text-xs">YouTube</span>
@@ -4260,22 +4212,6 @@ export const ChatPage: React.FC = () => {
         )}
       </main>
     </div>
-
-    {/* Long Press Countdown Indicator */}
-    {longPressCountdown !== null && countdownPosition && (
-      <div
-        className="fixed z-[60] pointer-events-none"
-        style={{
-          top: `${countdownPosition.y - 40}px`,
-          left: `${countdownPosition.x}px`,
-          transform: 'translateX(-50%)',
-        }}
-      >
-        <div className="bg-cyan-600 text-white px-3 py-2 rounded-full shadow-2xl border-2 border-cyan-400 animate-pulse">
-          <span className="font-bold text-lg">{longPressCountdown.toFixed(1)}s</span>
-        </div>
-      </div>
-    )}
 
     {/* User Context Menu */}
     {userContextMenu && (
