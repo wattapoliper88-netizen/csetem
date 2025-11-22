@@ -683,13 +683,16 @@ export const ChatPage: React.FC = () => {
 
   // Long press handlers for user management
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.bottom + 5;
+    
     const timer = window.setTimeout(() => {
-      const target = e.currentTarget as HTMLElement;
-      const rect = target.getBoundingClientRect();
       setUserContextMenu({
         userId: user.id,
-        x: rect.left + rect.width / 2,
-        y: rect.bottom + 5,
+        x,
+        y,
         user,
       });
       console.log('Context menu opened for:', user.username);
