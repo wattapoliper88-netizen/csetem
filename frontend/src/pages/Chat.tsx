@@ -3520,6 +3520,7 @@ export const ChatPage: React.FC = () => {
                             
                             {/* Link previews */}
                             {!editingMessageId && extractLinks(m.content).map((link: string, i: number) => {
+                                                            const _ = linkPreviewTrigger; // Force re-render on preview update
                               const preview = linkPreviewsRef.current[link];
                               if (!preview) {
                                 // Fetch preview if not yet loaded
