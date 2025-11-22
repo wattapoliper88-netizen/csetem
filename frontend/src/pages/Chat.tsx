@@ -54,6 +54,7 @@ const CustomAudioPlayer: React.FC<{
   const [isClosing, setIsClosing] = useState(false);
   const [shareLivePosition, setShareLivePosition] = useState(true);
   const livePositionIntervalRef = useRef<number | null>(null);
+  const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
 
   // Register this audio player in the global map with seek and pause callbacks
   useEffect(() => {
@@ -330,7 +331,7 @@ const CustomAudioPlayer: React.FC<{
   };
 
   return (
-    <div className={`w-full max-w-[360px] sm:max-w-full rounded-lg p-2 md:p-3 transition-all duration-300 overflow-hidden ${
+    <div className={`w-full ${isMobileViewport ? 'max-w-[280px]' : 'max-w-[360px]'} sm:max-w-full rounded-lg p-2 md:p-3 transition-all duration-300 overflow-hidden ${
       isCollapsedFirstAudio 
         ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-cyan-500/20' 
         : 'bg-transparent'
@@ -362,13 +363,13 @@ const CustomAudioPlayer: React.FC<{
       </audio>
       
       {/* Waveform Visualizer - Only shown when playing */}
-      {(isPlaying || isClosing) && (
-        <div className={`mb-3 ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
+      {(isPlaying || isClosing) && !isMobileViewport && (
+        <div className={`mb-2 ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
           <canvas
             ref={canvasRef}
-            width={800}
-            height={80}
-            className={`w-full h-16 md:h-20 rounded-lg ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+            width={600}
+            height={60}
+            className={`w-full h-14 md:h-20 rounded-lg ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
             style={{ display: 'block' }}
           />
         </div>
@@ -381,7 +382,7 @@ const CustomAudioPlayer: React.FC<{
           <img 
             src={thumbnail} 
             alt="Audio thumbnail"
-            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
+            className={`w-12 h-12 sm:w-14 sm:h-14 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
@@ -391,7 +392,7 @@ const CustomAudioPlayer: React.FC<{
           <img 
             src="/assets/zene.gif" 
             alt="Audio"
-            className={`w-14 h-14 sm:w-16 sm:h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
+            className={`w-12 h-12 sm:w-14 sm:h-14 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
@@ -402,14 +403,14 @@ const CustomAudioPlayer: React.FC<{
         {/* Play/Pause Button */}
         <button
           onClick={togglePlay}
-          className="w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border-2 border-cyan-500/30 hover:border-cyan-400/50"
+          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border border-cyan-500/30 hover:border-cyan-400/50"
         >
         {isPlaying ? (
-          <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
           </svg>
         ) : (
-          <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         )}
@@ -418,9 +419,9 @@ const CustomAudioPlayer: React.FC<{
       {/* File name and Progress Bar */}
       <div className="flex-1 flex flex-col gap-1">
         {fileName && (
-          <p className="text-[11px] sm:text-xs md:text-sm text-cyan-300 font-medium truncate px-1 max-w-[200px] sm:max-w-none">
+          <p className="text-[10px] sm:text-[11px] md:text-sm text-cyan-300 font-medium truncate px-1 max-w-[160px] sm:max-w-none">
             🎵 {(playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].fileName : fileName).split(' ').slice(0, 5).join(' ')}{(playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].fileName : fileName).split(' ').length > 5 ? '...' : ''}
-            {playlist && playlist.length > 1 && <span className="text-xs text-gray-400 ml-2">({currentPlaylistIndex + 1}/{playlist.length})</span>}
+            {playlist && playlist.length > 1 && <span className="text-[9px] sm:text-xs text-gray-400 ml-2">({currentPlaylistIndex + 1}/{playlist.length})</span>}
           </p>
         )}
         
@@ -435,7 +436,7 @@ const CustomAudioPlayer: React.FC<{
               
               return (
                 <>
-                  <span className="text-[10px] sm:text-xs text-gray-400">{formatDuration(totalCurrentTime)}</span>
+                  <span className="text-[9px] sm:text-xs text-gray-400">{formatDuration(totalCurrentTime)}</span>
                   <input
                     type="range"
                     min="0"
@@ -451,7 +452,7 @@ const CustomAudioPlayer: React.FC<{
                       boxShadow: otherUserPlaying && !isPlaying ? '0 0 12px 2px rgba(239, 68, 68, 0.6), 0 0 24px 4px rgba(239, 68, 68, 0.3)' : undefined
                     }}
                   />
-                  <span className="text-[10px] sm:text-xs text-gray-400">{formatDuration(totalDuration)}</span>
+                  <span className="text-[9px] sm:text-xs text-gray-400">{formatDuration(totalDuration)}</span>
                 </>
               );
             }
@@ -459,7 +460,7 @@ const CustomAudioPlayer: React.FC<{
             // Normal single track display
             return (
               <>
-                <span className="text-[10px] sm:text-xs text-gray-400">{formatDuration(currentTime)}</span>
+                <span className="text-[9px] sm:text-xs text-gray-400">{formatDuration(currentTime)}</span>
                 <input
                   type="range"
                   min="0"
@@ -475,7 +476,7 @@ const CustomAudioPlayer: React.FC<{
                     boxShadow: otherUserPlaying && !isPlaying ? '0 0 12px 2px rgba(239, 68, 68, 0.6), 0 0 24px 4px rgba(239, 68, 68, 0.3)' : undefined
                   }}
                 />
-                <span className="text-[10px] sm:text-xs text-gray-400">{formatDuration(duration)}</span>
+                <span className="text-[9px] sm:text-xs text-gray-400">{formatDuration(duration)}</span>
               </>
             );
           })()}
@@ -680,6 +681,8 @@ export const ChatPage: React.FC = () => {
   const [longPressTimer, setLongPressTimer] = useState<number | null>(null);
   const [longPressStartPos, setLongPressStartPos] = useState<{x: number; y: number} | null>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const scrollStartRef = useRef<number>(0);
+  const longPressCleanupRef = useRef<() => void>(() => {});
 
   const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
 
@@ -687,6 +690,7 @@ export const ChatPage: React.FC = () => {
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
     // Reset scroll flag
     setIsUserScrolling(false);
+    scrollStartRef.current = window.scrollY;
     // Store start position for move threshold
     if ('touches' in e && e.touches[0]) {
       setLongPressStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -710,12 +714,43 @@ export const ChatPage: React.FC = () => {
       }
     }, 500);
     setLongPressTimer(timer);
+
+    // Global listeners to cancel long press if user starts scrolling or performing large movements
+    const cancelOnInteraction = () => {
+      if (longPressTimer) {
+        const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
+        if (scrollDelta > 2) {
+          clearTimeout(longPressTimer);
+          setLongPressTimer(null);
+        }
+      }
+    };
+    const cancelOnWheel = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+      }
+    };
+    window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
+    window.addEventListener('touchmove', cancelOnInteraction, { passive: true, capture: true });
+    window.addEventListener('mousemove', cancelOnInteraction, { passive: true });
+    window.addEventListener('wheel', cancelOnWheel, { passive: true, capture: true });
+    longPressCleanupRef.current = () => {
+      window.removeEventListener('scroll', cancelOnInteraction, true);
+      window.removeEventListener('touchmove', cancelOnInteraction, true);
+      window.removeEventListener('mousemove', cancelOnInteraction);
+      window.removeEventListener('wheel', cancelOnWheel, true);
+    };
   };
 
   const handleUserLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
+    }
+    // Cleanup global listeners
+    if (longPressCleanupRef.current) {
+      longPressCleanupRef.current();
     }
     // Prevent click event if long press was triggered
     if (userContextMenu) {
