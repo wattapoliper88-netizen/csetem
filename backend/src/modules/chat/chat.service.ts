@@ -112,12 +112,15 @@ export class ChatService {
   }
 
   async createMessage(
-    conversationId: string, 
-    senderId: string, 
-    content: string, 
+    conversationId: string,
+    senderId: string,
+    content: string,
     isAdmin: boolean,
     file?: Express.Multer.File,
     audioThumbnail?: string,
+    fileUrl?: string,
+    fileName?: string,
+    fileType?: string,
   ) {
     const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
     if (!conv) throw new NotFoundException();
@@ -149,9 +152,17 @@ export class ChatService {
       messageData.fileUrl = `/uploads/${file.filename}`;
       messageData.fileName = file.originalname;
       messageData.fileType = file.mimetype;
-      
+
       // Save audio thumbnail if provided
       if (audioThumbnail && file.mimetype.startsWith('audio/')) {
+        messageData.audioThumbnail = audioThumbnail;
+      }
+    } else if (fileUrl) {
+      // If frontend uploaded to external storage (e.g. Firebase), record provided metadata
+      messageData.fileUrl = fileUrl;
+      if (fileName) messageData.fileName = fileName;
+      if (fileType) messageData.fileType = fileType;
+      if (audioThumbnail && fileType && fileType.startsWith('audio/')) {
         messageData.audioThumbnail = audioThumbnail;
       }
     }

@@ -53,10 +53,11 @@ export class ChatController {
     }),
   )
   async sendMessage(
-    @Req() req: any, 
-    @Body() body: { conversationId: string; content?: string; audioThumbnail?: string },
+    @Req() req: any,
+    @Body() body: { conversationId: string; content?: string; audioThumbnail?: string; fileUrl?: string; fileName?: string; fileType?: string },
     @UploadedFile() file?: Express.Multer.File,
   ) {
+    // If the client uploaded the file directly to Firebase, it will send fileUrl/fileName/fileType in the JSON body.
     return this.chatService.createMessage(
       body.conversationId,
       req.user.userId,
@@ -64,6 +65,9 @@ export class ChatController {
       req.user.isAdmin,
       file,
       body.audioThumbnail,
+      body.fileUrl,
+      body.fileName,
+      body.fileType,
     );
   }
 
