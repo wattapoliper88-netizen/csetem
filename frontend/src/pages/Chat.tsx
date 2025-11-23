@@ -1458,36 +1458,42 @@ export const ChatPage: React.FC = () => {
       return;
     }
 
-    // Multiple files - send them directly
+    // Multiple files - upload each to Firebase, then notify backend with the file URL
     if (!activeConversationId) return;
-    
+
     setIsUploadingFile(true);
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       if (file.size > maxSize) {
         alert(`A fájl mérete nem lehet nagyobb 3GB-nál: ${file.name}`);
         continue;
       }
 
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('conversationId', activeConversationId);
-        formData.append('content', file.name);
+        // uploadFile is the helper that uploads to Firebase Storage and returns a download URL
+        const url = await (await import('../uploadFile')).uploadFile(file);
 
-        const response = await fetch(`${API_URL}/messages`, {
+        // Send JSON to backend so it records fileUrl/fileName/fileType
+        const resp = await fetch(`${API_URL}/messages`, {
           method: 'POST',
           headers: {
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           },
-          body: formData
+          body: JSON.stringify({
+            conversationId: activeConversationId,
+            content: file.name,
+            fileUrl: url,
+            fileName: file.name,
+            fileType: file.type,
+          })
         });
 
-        if (!response.ok) throw new Error('Upload failed');
+        if (!resp.ok) throw new Error('Upload failed');
 
-        const newMessage = await response.json();
+        const newMessage = await resp.json();
         setMessages((prev) => [...prev, newMessage]);
         setFilteredMessages((prev) => [...prev, newMessage]);
         setNewMessageIds(prev => new Set([...prev, newMessage.id]));
@@ -1557,22 +1563,28 @@ export const ChatPage: React.FC = () => {
     setIsUploadingFile(true);
     
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('conversationId', activeConversationId);
-      if (input.trim()) {
-        formData.append('content', input.trim());
-      }
+      // Upload the selected file to Firebase and then send the file metadata to backend
+      const { uploadFile } = await import('../uploadFile');
+      const url = await uploadFile(selectedFile);
+
+      const payload: any = {
+        conversationId: activeConversationId,
+        content: input.trim() || selectedFile.name,
+        fileUrl: url,
+        fileName: selectedFile.name,
+        fileType: selectedFile.type,
+      };
       if (audioThumbnail && selectedFile.type.startsWith('audio/')) {
-        formData.append('audioThumbnail', audioThumbnail);
+        payload.audioThumbnail = audioThumbnail;
       }
 
       const response = await fetch(`${API_URL}/messages`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         },
-        body: formData
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) throw new Error('Upload failed');
