@@ -1123,12 +1123,6 @@ export const ChatPage: React.FC = () => {
     if (!socket || !activeConversationId) return;
     socket.emit('conversation:join', { conversationId: activeConversationId });
 
-    // Re-join conversation on reconnect
-    const handleConnect = () => {
-      socket.emit('conversation:join', { conversationId: activeConversationId });
-    };
-    socket.on('connect', handleConnect);
-
     // Send heartbeat every 20 seconds to keep online status active
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
@@ -1283,7 +1277,6 @@ export const ChatPage: React.FC = () => {
 
     return () => {
       clearInterval(heartbeatInterval);
-      socket.off('connect', handleConnect);
       socket.off('message:new');
       socket.off('typing');
       socket.off('user:online');
@@ -3564,8 +3557,8 @@ export const ChatPage: React.FC = () => {
                                   </div>
                                 )}
                                 
-                                {/* Don't show content text for audio files - filename is shown in player, and for images - filename is not needed */}
-                                {!m.fileType?.startsWith('audio/') && !m.fileType?.startsWith('image/') && (
+                                {/* Don't show content text for audio files - filename is shown in player */}
+                                {!m.fileType?.startsWith('audio/') && (
                                   <p className={`whitespace-pre-wrap text-cyan-100 font-light ${isLastMessage && msgIndex === group.messages.length - 1 ? `typewriter-text ${isScrolling ? 'hidden-text' : ''}` : ''}`}>
                                     {isLastMessage && msgIndex === group.messages.length - 1 ? (
                                       (extractLinks(m.content).length > 0 
