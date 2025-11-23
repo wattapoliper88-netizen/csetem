@@ -26,6 +26,11 @@ import { PrismaService } from '../../prisma/prisma.service';
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
     allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
   },
+  // Force websocket transport to avoid HTTP long-polling (which may be blocked by some proxies)
+  transports: ['websocket'],
+  // Tweak heartbeat settings to keep connections stable behind proxies/load-balancers
+  pingInterval: 25000,
+  pingTimeout: 60000,
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
