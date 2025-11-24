@@ -1,38 +1,40 @@
-import { initializeApp } from 'firebase/app';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import api from './api/client';
 
-// Firebase config - keep this in sync with your environment or replace with env var import
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAPcFuMvwOslMHL8YtTrTTs_5nksjiqhh8',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'web-chat-data.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'web-chat-data',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'web-chat-data.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '235670309696',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:235670309696:web:788a8e0ac3b9dcf0b1c8a5'
-};
-
-const app = initializeApp(firebaseConfig);
-const storage = getStorage(app);
-
+// uploadFileToFirebase: use server-generated signed upload URL to PUT file to Firebase Storage.
+// This avoids direct client POST to googleapis which can trigger CORS issues.
 export async function uploadFileToFirebase(file: File, path: string, onProgress?: (pct: number) => void) {
-  const storageRef = ref(storage, path);
-  const uploadTask = uploadBytesResumable(storageRef, file);
+  // Request a signed upload URL from backend
+  const resp = await api.post('/uploads/signed-url', { path, contentType: file.type });
+  if (resp.data?.error) throw new Error(resp.data.error);
+  const uploadUrl: string = resp.data.uploadUrl;
+  const bucket = (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'web-chat-data.appspot.com');
 
-  return new Promise<string>((resolve, reject) => {
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        if (onProgress) {
-          const pct = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          onProgress(Math.round(pct));
-        }
-      },
-      (error) => reject(error),
-      async () => {
-        const url = await getDownloadURL(storageRef);
-        resolve(url);
+  // Use fetch to PUT the file to the signed URL
+  const xhr = new XMLHttpRequest();
+  return await new Promise<string>((resolve, reject) => {
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable && onProgress) {
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        onProgress(pct);
       }
-    );
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        // Construct a download URL for use in the app. This URL may require proper storage rules.
+        const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
+        resolve(downloadUrl);
+      } else {
+        reject(new Error(`Upload failed with status ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.send(file);
   });
 }
 
-export default storage;
+export default null;
