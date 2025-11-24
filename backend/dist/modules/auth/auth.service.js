@@ -49,6 +49,16 @@ let AuthService = class AuthService {
                 isAdmin: false,
             },
         });
+        const admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
+        if (admin) {
+            await this.prisma.conversation.create({
+                data: {
+                    userId: user.id,
+                    adminId: admin.id,
+                },
+            });
+            console.log('✅ Conversation created for new user with admin:', { userId: user.id, adminId: admin.id });
+        }
         const tokens = this.issueTokens(user.id, user.isAdmin);
         return { user: { id: user.id, email: user.email, username: user.username }, ...tokens };
     }
@@ -85,8 +95,6 @@ let AuthService = class AuthService {
         console.log('User found:', user ? { id: user.id, username: user.username, verified: user.verified } : null);
         if (!user)
             throw new common_1.UnauthorizedException('Invalid credentials');
-        if (!user.verified)
-            throw new common_1.UnauthorizedException('Account not verified');
         const valid = await bcrypt.compare(dto.password, user.passwordHash);
         console.log('Password valid:', valid);
         if (!valid)

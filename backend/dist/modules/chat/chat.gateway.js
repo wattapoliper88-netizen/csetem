@@ -26,6 +26,8 @@ let ChatGateway = class ChatGateway {
         this.config = config;
         this.prisma = prisma;
     }
+    afterInit() {
+    }
     async handleConnection(client) {
         var _a;
         try {
@@ -216,9 +218,19 @@ __decorate([
 exports.ChatGateway = ChatGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
-            origin: 'http://localhost:5173',
+            origin: [
+                'https://csetem.vercel.app',
+                'http://localhost:3000',
+                'http://localhost:5173',
+                'http://127.0.0.1:5173'
+            ],
             credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         },
+        transports: ['websocket'],
+        pingInterval: 25000,
+        pingTimeout: 60000,
     }),
     __metadata("design:paramtypes", [chat_service_1.ChatService,
         jwt_1.JwtService,

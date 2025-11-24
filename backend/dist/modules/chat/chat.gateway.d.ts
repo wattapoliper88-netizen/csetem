@@ -11,6 +11,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     private prisma;
     server: Server;
     constructor(chatService: ChatService, jwtService: JwtService, config: ConfigService, prisma: PrismaService);
+    afterInit(): void;
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): Promise<void>;
     handleSendMessage(client: Socket, payload: {

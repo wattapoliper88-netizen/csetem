@@ -19,6 +19,9 @@ export declare class ChatService {
             email: string;
             username: string;
             id: string;
+            verified: boolean;
+            isAdmin: boolean;
+            lastSeen: Date;
         };
     } & {
         id: string;
@@ -31,7 +34,6 @@ export declare class ChatService {
             email: string;
             username: string;
             id: string;
-            avatarImage: string | null;
             lastSeen: Date;
         };
     } & {
@@ -48,12 +50,11 @@ export declare class ChatService {
         deleted: boolean;
         deletedBy: string;
     })[]>;
-    createMessage(conversationId: string, senderId: string, content: string, isAdmin: boolean, file?: Express.Multer.File, audioThumbnail?: string): Promise<{
+    createMessage(conversationId: string, senderId: string, content: string, isAdmin: boolean, file?: Express.Multer.File, audioThumbnail?: string, fileUrl?: string, fileName?: string, fileType?: string): Promise<{
         sender: {
             email: string;
             username: string;
             id: string;
-            avatarImage: string | null;
             lastSeen: Date;
         };
     } & {
@@ -73,8 +74,8 @@ export declare class ChatService {
     getLinkPreview(url: string): Promise<{
         url: string;
         title: string;
-        description: string | null;
-        image: string | null;
+        description: string;
+        image: string;
         siteName: string;
     }>;
     getFolders(conversationId: string, userId: string): Promise<{
@@ -96,7 +97,7 @@ export declare class ChatService {
         createdBy: string;
         closedBy: string;
     }>;
-    deleteMessages(messageIds: string[], userId: string, isAdmin: boolean): Promise<({
+    deleteMessages(messageIds: string[], userId: string, isAdmin: boolean): Promise<{
         id: string;
         createdAt: Date;
         conversationId: string;
@@ -109,5 +110,5 @@ export declare class ChatService {
         readAt: Date | null;
         deleted: boolean;
         deletedBy: string;
-    } | null)[]>;
+    }[]>;
 }

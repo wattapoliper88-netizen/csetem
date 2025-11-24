@@ -31,22 +31,57 @@ let ChatService = class ChatService {
         if (isAdmin) {
             throw new common_1.ForbiddenException('Use GET /conversations for admin');
         }
-        const admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
+        let admin = await this.prisma.user.findFirst({ where: { isAdmin: true } });
         if (!admin) {
-            throw new common_1.NotFoundException('Admin not configured');
+            admin = await this.prisma.user.update({
+                where: { id: userId },
+                data: { isAdmin: true },
+            });
+            console.log('⚠️ No admin found, promoted current user to admin:', {
+                userId,
+            });
         }
         const conv = await this.getOrCreateUserConversation(userId, admin.id);
-        console.log('getMyConversation:', { userId, adminId: admin.id, conversationId: conv.id });
+        console.log('getMyConversation:', {
+            userId,
+            adminId: admin.id,
+            conversationId: conv.id,
+        });
         return conv;
     }
     async listConversationsForAdmin(adminId) {
         console.log('listConversationsForAdmin called with adminId:', adminId);
         const conversations = await this.prisma.conversation.findMany({
             where: { adminId },
-            include: { user: { select: { id: true, email: true, username: true } } },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                        isAdmin: true,
+                        verified: true,
+                        lastSeen: true
+                    }
+                }
+            },
             orderBy: { createdAt: 'desc' },
         });
-        console.log('Found conversations:', conversations);
+        console.log('Found conversations (sanitized):', conversations.map(c => ({
+            id: c.id,
+            userId: c.userId,
+            adminId: c.adminId,
+            createdAt: c.createdAt,
+            user: {
+                id: c.user.id,
+                email: c.user.email,
+                username: c.user.username,
+                isAdmin: c.user.isAdmin,
+                verified: c.user.verified,
+                lastSeen: c.user.lastSeen,
+                avatarImageLength: (c.user.avatarImage ? c.user.avatarImage.length : 0)
+            }
+        })));
         return conversations;
     }
     async getMessages(conversationId, userId, isAdmin, limit = 50, cursor) {
@@ -69,12 +104,12 @@ let ChatService = class ChatService {
             cursor: cursor ? { id: cursor } : undefined,
             include: {
                 sender: {
-                    select: { id: true, username: true, email: true, avatarImage: true, lastSeen: true }
+                    select: { id: true, username: true, email: true, lastSeen: true }
                 }
             }
         });
     }
-    async createMessage(conversationId, senderId, content, isAdmin, file, audioThumbnail) {
+    async createMessage(conversationId, senderId, content, isAdmin, file, audioThumbnail, fileUrl, fileName, fileType) {
         const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
         if (!conv)
             throw new common_1.NotFoundException();
@@ -83,6 +118,13 @@ let ChatService = class ChatService {
         }
         if (isAdmin && conv.adminId !== senderId) {
             throw new common_1.ForbiddenException();
+        }
+        const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
+        if (sender && !sender.verified && !sender.isAdmin) {
+            const isPermissionRequest = content === null || content === void 0 ? void 0 : content.includes('Engedélyt kérek a csetfalra íráshoz');
+            if (!isPermissionRequest) {
+                throw new common_1.ForbiddenException('Nincs jogosultságod üzenetet küldeni. Kérj engedélyt az adminisztrátoroktól!');
+            }
         }
         const messageData = {
             conversationId,
@@ -97,11 +139,21 @@ let ChatService = class ChatService {
                 messageData.audioThumbnail = audioThumbnail;
             }
         }
+        else if (fileUrl) {
+            messageData.fileUrl = fileUrl;
+            if (fileName)
+                messageData.fileName = fileName;
+            if (fileType)
+                messageData.fileType = fileType;
+            if (audioThumbnail && fileType && fileType.startsWith('audio/')) {
+                messageData.audioThumbnail = audioThumbnail;
+            }
+        }
         return this.prisma.message.create({
             data: messageData,
             include: {
                 sender: {
-                    select: { id: true, username: true, email: true, avatarImage: true, lastSeen: true }
+                    select: { id: true, username: true, email: true, lastSeen: true }
                 }
             }
         });

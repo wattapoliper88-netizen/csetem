@@ -35,7 +35,7 @@ let ChatController = class ChatController {
         return this.chatService.getMessages(conversationId, req.user.userId, req.user.isAdmin, Number(limit), cursor);
     }
     async sendMessage(req, body, file) {
-        return this.chatService.createMessage(body.conversationId, req.user.userId, body.content || '', req.user.isAdmin, file, body.audioThumbnail);
+        return this.chatService.createMessage(body.conversationId, req.user.userId, body.content || '', req.user.isAdmin, file, body.audioThumbnail, body.fileUrl, body.fileName, body.fileType);
     }
     async getLinkPreview(url) {
         return this.chatService.getLinkPreview(url);

@@ -13,6 +13,9 @@ export declare class ChatController {
             email: string;
             username: string;
             id: string;
+            verified: boolean;
+            isAdmin: boolean;
+            lastSeen: Date;
         };
     } & {
         id: string;
@@ -25,7 +28,6 @@ export declare class ChatController {
             email: string;
             username: string;
             id: string;
-            avatarImage: string | null;
             lastSeen: Date;
         };
     } & {
@@ -46,12 +48,14 @@ export declare class ChatController {
         conversationId: string;
         content?: string;
         audioThumbnail?: string;
+        fileUrl?: string;
+        fileName?: string;
+        fileType?: string;
     }, file?: Express.Multer.File): Promise<{
         sender: {
             email: string;
             username: string;
             id: string;
-            avatarImage: string | null;
             lastSeen: Date;
         };
     } & {
@@ -71,8 +75,8 @@ export declare class ChatController {
     getLinkPreview(url: string): Promise<{
         url: string;
         title: string;
-        description: string | null;
-        image: string | null;
+        description: string;
+        image: string;
         siteName: string;
     }>;
     getFolders(req: any, conversationId: string): Promise<{
@@ -96,7 +100,7 @@ export declare class ChatController {
     }>;
     deleteMessages(req: any, body: {
         messageIds: string[];
-    }): Promise<({
+    }): Promise<{
         id: string;
         createdAt: Date;
         conversationId: string;
@@ -109,5 +113,5 @@ export declare class ChatController {
         readAt: Date | null;
         deleted: boolean;
         deletedBy: string;
-    } | null)[]>;
+    }[]>;
 }
