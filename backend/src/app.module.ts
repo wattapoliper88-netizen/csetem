@@ -21,7 +21,9 @@ import { EmailModule } from './email/email.module';
     AuthModule,
     UserModule,
     ChatModule,
-    // StatusModule removed: folder not present in repo
+    // Uploads module provides signed upload URLs for Firebase Storage
+    // (created to avoid CORS issues when frontend uploads directly to Firebase)
+    require('./modules/uploads/uploads.module').UploadsModule,
   ],
 })
 export class AppModule {}
