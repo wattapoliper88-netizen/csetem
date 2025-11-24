@@ -1563,7 +1563,31 @@ export const ChatPage: React.FC = () => {
       payload.fileName = selectedFile.name;
       payload.fileType = selectedFile.type;
       if (audioThumbnail && selectedFile.type.startsWith('audio/')) {
-        payload.audioThumbnail = audioThumbnail;
+        try {
+          // If audioThumbnail is a data URL, upload it to Firebase and replace with a URL
+          if (audioThumbnail.startsWith('data:')) {
+            const { uploadFileToFirebase } = await import('../firebase');
+            // Convert data URL to Blob -> File
+            const arr = audioThumbnail.split(',');
+            const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+              u8arr[n] = bstr.charCodeAt(n);
+            }
+            const thumbFile = new File([u8arr], `thumb_${Date.now()}.png`, { type: mime });
+            const thumbPath = `messages/${activeConversationId}/thumbnails/${Date.now()}_${thumbFile.name}`;
+            const thumbUrl = await uploadFileToFirebase(thumbFile, thumbPath);
+            payload.audioThumbnail = thumbUrl;
+          } else {
+            // Already a URL — pass through
+            payload.audioThumbnail = audioThumbnail;
+          }
+        } catch (err) {
+          console.error('Failed to upload audio thumbnail, sending base64 as fallback', err);
+          payload.audioThumbnail = audioThumbnail;
+        }
       }
 
       const newMessage = await sendMessage(activeConversationId, payload.content || '', {

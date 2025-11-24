@@ -125,6 +125,56 @@ async function migrate() {
   }
 
   console.log(`Migration complete. Migrated ${migrated} avatars.`);
+
+  // Migrate message audio thumbnails (base64 data URLs) to Firebase
+  console.log('Searching messages with audioThumbnail...');
+  const messages = await prisma.message.findMany({
+    where: { audioThumbnail: { not: null } },
+    select: { id: true, conversationId: true, audioThumbnail: true },
+  });
+
+  console.log(`Found ${messages.length} messages with audioThumbnail set`);
+
+  let migratedThumbs = 0;
+  for (const m of messages) {
+    const thumb = m.audioThumbnail as string | null;
+    if (!thumb) continue;
+
+    // Skip if already URL
+    if (thumb.startsWith('http://') || thumb.startsWith('https://') || thumb.startsWith('gs://')) {
+      continue;
+    }
+
+    // Try parsing data URL
+    const parsed = parseDataUrl(thumb);
+    if (!parsed) {
+      console.log(`Skipping message ${m.id}: audioThumbnail not a data URL`);
+      continue;
+    }
+
+    try {
+      const buffer = Buffer.from(parsed.base64, 'base64');
+      const extension = extFromMime(parsed.mime);
+      const destination = `messages/${m.conversationId}/thumbnails/${m.id}_${Date.now()}${extension}`;
+      const file = bucket.file(destination);
+
+      console.log(`Uploading audio thumbnail for message ${m.id} -> ${destination}`);
+
+      await file.save(buffer, { contentType: parsed.mime || 'image/png', resumable: false });
+
+      // Generate signed URL (10 years)
+      const expires = Date.now() + 10 * 365 * 24 * 60 * 60 * 1000;
+      const [url] = await file.getSignedUrl({ action: 'read', expires });
+
+      await prisma.message.update({ where: { id: m.id }, data: { audioThumbnail: url } });
+      migratedThumbs++;
+      console.log(`Updated message ${m.id} audioThumbnail -> ${url}`);
+    } catch (err) {
+      console.error(`Failed to migrate audio thumbnail for message ${m.id}:`, err);
+    }
+  }
+
+  console.log(`Audio thumbnail migration complete. Migrated ${migratedThumbs} thumbnails.`);
 }
 
 migrate()
