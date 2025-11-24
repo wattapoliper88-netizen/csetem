@@ -4,12 +4,8 @@ export declare class UploadsController {
         path: string;
         contentType?: string;
     }): Promise<{
-        error: string;
-        uploadUrl?: undefined;
-        path?: undefined;
-    } | {
         uploadUrl: string;
         path: string;
-        error?: undefined;
+        readUrl: string;
     }>;
 }
