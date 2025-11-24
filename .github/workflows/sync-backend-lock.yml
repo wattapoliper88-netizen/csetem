@@ -16,7 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          # Avoid using the automatically persisted credentials so we can
+          # explicitly push via the provided GITHUB_TOKEN in the next step.
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,9 +38,9 @@ jobs:
           if git status --porcelain | grep -q "package-lock.json"; then
             git add package-lock.json
             git commit -m "chore(ci): sync backend package-lock.json [skip ci]"
-            # Ensure we can push using the token
-            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
-            git push origin HEAD:main
+            # Push using an explicit URL that embeds the GITHUB_TOKEN to ensure
+            # authentication works even when repo settings require it.
+            git push "https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
           else
             echo "No changes to package-lock.json"
           fi
