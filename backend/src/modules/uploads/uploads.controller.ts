@@ -23,10 +23,9 @@ export class UploadsController {
 
   @Post('signed-url')
   async getSignedUploadUrl(@Body() body: { path: string; contentType?: string }) {
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
-    if (!bucketName) {
-      return { error: 'FIREBASE_STORAGE_BUCKET not configured on server' };
-    }
+    // Allow a fallback bucket so the app keeps working even if env var missing.
+    const fallbackBucket = 'web-chat-data.appspot.com';
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || fallbackBucket;
 
     const destination = body.path;
     if (!destination) return { error: 'Missing path' };
@@ -41,9 +40,19 @@ export class UploadsController {
     };
     if (body.contentType) options.contentType = body.contentType;
 
-    const [url] = await file.getSignedUrl(options as any);
+    const [uploadUrl] = await file.getSignedUrl(options as any);
 
-    // Public read URL (not signed) can be constructed but we return signed upload URL only
-    return { uploadUrl: url, path: destination };
+    // Try to generate a short-lived read signed URL so frontend can use it without public bucket rules.
+    let readUrl: string | null = null;
+    try {
+      const expires = Date.now() + 60 * 60 * 1000; // 1 hour
+      const [r] = await file.getSignedUrl({ action: 'read', expires });
+      readUrl = r;
+    } catch (e) {
+      // If signed read URL generation fails, fallback to public media URL (may require bucket rules)
+      readUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(destination)}?alt=media`;
+    }
+
+    return { uploadUrl, path: destination, readUrl };
   }
 }
