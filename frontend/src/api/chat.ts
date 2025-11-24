@@ -23,8 +23,15 @@ export async function getMessages(conversationId: string) {
   return res.data;
 }
 
-export async function sendMessage(conversationId: string, content: string) {
-  const res = await api.post('/messages', { conversationId, content });
+export async function sendMessage(conversationId: string, content?: string, options?: { fileUrl?: string; fileName?: string; fileType?: string; audioThumbnail?: string }) {
+  const body: any = { conversationId };
+  if (content) body.content = content;
+  if (options?.fileUrl) body.fileUrl = options.fileUrl;
+  if (options?.fileName) body.fileName = options.fileName;
+  if (options?.fileType) body.fileType = options.fileType;
+  if (options?.audioThumbnail) body.audioThumbnail = options.audioThumbnail;
+
+  const res = await api.post('/messages', body);
   return res.data;
 }
 

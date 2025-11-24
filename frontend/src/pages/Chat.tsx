@@ -1458,42 +1458,31 @@ export const ChatPage: React.FC = () => {
       return;
     }
 
-    // Multiple files - upload each to Firebase, then notify backend with the file URL
+    // Multiple files - send them directly
     if (!activeConversationId) return;
-
+    
     setIsUploadingFile(true);
-
+    
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-
+      
       if (file.size > maxSize) {
         alert(`A fájl mérete nem lehet nagyobb 3GB-nál: ${file.name}`);
         continue;
       }
 
       try {
-        // uploadFile is the helper that uploads to Firebase Storage and returns a download URL
-        const url = await (await import('../uploadFile')).uploadFile(file);
+        // Upload each file to Firebase and then send a message with the file URL
+        const { uploadFileToFirebase } = await import('../firebase');
+        const path = `messages/${activeConversationId}/${Date.now()}_${file.name}`;
+        const fileUrl = await uploadFileToFirebase(file, path);
 
-        // Send JSON to backend so it records fileUrl/fileName/fileType
-        const resp = await fetch(`${API_URL}/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-          },
-          body: JSON.stringify({
-            conversationId: activeConversationId,
-            content: file.name,
-            fileUrl: url,
-            fileName: file.name,
-            fileType: file.type,
-          })
+        const newMessage = await sendMessage(activeConversationId, file.name, {
+          fileUrl,
+          fileName: file.name,
+          fileType: file.type,
         });
 
-        if (!resp.ok) throw new Error('Upload failed');
-
-        const newMessage = await resp.json();
         setMessages((prev) => [...prev, newMessage]);
         setFilteredMessages((prev) => [...prev, newMessage]);
         setNewMessageIds(prev => new Set([...prev, newMessage.id]));
@@ -1563,33 +1552,26 @@ export const ChatPage: React.FC = () => {
     setIsUploadingFile(true);
     
     try {
-      // Upload the selected file to Firebase and then send the file metadata to backend
-      const { uploadFile } = await import('../uploadFile');
-      const url = await uploadFile(selectedFile);
+      // Upload file to Firebase Storage first and then send a message with the file URL
+      const { uploadFileToFirebase } = await import('../firebase');
+      const path = `messages/${activeConversationId}/${Date.now()}_${selectedFile.name}`;
+      const fileUrl = await uploadFileToFirebase(selectedFile, path);
 
-      const payload: any = {
-        conversationId: activeConversationId,
-        content: input.trim() || selectedFile.name,
-        fileUrl: url,
-        fileName: selectedFile.name,
-        fileType: selectedFile.type,
-      };
+      const payload: any = { conversationId: activeConversationId };
+      if (input.trim()) payload.content = input.trim();
+      payload.fileUrl = fileUrl;
+      payload.fileName = selectedFile.name;
+      payload.fileType = selectedFile.type;
       if (audioThumbnail && selectedFile.type.startsWith('audio/')) {
         payload.audioThumbnail = audioThumbnail;
       }
 
-      const response = await fetch(`${API_URL}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify(payload)
+      const newMessage = await sendMessage(activeConversationId, payload.content || '', {
+        fileUrl: payload.fileUrl,
+        fileName: payload.fileName,
+        fileType: payload.fileType,
+        audioThumbnail: payload.audioThumbnail
       });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const newMessage = await response.json();
       setMessages((prev) => [...prev, newMessage]);
       setFilteredMessages((prev) => [...prev, newMessage]);
       setNewMessageIds(new Set([newMessage.id]));
@@ -1852,33 +1834,31 @@ export const ChatPage: React.FC = () => {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const avatarData = reader.result as string;
-        setAvatarImage(avatarData);
-        setShowAvatarMenu(false);
-        
-        // Save to backend
-        try {
-          await updateAvatar(avatarData);
-          // Refetch user data and messages to update UI everywhere
-          await refetchMe();
-          if (activeConversationId) {
-            const msgs = await getMessages(activeConversationId);
-            // Filter out messages deleted by current user
-            const filteredMsgs = msgs.filter((msg: any) => {
-              const deletedBy = msg.deletedBy ? JSON.parse(msg.deletedBy) : [];
-              return !deletedBy.includes(me?.id);
-            });
-            console.log('Updated messages with avatars:', filteredMsgs.slice(0, 2).map((m: any) => ({ id: m.id, avatar: m.sender?.avatarImage })));
-            setMessages(filteredMsgs);
-          }
-        } catch (error) {
-          console.error('Failed to save avatar:', error);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Upload avatar directly to Firebase Storage and save the returned URL
+    try {
+      setShowAvatarMenu(false);
+      setIsUploadingFile(true);
+      const { uploadFileToFirebase } = await import('../firebase');
+      const path = `avatars/${me?.id || 'anon'}/${Date.now()}_${file.name}`;
+      const url = await uploadFileToFirebase(file, path);
+      setAvatarImage(url);
+      await updateAvatar(url); // backend will store the URL in avatarImage field for now
+      await refetchMe();
+      if (activeConversationId) {
+        const msgs = await getMessages(activeConversationId);
+        const filteredMsgs = msgs.filter((msg: any) => {
+          const deletedBy = msg.deletedBy ? JSON.parse(msg.deletedBy) : [];
+          return !deletedBy.includes(me?.id);
+        });
+        setMessages(filteredMsgs);
+      }
+    } catch (error) {
+      console.error('Failed to upload avatar to Firebase:', error);
+      alert('Avatar feltöltése sikertelen.');
+    } finally {
+      setIsUploadingFile(false);
     }
   };
 
@@ -2462,14 +2442,17 @@ export const ChatPage: React.FC = () => {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              setFolderIcon(event.target?.result as string);
-                            };
-                            reader.readAsDataURL(file);
+                          if (!file) return;
+                          try {
+                            const { uploadFileToFirebase } = await import('../firebase');
+                            const path = `folder-icons/${me?.id || 'anon'}/${Date.now()}_${file.name}`;
+                            const url = await uploadFileToFirebase(file, path);
+                            setFolderIcon(url);
+                          } catch (err) {
+                            console.error('Failed to upload folder icon to Firebase', err);
+                            alert('Sikertelen ikon feltöltés.');
                           }
                         }}
                       />
