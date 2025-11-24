@@ -50,6 +50,7 @@ export class ChatService {
     console.log('listConversationsForAdmin called with adminId:', adminId);
     const conversations = await this.prisma.conversation.findMany({
       where: { adminId },
+      // Do NOT include full avatar blobs here — they can be large and cause memory spikes.
       include: { 
         user: { 
           select: { 
@@ -58,8 +59,8 @@ export class ChatService {
             username: true, 
             isAdmin: true, 
             verified: true, 
-            lastSeen: true,
-            avatarImage: true
+            lastSeen: true
+            // avatarImage intentionally omitted
           } 
         } 
       },
@@ -78,7 +79,8 @@ export class ChatService {
         isAdmin: c.user.isAdmin,
         verified: c.user.verified,
         lastSeen: c.user.lastSeen,
-        avatarImageLength: c.user.avatarImage ? c.user.avatarImage.length : 0
+        // If avatarImage was present (older log runs), compute length; otherwise report 0
+        avatarImageLength: ((c.user as any).avatarImage ? (c.user as any).avatarImage.length : 0)
       }
     })));
     return conversations;
@@ -95,6 +97,7 @@ export class ChatService {
       throw new ForbiddenException();
     }
 
+    // Avoid returning full avatar blobs with each message to prevent high memory usage.
     return this.prisma.message.findMany({
       where: { 
         conversationId
@@ -105,7 +108,7 @@ export class ChatService {
       cursor: cursor ? { id: cursor } : undefined,
       include: {
         sender: {
-          select: { id: true, username: true, email: true, avatarImage: true, lastSeen: true }
+          select: { id: true, username: true, email: true, lastSeen: true }
         }
       }
     });
@@ -171,7 +174,8 @@ export class ChatService {
       data: messageData,
       include: {
         sender: {
-          select: { id: true, username: true, email: true, avatarImage: true, lastSeen: true }
+            // Do not include avatarImage here to avoid returning large base64 blobs on every message create
+            select: { id: true, username: true, email: true, lastSeen: true }
         }
       }
     });
