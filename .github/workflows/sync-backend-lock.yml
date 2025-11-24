@@ -1,0 +1,39 @@
+name: Sync backend package-lock
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-lock:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (update lock)
+        run: |
+          npm install
+
+      - name: Commit lockfile if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git status --porcelain | grep -q "package-lock.json"; then
+            git add package-lock.json
+            git commit -m "chore(ci): sync backend package-lock.json [skip ci]"
+            git push origin HEAD:main
+          else
+            echo "No changes to package-lock.json"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
