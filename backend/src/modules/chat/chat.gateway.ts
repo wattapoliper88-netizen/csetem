@@ -51,7 +51,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token;
+      // Log for diagnostics so we can tell why the server closes sockets
+      console.log('Socket connect attempt:', { id: client.id, hasToken: !!token });
       if (!token) {
+        console.warn('Socket connection rejected: missing auth token', { id: client.id, handshake: client.handshake });
         client.disconnect();
         return;
       }
@@ -68,7 +71,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       
       // Broadcast online status
       this.server.emit('user:online', { userId: payload.sub, lastSeen: new Date() });
-    } catch {
+    } catch (err) {
+      console.error('Socket connection auth error:', err instanceof Error ? err.message : err, { id: client.id, handshake: client.handshake });
       client.disconnect();
     }
   }
