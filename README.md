@@ -179,6 +179,10 @@ JWT_ACCESS_SECRET=your_strong_secret_here
 JWT_REFRESH_SECRET=your_strong_refresh_secret_here
 
 PORT=3000
+
+# Optional: apply storage CORS on backend startup (set to 'true')
+APPLY_BUCKET_CORS_ON_STARTUP=false
+
 ```
 
 ### Frontend környezet

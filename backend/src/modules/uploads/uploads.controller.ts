@@ -113,4 +113,25 @@ export class UploadsController {
       throw new HttpException({ error: 'Failed to generate signed upload URL', detail: e?.message || String(e) }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Get('debug-storage')
+  async getStorageDebug() {
+    try {
+      Logger.log('Running storage debug: calling initAdmin');
+      initAdmin();
+
+      const fallbackBucket = 'web-chat-data.appspot.com';
+      const bucketName = process.env.FIREBASE_STORAGE_BUCKET || fallbackBucket;
+      Logger.log('Storage debug using bucket:', bucketName);
+
+      const bucket = admin.storage().bucket(bucketName);
+      Logger.log('Requesting bucket metadata...');
+      const [metadata] = await bucket.getMetadata();
+      Logger.log('Bucket metadata received');
+      return { ok: true, bucketName, metadata };
+    } catch (e: any) {
+      Logger.error('Storage debug failed', e);
+      return { ok: false, error: e?.message || String(e) };
+    }
+  }
 }

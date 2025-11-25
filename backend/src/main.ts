@@ -5,6 +5,8 @@ import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { join } from 'path';
+import { Storage } from '@google-cloud/storage';
+import * as fs from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -80,5 +82,41 @@ async function bootstrap() {
   );
 
   await app.listen(process.env.PORT || 3000);
+
+  // Optional: Apply bucket CORS on startup if requested via env var
+  if (process.env.APPLY_BUCKET_CORS_ON_STARTUP === 'true') {
+    try {
+      const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'web-chat-data.appspot.com';
+      console.log('APPLY_BUCKET_CORS_ON_STARTUP: attempting to apply CORS to', bucketName);
+      let storage: Storage;
+      if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+        const creds = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+        storage = new Storage({ projectId: creds.project_id, credentials: creds });
+      } else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+        const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+        if (fs.existsSync(keyPath)) {
+          storage = new Storage({ keyFilename: keyPath });
+        } else {
+          throw new Error('Service account file not found: ' + keyPath);
+        }
+      } else {
+        storage = new Storage();
+      }
+
+      const bucket = storage.bucket(bucketName);
+      const cors = [
+        {
+          origin: (process.env.CORS_ORIGIN || 'https://csetem.vercel.app').split(',').map(s => s.trim()),
+          method: ['GET', 'HEAD', 'PUT', 'POST', 'OPTIONS'],
+          responseHeader: ['Content-Type', 'Content-Length', 'X-Goog-*', 'Authorization', 'X-Requested-With', 'Accept'],
+          maxAgeSeconds: 3600,
+        },
+      ];
+      const [metadata] = await bucket.setMetadata({ cors });
+      console.log('Successfully applied CORS to bucket', bucketName, 'metadata.cors=', metadata.cors || metadata.corsConfig || 'none');
+    } catch (e) {
+      console.error('Failed to apply bucket CORS on startup:', e);
+    }
+  }
 }
 bootstrap();

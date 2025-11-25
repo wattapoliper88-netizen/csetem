@@ -110,6 +110,19 @@ export class AuthService {
     return { user: { id: user.id, email: user.email, username: user.username }, ...tokens };
   }
 
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+      });
+      // Issue new tokens for the user
+      const tokens = this.issueTokens(payload.sub, payload.isAdmin);
+      return tokens;
+    } catch (e) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
   private issueTokens(userId: string, isAdmin: boolean) {
     const payload = { sub: userId, isAdmin };
 

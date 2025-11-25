@@ -12,6 +12,8 @@
     "prisma:migrate": "prisma migrate dev"
     ,
     "migrate:avatars": "ts-node scripts/migrate-avatars-to-firebase.ts"
+    ,
+    "set-cors": "node scripts/set-bucket-cors.js"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +31,7 @@
     "@nestjs/websockets": "^11.1.9",
     "@prisma/client": "^6.19.0",
     "firebase-admin": "^11.10.0",
+    "@google-cloud/storage": "^6.10.0",
     "@types/multer": "^2.0.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
