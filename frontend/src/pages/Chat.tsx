@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'react-query';
 import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
-import { getSocket } from '../socket';
+// Using createSocket dynamically in effect instead of getSocket
 import { getReadUrl } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
@@ -145,7 +145,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   const [shareLivePosition, setShareLivePosition] = useState(true);
   const livePositionIntervalRef = useRef<number | null>(null);
   const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
-  const [showMobileControls, setShowMobileControls] = useState(false);
+  const [showMobileControls] = useState(false);
 
   // Register this audio player in the global map with seek and pause callbacks
   useEffect(() => {
@@ -336,9 +336,9 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     if (isPlaying && shareLivePosition && messageId && conversationId) {
       // Send position every 2 seconds while playing
       livePositionIntervalRef.current = window.setInterval(() => {
-        const socket = (window as any).socket;
-        if (socket && audioRef.current) {
-          socket.emit('audio-position', {
+        const sock = (window as any).socket;
+        if (sock && audioRef.current) {
+          sock.emit('audio-position', {
             conversationId,
             messageId,
             position: audioRef.current.currentTime
@@ -470,10 +470,21 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         data-message-id={messageId}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onError={() => {
+        onError={async () => {
           console.error('🔴 Audio load error, trying fallback (no type):', { src: effectiveSrc, type: effectiveMime });
           if (!fallbackMode) {
             setFallbackMode(true);
+          }
+          try {
+            // If effectiveSrc is signed but expired or invalid, request a fresh read URL
+            if (effectiveSrc && (effectiveSrc.includes('X-Goog-Signature') || effectiveSrc.includes('GoogleAccessId') || effectiveSrc.includes('firebasestorage.googleapis.com') || effectiveSrc.includes('storage.googleapis.com'))) {
+              const fresh = await getReadUrl(effectiveSrc);
+              if (fresh) {
+                setResolvedSrc(fresh);
+              }
+            }
+          } catch (e) {
+            // Ignore failures here, user will still see error
           }
         }}
         onEnded={() => {
@@ -705,11 +716,11 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
             onClick={() => {
               console.log('📍 Pozíció küldése gombra kattintás');
               console.log('📍 Adatok:', { conversationId, messageId, position: currentTime });
-              const socket = (window as any).socket;
-              console.log('📍 Socket létezik?', !!socket);
-              console.log('📍 Socket csatlakozva?', socket?.connected);
-              if (socket) {
-                socket.emit('audio-position', {
+              const sock = (window as any).socket;
+              console.log('📍 Socket létezik?', !!sock);
+              console.log('📍 Socket csatlakozva?', sock?.connected);
+              if (sock) {
+                sock.emit('audio-position', {
                   conversationId,
                   messageId,
                   position: currentTime
@@ -773,7 +784,6 @@ export const ChatPage: React.FC = () => {
   const [isScrolling, setIsScrolling] = useState(false);
   const notificationSound = useRef<HTMLAudioElement | null>(null);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
-  const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
   const [showMobileControls, setShowMobileControls] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -882,7 +892,25 @@ export const ChatPage: React.FC = () => {
   const scrollStartRef = useRef<number>(0);
   const longPressCleanupRef = useRef<() => void>(() => {});
 
-  const socket = useMemo(() => (accessToken ? getSocket(accessToken) : null), [accessToken]);
+  const [socketState, setSocketState] = useState<any | null>(null);
+  const getSocketInst = () => socketState || (window as any).socket;
+  useEffect(() => {
+    let mounted = true;
+    const init = async () => {
+      if (!accessToken) {
+        if (mounted) setSocketState(null);
+        return;
+      }
+      try {
+        const s = await (await import('../socket')).createSocket();
+        if (mounted) setSocketState(s);
+      } catch (e) {
+        console.error('Failed to create socket', e);
+      }
+    };
+    init();
+    return () => { mounted = false; };
+  }, [accessToken]);
 
   // Long press handlers for user management
   const handleUserLongPressStart = (e: React.TouchEvent | React.MouseEvent, user: any) => {
@@ -1053,14 +1081,14 @@ export const ChatPage: React.FC = () => {
 
   // Save socket to window for access in AudioPlayer component
   useEffect(() => {
-    if (socket) {
-      (window as any).socket = socket;
+    if (socketState) {
+      (window as any).socket = socketState;
       console.log('📍 Socket saved to window object');
     }
     return () => {
       delete (window as any).socket;
     };
-  }, [socket]);
+  }, [socketState]);
 
   useEffect(() => {
     notificationSound.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE=');
@@ -1179,17 +1207,17 @@ export const ChatPage: React.FC = () => {
   }, [activeConversationId, refetchMessages]);
 
   useEffect(() => {
-    if (!socket || !activeConversationId) return;
-    socket.emit('conversation:join', { conversationId: activeConversationId });
+    if (!socketState || !activeConversationId) return;
+    socketState.emit('conversation:join', { conversationId: activeConversationId });
 
     // Send heartbeat every 20 seconds to keep online status active
     const heartbeatInterval = setInterval(() => {
-      if (socket.connected) {
-        socket.emit('heartbeat');
+      if (socketState?.connected) {
+        socketState.emit('heartbeat');
       }
     }, 20000);
 
-    socket.on('message:new', (msg: any) => {
+    socketState?.on('message:new', (msg: any) => {
       console.log('🔵 message:new event received', msg);
       if (msg.conversationId === activeConversationId) {
         console.log('✅ Message is for active conversation');
@@ -1218,12 +1246,12 @@ export const ChatPage: React.FC = () => {
       }
     });
 
-    socket.on('typing', (payload: any) => {
+    socketState?.on('typing', (payload: any) => {
       setIsTyping(payload.isTyping);
       setTypingTextLength(payload.textLength || 0);
     });
 
-    socket.on('user:online', (payload: { userId: string; lastSeen: Date }) => {
+    socketState?.on('user:online', (payload: { userId: string; lastSeen: Date }) => {
       // Update messages with new online status
       setMessages((prev) => prev.map((msg: any) => {
         if (msg.sender?.id === payload.userId) {
@@ -1236,7 +1264,7 @@ export const ChatPage: React.FC = () => {
       }));
     });
 
-    socket.on('user:offline', (payload: { userId: string; lastSeen: Date }) => {
+    socketState?.on('user:offline', (payload: { userId: string; lastSeen: Date }) => {
       // Update messages with new offline status
       setMessages((prev) => prev.map((msg: any) => {
         if (msg.sender?.id === payload.userId) {
@@ -1249,7 +1277,7 @@ export const ChatPage: React.FC = () => {
       }));
     });
 
-    socket.on('folder:new', (folder: any) => {
+    socketState?.on('folder:new', (folder: any) => {
       // Received folder from backend (after it was saved to database)
       console.log('📁 folder:new event received', folder);
       
@@ -1270,7 +1298,7 @@ export const ChatPage: React.FC = () => {
       });
     });
 
-    socket.on('audio-position:received', (data: { messageId: string; position: number; senderId: string; username?: string }) => {
+    socketState?.on('audio-position:received', (data: { messageId: string; position: number; senderId: string; username?: string }) => {
       console.log('🎵 Audio position received:', data);
       console.log('🎵 Available audio players:', Array.from((window as any).audioRefsMap?.keys() || []));
       
@@ -1336,14 +1364,14 @@ export const ChatPage: React.FC = () => {
 
     return () => {
       clearInterval(heartbeatInterval);
-      socket.off('message:new');
-      socket.off('typing');
-      socket.off('user:online');
-      socket.off('user:offline');
-      socket.off('audio-position:received');
-      socket.off('folder:new');
+      socketState?.off('message:new');
+      socketState?.off('typing');
+      socketState?.off('user:online');
+      socketState?.off('user:offline');
+      socketState?.off('audio-position:received');
+      getSocketInst()?.off('folder:new');
     };
-  }, [socket, activeConversationId, me?.id, messages]);
+  }, [socketState, activeConversationId, me?.id, messages]);
 
   // Load folders from database when conversation changes
   useEffect(() => {
@@ -1470,7 +1498,7 @@ export const ChatPage: React.FC = () => {
     setEditableTitle('');
     
     // Send typing: false when message is sent
-    socket?.emit('typing', {
+    getSocketInst()?.emit('typing', {
       conversationId: activeConversationId,
       isTyping: false,
     });
@@ -1534,7 +1562,8 @@ export const ChatPage: React.FC = () => {
         // Upload each file to Firebase and then send a message with the file URL
         const { uploadFileToFirebase } = await import('../firebase');
         const path = `messages/${activeConversationId}/${Date.now()}_${file.name}`;
-        const fileUrl = await uploadFileToFirebase(file, path);
+        const { path: filePath } = await uploadFileToFirebase(file, path);
+        const fileUrl = filePath; // store the canonical path in DB
 
         const newMessage = await sendMessage(activeConversationId, file.name, {
           fileUrl,
@@ -1614,7 +1643,8 @@ export const ChatPage: React.FC = () => {
       // Upload file to Firebase Storage first and then send a message with the file URL
       const { uploadFileToFirebase } = await import('../firebase');
       const path = `messages/${activeConversationId}/${Date.now()}_${selectedFile.name}`;
-      const fileUrl = await uploadFileToFirebase(selectedFile, path);
+      const { path: filePath } = await uploadFileToFirebase(selectedFile, path);
+      const fileUrl = filePath; // store the canonical path in DB
 
       const payload: any = { conversationId: activeConversationId };
       if (input.trim()) payload.content = input.trim();
@@ -1637,7 +1667,8 @@ export const ChatPage: React.FC = () => {
             }
             const thumbFile = new File([u8arr], `thumb_${Date.now()}.png`, { type: mime });
             const thumbPath = `messages/${activeConversationId}/thumbnails/${Date.now()}_${thumbFile.name}`;
-            const thumbUrl = await uploadFileToFirebase(thumbFile, thumbPath);
+            const { path: thumbPathResult } = await uploadFileToFirebase(thumbFile, thumbPath);
+            const thumbUrl = thumbPathResult; 
             payload.audioThumbnail = thumbUrl;
           } else {
             // Already a URL — pass through
@@ -1670,7 +1701,7 @@ export const ChatPage: React.FC = () => {
       setInput('');
       handleRemoveFile();
       
-      socket?.emit('typing', {
+      getSocketInst()?.emit('typing', {
         conversationId: activeConversationId,
         isTyping: false,
       });
@@ -1925,7 +1956,8 @@ export const ChatPage: React.FC = () => {
       setIsUploadingFile(true);
       const { uploadFileToFirebase } = await import('../firebase');
       const path = `avatars/${me?.id || 'anon'}/${Date.now()}_${file.name}`;
-      const url = await uploadFileToFirebase(file, path);
+      const { path: filePath } = await uploadFileToFirebase(file, path);
+      const url = filePath;
       setAvatarImage(url);
       await updateAvatar(url); // backend will store the URL in avatarImage field for now
       await refetchMe();
@@ -2489,9 +2521,10 @@ export const ChatPage: React.FC = () => {
                         };
                         
                         // Send folder to backend via WebSocket - backend will save and broadcast
-                        if (socket && activeConversationId) {
+                        const sock = getSocketInst();
+                        if (sock && activeConversationId) {
                           console.log('📤 Sending folder:create event', { conversationId: activeConversationId, folder: newFolder });
-                          socket.emit('folder:create', {
+                          sock.emit('folder:create', {
                             conversationId: activeConversationId,
                             folder: newFolder
                           });
@@ -2531,7 +2564,7 @@ export const ChatPage: React.FC = () => {
                           try {
                             const { uploadFileToFirebase } = await import('../firebase');
                             const path = `folder-icons/${me?.id || 'anon'}/${Date.now()}_${file.name}`;
-                            const url = await uploadFileToFirebase(file, path);
+                            const { path: url } = await uploadFileToFirebase(file, path);
                             setFolderIcon(url);
                           } catch (err) {
                             console.error('Failed to upload folder icon to Firebase', err);
@@ -2616,9 +2649,10 @@ export const ChatPage: React.FC = () => {
                           };
                           
                           // Send folder to backend via WebSocket - backend will save and broadcast
-                          if (socket && activeConversationId) {
+                          const sock = getSocketInst();
+                          if (sock && activeConversationId) {
                             console.log('📤 Sending folder:create event', { conversationId: activeConversationId, folder: newFolder });
-                            socket.emit('folder:create', {
+                            sock.emit('folder:create', {
                               conversationId: activeConversationId,
                               folder: newFolder
                             });
@@ -4421,7 +4455,7 @@ export const ChatPage: React.FC = () => {
                       value={input}
                       onChange={(e) => {
                         setInput(e.target.value);
-                        socket?.emit('typing', {
+                        getSocketInst()?.emit('typing', {
                           conversationId: activeConversationId,
                           isTyping: e.target.value.length > 0,
                           textLength: e.target.value.length,

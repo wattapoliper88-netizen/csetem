@@ -11,7 +11,7 @@ export async function uploadFileToFirebase(file: File, path: string, onProgress?
 
   // Use fetch to PUT the file to the signed URL
   const xhr = new XMLHttpRequest();
-  return await new Promise<string>((resolve, reject) => {
+  return await new Promise<{ path: string; readUrl?: string }>(async (resolve, reject) => {
     xhr.open('PUT', uploadUrl);
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
 
@@ -23,10 +23,10 @@ export async function uploadFileToFirebase(file: File, path: string, onProgress?
     };
 
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        // Construct a download URL for use in the app. This URL may require proper storage rules.
-        const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
-        resolve(downloadUrl);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Use backend-provided readUrl when available (signed read URL) and return both path+readUrl
+          const readUrl = resp.data?.readUrl as string | undefined;
+          resolve({ path, readUrl });
       } else {
         reject(new Error(`Upload failed with status ${xhr.status}`));
       }
