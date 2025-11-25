@@ -1,4 +1,4 @@
-import { Body, Controller, Post, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Body, Controller, Post, HttpException, HttpStatus, Logger, Get } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 
@@ -43,6 +43,18 @@ export class UploadsController {
     }
   }
 
+  @Get('debug')
+  getDebugInfo() {
+    const apps = (admin as any).apps;
+    return {
+      firebaseInitialized: apps && apps.length > 0,
+      appCount: apps ? apps.length : 0,
+      bucketName: process.env.FIREBASE_STORAGE_BUCKET || 'web-chat-data.appspot.com (fallback)',
+      hasServiceAccountJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+      hasServiceAccountPath: !!process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+    };
+  }
+
   @Post('signed-url')
   async getSignedUploadUrl(@Body() body: { path: string; contentType?: string }) {
     Logger.log('signed-url request received', { path: body.path, contentType: body.contentType });
@@ -50,6 +62,13 @@ export class UploadsController {
       Logger.log('Calling initAdmin...');
       initAdmin();
       Logger.log('initAdmin completed successfully');
+
+      // Check if Firebase is properly initialized
+      const apps = (admin as any).apps;
+      Logger.log('Firebase apps initialized:', apps ? apps.length : 'none');
+      if (!apps || apps.length === 0) {
+        throw new Error('Firebase not initialized');
+      }
 
       // Allow a fallback bucket so the app keeps working even if env var missing.
       const fallbackBucket = 'web-chat-data.appspot.com';
