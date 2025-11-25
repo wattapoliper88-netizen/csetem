@@ -45,16 +45,21 @@ export class UploadsController {
 
   @Post('signed-url')
   async getSignedUploadUrl(@Body() body: { path: string; contentType?: string }) {
+    Logger.log('signed-url request received', { path: body.path, contentType: body.contentType });
     try {
+      Logger.log('Calling initAdmin...');
       initAdmin();
+      Logger.log('initAdmin completed successfully');
 
       // Allow a fallback bucket so the app keeps working even if env var missing.
       const fallbackBucket = 'web-chat-data.appspot.com';
       const bucketName = process.env.FIREBASE_STORAGE_BUCKET || fallbackBucket;
+      Logger.log('Using bucket name:', bucketName);
 
       const destination = body.path;
       if (!destination) throw new HttpException('Missing path', HttpStatus.BAD_REQUEST);
 
+      Logger.log('Creating bucket and file reference...');
       const bucket = admin.storage().bucket(bucketName);
       const file = bucket.file(destination);
 
@@ -65,18 +70,24 @@ export class UploadsController {
       };
       if (body.contentType) options.contentType = body.contentType;
 
+      Logger.log('Generating signed upload URL...');
       const [uploadUrl] = await file.getSignedUrl(options as any);
+      Logger.log('Upload URL generated successfully');
 
       // Try to generate a short-lived read signed URL so frontend can use it without public bucket rules.
       let readUrl: string | null = null;
       try {
+        Logger.log('Generating read signed URL...');
         const expires = Date.now() + 60 * 60 * 1000; // 1 hour
         const [r] = await file.getSignedUrl({ action: 'read', expires });
         readUrl = r;
+        Logger.log('Read URL generated successfully');
       } catch (e) {
+        Logger.log('Read URL generation failed, using fallback', e);
         readUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(destination)}?alt=media`;
       }
 
+      Logger.log('Returning signed URLs');
       return { uploadUrl, path: destination, readUrl };
     } catch (e: any) {
       Logger.error('Error while generating signed upload URL', e);
