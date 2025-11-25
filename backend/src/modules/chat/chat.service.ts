@@ -173,7 +173,35 @@ export class ChatService {
       if (sanitizedUrl !== fileUrl) {
         console.log('Normalized incoming fileUrl', { original: fileUrl, sanitized: sanitizedUrl });
       }
-      messageData.fileUrl = sanitizedUrl;
+
+      // If this looks like a Firebase / GCS URL, extract the object path and store that instead (canonical form)
+      let parsedPath: string | null = null;
+      try {
+        const u = new URL(sanitizedUrl);
+        const host = u.hostname;
+        if (host.includes('firebasestorage.googleapis.com')) {
+          const matches = u.pathname.match(/\/o\/(.+)/);
+          if (matches && matches[1]) parsedPath = decodeURIComponent(matches[1]);
+        } else if (host.includes('storage.googleapis.com')) {
+          const splits = u.pathname.split('/').filter(Boolean);
+          if (splits.length >= 2) parsedPath = splits.slice(1).join('/');
+        } else if (u.pathname.startsWith('/uploads/')) {
+          parsedPath = u.pathname; // Keep leading / for internal uploads
+        }
+      } catch (e) {
+        // Not a full URL — ignore
+      }
+
+      if (parsedPath) {
+        // If it's an internal upload path, keep leading slash; for storage bucket paths, store as canonical path without leading '/'
+        if (parsedPath.startsWith('/uploads/')) {
+          messageData.fileUrl = parsedPath;
+        } else {
+          messageData.fileUrl = parsedPath; // e.g. messages/...
+        }
+      } else {
+        messageData.fileUrl = sanitizedUrl;
+      }
       if (fileName) messageData.fileName = fileName;
       if (fileType) messageData.fileType = fileType;
       if (audioThumbnail && fileType && fileType.startsWith('audio/')) {

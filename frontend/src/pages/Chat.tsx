@@ -4,6 +4,7 @@ import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 // Using createSocket dynamically in effect instead of getSocket
 import { getReadUrl } from '../api/client';
+import { getSocket } from '../socket';
 import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { updateAvatar } from '../api/client';
@@ -32,12 +33,12 @@ function getFullUrl(fileUrl?: string | null): string | undefined {
   if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
     return fileUrl;
   }
-  // If purely hostname like 'firebasestorage.googleapis.com/..', default to https
-  if (/^[a-z0-9.-]+\//i.test(fileUrl)) {
+    // If the first segment looks like a hostname (contains a dot) — e.g. 'firebasestorage.googleapis.com/..' — treat as host
+    if (/^[^/]+\.[a-z]{2,}\/.*$/i.test(fileUrl)) {
     return 'https://' + fileUrl;
   }
-  // Otherwise, assume it's a backend relative path
-  return `${API_URL}${fileUrl}`;
+  // Otherwise, assume it's a backend relative path. Ensure single slash between API_URL and path
+  return `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
 }
 
 // Custom Audio Player Component
@@ -336,7 +337,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     if (isPlaying && shareLivePosition && messageId && conversationId) {
       // Send position every 2 seconds while playing
       livePositionIntervalRef.current = window.setInterval(() => {
-        const sock = (window as any).socket;
+        const sock = getSocket();
         if (sock && audioRef.current) {
           sock.emit('audio-position', {
             conversationId,
@@ -713,10 +714,10 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         {/* Send Position Button */}
         {messageId && conversationId && (
           <button
-            onClick={() => {
+              onClick={() => {
               console.log('📍 Pozíció küldése gombra kattintás');
               console.log('📍 Adatok:', { conversationId, messageId, position: currentTime });
-              const sock = (window as any).socket;
+              const sock = getSocket();
               console.log('📍 Socket létezik?', !!sock);
               console.log('📍 Socket csatlakozva?', sock?.connected);
               if (sock) {

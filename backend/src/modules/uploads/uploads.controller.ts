@@ -165,18 +165,29 @@ export class UploadsController {
       }
 
       if (!path) {
-        throw new Error('Missing path or url');
+        Logger.warn('Missing path or url for read-url', body);
+        throw new HttpException({ error: 'Missing path or url' }, HttpStatus.BAD_REQUEST);
       }
 
       const bucket = admin.storage().bucket(bucketName);
       const file = bucket.file(path);
+      // Check if the file actually exists and return 404 if not
+      const [exists] = await file.exists();
+      if (!exists) {
+        Logger.warn('Requested file does not exist for path', path);
+        throw new HttpException({ error: 'Not found' }, HttpStatus.NOT_FOUND);
+      }
       const expires = Date.now() + 60 * 60 * 1000;
+      // Generate signed URL for reading
       const [readUrl] = await file.getSignedUrl({ action: 'read', expires });
       Logger.log('Read URL generated successfully for path', path);
       return { readUrl };
     } catch (e: any) {
-      Logger.error('Error while generating read URL', e);
-      throw new HttpException({ error: 'Failed to generate read URL', detail: e?.message || String(e) }, HttpStatus.INTERNAL_SERVER_ERROR);
+      // Log the raw input and slot error details for diagnostics
+      Logger.error('Error while generating read URL', JSON.stringify(body));
+      if (e && e.stack) Logger.error(e.stack);
+      const detail = e?.message || String(e);
+      throw new HttpException({ error: 'Failed to generate read URL', detail }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }
