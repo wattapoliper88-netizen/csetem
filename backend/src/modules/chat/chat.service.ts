@@ -162,7 +162,18 @@ export class ChatService {
       }
     } else if (fileUrl) {
       // If frontend uploaded to external storage (e.g. Firebase), record provided metadata
-      messageData.fileUrl = fileUrl;
+      // sanitize common protocol issues (e.g. 'https//example' -> 'https://example')
+      let sanitizedUrl = fileUrl;
+      if (/^https?\/\//i.test(sanitizedUrl) && !/^https?:\/\//i.test(sanitizedUrl)) {
+        sanitizedUrl = sanitizedUrl.replace(/^(https?)\/\//i, '$1://');
+      }
+      if (sanitizedUrl.startsWith('//')) {
+        sanitizedUrl = 'https:' + sanitizedUrl;
+      }
+      if (sanitizedUrl !== fileUrl) {
+        console.log('Normalized incoming fileUrl', { original: fileUrl, sanitized: sanitizedUrl });
+      }
+      messageData.fileUrl = sanitizedUrl;
       if (fileName) messageData.fileName = fileName;
       if (fileType) messageData.fileType = fileType;
       if (audioThumbnail && fileType && fileType.startsWith('audio/')) {

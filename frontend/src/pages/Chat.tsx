@@ -10,6 +10,35 @@ import { updateAvatar } from '../api/client';
 // Egységes backend URL
 const API_URL = import.meta.env.VITE_API_URL || 'https://csetem.onrender.com';
 
+// Normalize file URLs coming from messages:
+// - If fileUrl is already absolute (https:// or http:// or //), use as-is.
+// - If fileUrl starts with https// or http// (missing ':' due to historical bug), fix it.
+// - Otherwise treat as a relative backend path and prefix API_URL.
+function getFullUrl(fileUrl?: string | null): string | undefined {
+  if (!fileUrl) return undefined;
+  // Fix missing ':' in protocol (e.g. 'https//firebasestorage...')
+  if (/^https?:\/\//.test(fileUrl)) {
+    // ok
+    return fileUrl;
+  }
+  if (/^https?\/\//.test(fileUrl)) {
+    // convert 'https//example' -> 'https://example'
+    return fileUrl.replace(/^(https?)\/:\//, '$1://').replace(/^(https?)\/\//, '$1://');
+  }
+  if (fileUrl.startsWith('//')) {
+    return `${window.location.protocol}${fileUrl}`;
+  }
+  if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+    return fileUrl;
+  }
+  // If purely hostname like 'firebasestorage.googleapis.com/..', default to https
+  if (/^[a-z0-9.-]+\//i.test(fileUrl)) {
+    return 'https://' + fileUrl;
+  }
+  // Otherwise, assume it's a backend relative path
+  return `${API_URL}${fileUrl}`;
+}
+
 // Custom Audio Player Component
 // Global map to store audio seek and pause callbacks for position sync and single playback
 interface AudioCallbacks {
@@ -172,7 +201,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       const loadDurations = async () => {
         const durations: number[] = [];
         for (const item of playlist) {
-          const audio = new Audio(item.url);
+          const audio = new Audio(getFullUrl(item.url) || '');
           await new Promise<void>((resolve) => {
             audio.addEventListener('loadedmetadata', () => {
               durations.push(audio.duration);
@@ -2689,7 +2718,7 @@ export const ChatPage: React.FC = () => {
                             <div className="w-full max-w-xs">
                               {otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('audio/') ? (
                                 <CustomAudioPlayer 
-                                  src={`${API_URL}${otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl}`}
+                                  src={getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl)}
                                   type={otherPersonLastMessage.overallLastMessage.lastMessage.fileType}
                                   thumbnail={otherPersonLastMessage.overallLastMessage.lastMessage.audioThumbnail}
                                   messageId={otherPersonLastMessage.overallLastMessage.lastMessage.id}
@@ -2700,10 +2729,10 @@ export const ChatPage: React.FC = () => {
                                 />
                               ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('image/') ? (
                                 <img 
-                                  src={`${API_URL}${otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl}`}
+                                  src={getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl)}
                                   alt={otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Kép'}
                                   className="max-w-full max-h-32 rounded-lg shadow-lg cursor-pointer border border-purple-500/30"
-                                  onClick={() => otherPersonLastMessage.overallLastMessage?.lastMessage?.fileUrl && window.open(`${API_URL}${otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl}`, '_blank')}
+                                  onClick={() => otherPersonLastMessage.overallLastMessage?.lastMessage?.fileUrl && window.open(getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl), '_blank')}
                                 />
                               ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('video/') ? (
                                 <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
@@ -2814,7 +2843,7 @@ export const ChatPage: React.FC = () => {
                           /* Audio player card - full player like on chat wall */
                           <div className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
                             <CustomAudioPlayer 
-                              src={`${API_URL}${otherPersonLastMessage.lastMessage.fileUrl}`}
+                              src={getFullUrl(otherPersonLastMessage.lastMessage.fileUrl)}
                               type={otherPersonLastMessage.lastMessage.fileType}
                               thumbnail={otherPersonLastMessage.lastMessage.audioThumbnail}
                               messageId={otherPersonLastMessage.lastMessage.id}
@@ -2843,10 +2872,10 @@ export const ChatPage: React.FC = () => {
                         ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('image/') ? (
                           /* Image - just the image */
                           <img 
-                            src={`${API_URL}${otherPersonLastMessage.lastMessage.fileUrl}`}
+                            src={getFullUrl(otherPersonLastMessage.lastMessage.fileUrl)}
                             alt={otherPersonLastMessage.lastMessage.fileName || 'Kép'}
                             className="max-w-full max-h-64 rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-opacity border border-purple-500/30"
-                            onClick={() => window.open(`${API_URL}${otherPersonLastMessage.lastMessage.fileUrl}`, '_blank')}
+                            onClick={() => window.open(getFullUrl(otherPersonLastMessage.lastMessage.fileUrl), '_blank')}
                           />
                         ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('video/') ? (
                           /* Video card */
@@ -3485,10 +3514,10 @@ export const ChatPage: React.FC = () => {
                                   <div className="mb-2">
                                     {m.fileType?.startsWith('image/') ? (
                                       <img 
-                                          src={`${API_URL}${m.fileUrl}`}
+                                          src={getFullUrl(m.fileUrl)}
                                         alt={m.fileName || 'Kép'}
                                         className="max-w-full max-h-96 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                        onClick={() => window.open(`${API_URL}${m.fileUrl}`, '_blank')}
+                                        onClick={() => window.open(getFullUrl(m.fileUrl), '_blank')}
                                       />
                                     ) : m.fileType?.startsWith('audio/') ? (
                                       <div className="space-y-3">
@@ -3508,7 +3537,7 @@ export const ChatPage: React.FC = () => {
                                           // Create playlist for collapsed groups
                                           const audioPlaylist = hasMultipleAudios && isFirstAudio && !isExpanded
                                             ? audioMessages.map((audio: any) => ({
-                                                url: `${API_URL}${audio.fileUrl}`,
+                                                url: getFullUrl(audio.fileUrl),
                                                 fileName: audio.content || audio.fileName
                                               }))
                                             : undefined;
@@ -3517,7 +3546,7 @@ export const ChatPage: React.FC = () => {
                                             <div className="flex gap-2 items-center">
                                               <div className="audio-player-wrapper w-full flex-1">
                                                 <CustomAudioPlayer 
-                                                  src={`${API_URL}${m.fileUrl}`} 
+                                                  src={getFullUrl(m.fileUrl)} 
                                                   type={m.fileType}
                                                   thumbnail={m.audioThumbnail}
                                                   messageId={m.id}
@@ -3555,12 +3584,12 @@ export const ChatPage: React.FC = () => {
                                       </div>
                                     ) : m.fileType?.startsWith('video/') ? (
                                       <video controls className="max-w-full max-h-96 rounded-lg">
-                                          <source src={`${API_URL}${m.fileUrl}`} type={m.fileType} />
+                                          <source src={getFullUrl(m.fileUrl)} type={m.fileType} />
                                         A böngésződ nem támogatja a video lejátszást.
                                       </video>
                                     ) : (
                                       <a 
-                                          href={`${API_URL}${m.fileUrl}`} 
+                                          href={getFullUrl(m.fileUrl)} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors"
