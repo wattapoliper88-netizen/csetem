@@ -18,6 +18,22 @@ export const updateAvatar = (avatarImage: string) =>
 
 export default api;
 
+export async function getReadUrl(pathOrUrl: string) {
+  try {
+    // If pathOrUrl already looks like a signed URL with Google parameters, return as-is
+    if (pathOrUrl && (pathOrUrl.includes('X-Goog-Signature') || pathOrUrl.includes('GoogleAccessId'))) {
+      return pathOrUrl;
+    }
+    // Call backend endpoint to request fresh read URL
+    const body = pathOrUrl.startsWith('http') ? { url: pathOrUrl } : { path: pathOrUrl };
+    const res = await api.post('/uploads/read-url', body);
+    return res.data?.readUrl;
+  } catch (e) {
+    console.error('Failed to fetch read URL from backend', e);
+    return pathOrUrl; // fallback to the original value
+  }
+}
+
 // Refresh flow: on 401 try to refresh once and retry the request
 let isRefreshing = false;
 let subscribers: Array<(token: string | null) => void> = [];

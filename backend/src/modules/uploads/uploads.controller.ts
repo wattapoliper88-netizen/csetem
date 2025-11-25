@@ -134,4 +134,49 @@ export class UploadsController {
       return { ok: false, error: e?.message || String(e) };
     }
   }
+
+  @Post('read-url')
+  async getReadUrl(@Body() body: { path?: string; url?: string }) {
+    try {
+      Logger.log('read-url request received', body);
+      initAdmin();
+      const fallbackBucket = 'web-chat-data.appspot.com';
+      const bucketName = process.env.FIREBASE_STORAGE_BUCKET || fallbackBucket;
+
+      let path = body.path;
+      if (!path && body.url) {
+        try {
+          const parsed = new URL(body.url);
+          Logger.log('Parsing URL to path:', parsed.pathname);
+          if (parsed.hostname.includes('firebasestorage.googleapis.com')) {
+            const matches = parsed.pathname.match(/\/o\/(.+)/);
+            if (matches && matches[1]) path = decodeURIComponent(matches[1]);
+          } else if (parsed.hostname.includes('storage.googleapis.com')) {
+            // Path after first segment which is bucket
+            const splits = parsed.pathname.split('/').filter(Boolean);
+            if (splits.length >= 2) {
+              // [bucket, rest...]
+              path = splits.slice(1).join('/');
+            }
+          }
+        } catch (e) {
+          Logger.warn('Failed to parse provided url into path', e as any);
+        }
+      }
+
+      if (!path) {
+        throw new Error('Missing path or url');
+      }
+
+      const bucket = admin.storage().bucket(bucketName);
+      const file = bucket.file(path);
+      const expires = Date.now() + 60 * 60 * 1000;
+      const [readUrl] = await file.getSignedUrl({ action: 'read', expires });
+      Logger.log('Read URL generated successfully for path', path);
+      return { readUrl };
+    } catch (e: any) {
+      Logger.error('Error while generating read URL', e);
+      throw new HttpException({ error: 'Failed to generate read URL', detail: e?.message || String(e) }, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from 'react-query';
 import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 import { getSocket } from '../socket';
+import { getReadUrl } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { updateAvatar } from '../api/client';
@@ -201,7 +202,11 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       const loadDurations = async () => {
         const durations: number[] = [];
         for (const item of playlist) {
-          const audio = new Audio(getFullUrl(item.url) || '');
+                  const urlToPlay = getFullUrl(item.url);
+                  const resolvedUrl = urlToPlay && !urlToPlay.includes('X-Goog-Signature') && !urlToPlay.includes('GoogleAccessId')
+                    ? await getReadUrl(urlToPlay)
+                    : urlToPlay;
+                  const audio = new Audio(resolvedUrl || '');
           await new Promise<void>((resolve) => {
             audio.addEventListener('loadedmetadata', () => {
               durations.push(audio.duration);
@@ -226,6 +231,31 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       audioRef.current.load();
     }
   }, [fallbackMode]);
+
+  const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    const resolve = async () => {
+      if (!effectiveSrc) {
+        if (mounted) setResolvedSrc(undefined);
+        return;
+      }
+      // If it's already a signed URL, use as-is
+      if (effectiveSrc.includes('X-Goog-Signature') || effectiveSrc.includes('GoogleAccessId')) {
+        if (mounted) setResolvedSrc(effectiveSrc);
+        return;
+      }
+      try {
+        const url = await getReadUrl(effectiveSrc);
+        if (mounted) setResolvedSrc(url || effectiveSrc);
+      } catch (err) {
+        if (mounted) setResolvedSrc(effectiveSrc);
+      }
+    };
+    resolve();
+    return () => { mounted = false; };
+  }, [effectiveSrc]);
 
   // Draw animated circular waveform
   const drawWaveform = () => {
@@ -436,7 +466,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     }`}>
       <audio
         ref={audioRef}
-        src={effectiveSrc}
+        src={resolvedSrc || effectiveSrc}
         data-message-id={messageId}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
@@ -464,9 +494,9 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         }}
       >
         {fallbackMode ? (
-          <source src={effectiveSrc} />
+          <source src={resolvedSrc || effectiveSrc} />
         ) : (
-          <source src={effectiveSrc} {...(effectiveMime ? { type: effectiveMime } : {})} />
+          <source src={resolvedSrc || effectiveSrc} {...(effectiveMime ? { type: effectiveMime } : {})} />
         )}
       </audio>
       
