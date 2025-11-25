@@ -26,8 +26,8 @@ import { PrismaService } from '../../prisma/prisma.service';
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
     allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
   },
-  // Force websocket transport to avoid HTTP long-polling (which may be blocked by some proxies)
-  transports: ['websocket'],
+  // Allow both websocket and polling transports to support fallback when websocket upgrade fails
+  // transports: ['websocket'], // Removed to allow polling fallback
   // Tweak heartbeat settings to keep connections stable behind proxies/load-balancers
   pingInterval: 25000,
   pingTimeout: 60000,
@@ -49,6 +49,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleConnection(client: Socket) {
+    console.log('Socket connection attempt:', { id: client.id, transport: client.conn.transport.name, hasToken: !!client.handshake.auth?.token });
     try {
       const token = client.handshake.auth?.token;
       // Log for diagnostics so we can tell why the server closes sockets
