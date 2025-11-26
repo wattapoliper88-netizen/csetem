@@ -1,8 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
   constructor(private prisma: PrismaService) {}
 
   async getOrCreateUserConversation(userId: string, adminId: string) {
@@ -31,23 +32,23 @@ export class ChatService {
         where: { id: userId },
         data: { isAdmin: true },
       });
-      console.log('⚠️ No admin found, promoted current user to admin:', {
+      this.logger.warn('⚠️ No admin found, promoted current user to admin: ' + JSON.stringify({
         userId,
-      });
+      }));
     }
 
     const conv = await this.getOrCreateUserConversation(userId, admin.id);
-    console.log('getMyConversation:', {
+    this.logger.log('getMyConversation: ' + JSON.stringify({
       userId,
       adminId: admin.id,
       conversationId: conv.id,
-    });
+    }));
 
     return conv;
   }
 
   async listConversationsForAdmin(adminId: string) {
-    console.log('listConversationsForAdmin called with adminId:', adminId);
+    this.logger.log('listConversationsForAdmin called with adminId: ' + adminId);
     const conversations = await this.prisma.conversation.findMany({
       where: { adminId },
       // Do NOT include full avatar blobs here — they can be large and cause memory spikes.
@@ -67,7 +68,7 @@ export class ChatService {
       orderBy: { createdAt: 'desc' },
     });
     // Avoid logging full base64 avatar blobs – just lengths for diagnostics
-    console.log('Found conversations (sanitized):', conversations.map(c => ({
+    this.logger.log('Found conversations (sanitized): ' + JSON.stringify(conversations.map(c => ({
       id: c.id,
       userId: c.userId,
       adminId: c.adminId,
@@ -82,7 +83,7 @@ export class ChatService {
         // If avatarImage was present (older log runs), compute length; otherwise report 0
         avatarImageLength: ((c.user as any).avatarImage ? (c.user as any).avatarImage.length : 0)
       }
-    })));
+    }))));
     return conversations;
   }
 
@@ -171,7 +172,7 @@ export class ChatService {
         sanitizedUrl = 'https:' + sanitizedUrl;
       }
       if (sanitizedUrl !== fileUrl) {
-        console.log('Normalized incoming fileUrl', { original: fileUrl, sanitized: sanitizedUrl });
+          this.logger.log('Normalized incoming fileUrl: ' + JSON.stringify({ original: fileUrl, sanitized: sanitizedUrl }));
       }
 
       // If this looks like a Firebase / GCS URL, extract the object path and store that instead (canonical form)
