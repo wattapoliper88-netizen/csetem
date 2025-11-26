@@ -1,39 +1,42 @@
 import { PrismaService } from '../../prisma/prisma.service';
 export declare class ChatService {
     private prisma;
+    private readonly logger;
     constructor(prisma: PrismaService);
     getOrCreateUserConversation(userId: string, adminId: string): Promise<{
         id: string;
-        createdAt: Date;
         userId: string;
         adminId: string;
+        createdAt: Date;
     }>;
     getMyConversation(userId: string, isAdmin: boolean): Promise<{
         id: string;
-        createdAt: Date;
         userId: string;
         adminId: string;
+        createdAt: Date;
     }>;
     listConversationsForAdmin(adminId: string): Promise<({
         user: {
+            id: string;
             email: string;
             username: string;
-            id: string;
+            avatarImage: string;
             verified: boolean;
             isAdmin: boolean;
             lastSeen: Date;
         };
     } & {
         id: string;
-        createdAt: Date;
         userId: string;
         adminId: string;
+        createdAt: Date;
     })[]>;
     getMessages(conversationId: string, userId: string, isAdmin: boolean, limit?: number, cursor?: string): Promise<({
         sender: {
+            id: string;
             email: string;
             username: string;
-            id: string;
+            avatarImage: string;
             lastSeen: Date;
         };
     } & {
@@ -52,9 +55,10 @@ export declare class ChatService {
     })[]>;
     createMessage(conversationId: string, senderId: string, content: string, isAdmin: boolean, file?: Express.Multer.File, audioThumbnail?: string, fileUrl?: string, fileName?: string, fileType?: string): Promise<{
         sender: {
+            id: string;
             email: string;
             username: string;
-            id: string;
+            avatarImage: string;
             lastSeen: Date;
         };
     } & {

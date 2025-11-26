@@ -4,9 +4,9 @@ export declare class UserController {
     constructor(prisma: PrismaService);
     private checkAdmin;
     me(req: any): Promise<{
+        id: string;
         email: string;
         username: string;
-        id: string;
         avatarImage: string;
         verified: boolean;
         isAdmin: boolean;
@@ -15,9 +15,9 @@ export declare class UserController {
     updateAvatar(req: any, body: {
         avatarImage: string;
     }): Promise<{
+        id: string;
         email: string;
         username: string;
-        id: string;
         avatarImage: string;
         verified: boolean;
         isAdmin: boolean;
@@ -28,29 +28,29 @@ export declare class UserController {
     toggleBanUser(req: any, userId: string, body: {
         banned: boolean;
     }): Promise<{
+        id: string;
+        createdAt: Date;
         email: string;
         username: string;
-        id: string;
         passwordHash: string;
         avatarImage: string | null;
         verified: boolean;
         isAdmin: boolean;
         lastSeen: Date;
-        createdAt: Date;
         updatedAt: Date;
     }>;
     toggleAdmin(req: any, userId: string, body: {
         isAdmin: boolean;
     }): Promise<{
+        id: string;
+        createdAt: Date;
         email: string;
         username: string;
-        id: string;
         passwordHash: string;
         avatarImage: string | null;
         verified: boolean;
         isAdmin: boolean;
         lastSeen: Date;
-        createdAt: Date;
         updatedAt: Date;
     }>;
 }

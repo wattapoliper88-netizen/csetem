@@ -40,5 +40,9 @@ export declare class AuthService {
             username: string;
         };
     }>;
+    refreshTokens(refreshToken: string): Promise<{
+        accessToken: string;
+        refreshToken: string;
+    }>;
     private issueTokens;
 }

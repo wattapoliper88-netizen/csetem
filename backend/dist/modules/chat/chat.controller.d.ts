@@ -1,33 +1,37 @@
 import { ChatService } from './chat.service';
+import { ChatGateway } from './chat.gateway';
 export declare class ChatController {
     private chatService;
-    constructor(chatService: ChatService);
+    private chatGateway;
+    constructor(chatService: ChatService, chatGateway: ChatGateway);
     myConversation(req: any): Promise<{
         id: string;
-        createdAt: Date;
         userId: string;
         adminId: string;
+        createdAt: Date;
     }>;
     listConversations(req: any): Promise<({
         user: {
+            id: string;
             email: string;
             username: string;
-            id: string;
+            avatarImage: string;
             verified: boolean;
             isAdmin: boolean;
             lastSeen: Date;
         };
     } & {
         id: string;
-        createdAt: Date;
         userId: string;
         adminId: string;
+        createdAt: Date;
     })[]>;
     getMessages(req: any, conversationId: string, limit?: number, cursor?: string): Promise<({
         sender: {
+            id: string;
             email: string;
             username: string;
-            id: string;
+            avatarImage: string;
             lastSeen: Date;
         };
     } & {
@@ -53,9 +57,10 @@ export declare class ChatController {
         fileType?: string;
     }, file?: Express.Multer.File): Promise<{
         sender: {
+            id: string;
             email: string;
             username: string;
-            id: string;
+            avatarImage: string;
             lastSeen: Date;
         };
     } & {

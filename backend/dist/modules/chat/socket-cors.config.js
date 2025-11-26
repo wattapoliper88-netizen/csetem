@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.socketCorsConfig = void 0;
+const common_1 = require("@nestjs/common");
 const origins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
     : [
@@ -9,7 +10,8 @@ const origins = process.env.CORS_ORIGIN
         'https://csetem.vercel.app',
         'https://csetem-frontend.onrender.com',
     ];
-console.log('✅ [socket-cors.config.ts] Socket.IO CORS origins:', origins);
+const _logger = new common_1.Logger('SocketCorsConfig');
+_logger.log('✅ Socket.IO CORS origins:' + JSON.stringify(origins));
 exports.socketCorsConfig = {
     origin: origins,
     credentials: true,

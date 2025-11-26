@@ -10,6 +10,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     private config;
     private prisma;
     server: Server;
+    private readonly logger;
     constructor(chatService: ChatService, jwtService: JwtService, config: ConfigService, prisma: PrismaService);
     afterInit(): void;
     handleConnection(client: Socket): Promise<void>;

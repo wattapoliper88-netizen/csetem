@@ -8,13 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ChatService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
-let ChatService = class ChatService {
+let ChatService = ChatService_1 = class ChatService {
     constructor(prisma) {
         this.prisma = prisma;
+        this.logger = new common_1.Logger(ChatService_1.name);
     }
     async getOrCreateUserConversation(userId, adminId) {
         let conv = await this.prisma.conversation.findFirst({
@@ -37,20 +39,20 @@ let ChatService = class ChatService {
                 where: { id: userId },
                 data: { isAdmin: true },
             });
-            console.log('⚠️ No admin found, promoted current user to admin:', {
+            this.logger.warn('⚠️ No admin found, promoted current user to admin: ' + JSON.stringify({
                 userId,
-            });
+            }));
         }
         const conv = await this.getOrCreateUserConversation(userId, admin.id);
-        console.log('getMyConversation:', {
+        this.logger.log('getMyConversation: ' + JSON.stringify({
             userId,
             adminId: admin.id,
             conversationId: conv.id,
-        });
+        }));
         return conv;
     }
     async listConversationsForAdmin(adminId) {
-        console.log('listConversationsForAdmin called with adminId:', adminId);
+        this.logger.log('listConversationsForAdmin called with adminId: ' + adminId);
         const conversations = await this.prisma.conversation.findMany({
             where: { adminId },
             include: {
@@ -61,13 +63,14 @@ let ChatService = class ChatService {
                         username: true,
                         isAdmin: true,
                         verified: true,
-                        lastSeen: true
+                        lastSeen: true,
+                        avatarImage: true,
                     }
                 }
             },
             orderBy: { createdAt: 'desc' },
         });
-        console.log('Found conversations (sanitized):', conversations.map(c => ({
+        this.logger.log('Found conversations (sanitized): ' + JSON.stringify(conversations.map(c => ({
             id: c.id,
             userId: c.userId,
             adminId: c.adminId,
@@ -81,7 +84,7 @@ let ChatService = class ChatService {
                 lastSeen: c.user.lastSeen,
                 avatarImageLength: (c.user.avatarImage ? c.user.avatarImage.length : 0)
             }
-        })));
+        }))));
         return conversations;
     }
     async getMessages(conversationId, userId, isAdmin, limit = 50, cursor) {
@@ -104,7 +107,7 @@ let ChatService = class ChatService {
             cursor: cursor ? { id: cursor } : undefined,
             include: {
                 sender: {
-                    select: { id: true, username: true, email: true, lastSeen: true }
+                    select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
                 }
             }
         });
@@ -140,7 +143,47 @@ let ChatService = class ChatService {
             }
         }
         else if (fileUrl) {
-            messageData.fileUrl = fileUrl;
+            let sanitizedUrl = fileUrl;
+            if (/^https?\/\//i.test(sanitizedUrl) && !/^https?:\/\//i.test(sanitizedUrl)) {
+                sanitizedUrl = sanitizedUrl.replace(/^(https?)\/\//i, '$1://');
+            }
+            if (sanitizedUrl.startsWith('//')) {
+                sanitizedUrl = 'https:' + sanitizedUrl;
+            }
+            if (sanitizedUrl !== fileUrl) {
+                this.logger.log('Normalized incoming fileUrl: ' + JSON.stringify({ original: fileUrl, sanitized: sanitizedUrl }));
+            }
+            let parsedPath = null;
+            try {
+                const u = new URL(sanitizedUrl);
+                const host = u.hostname;
+                if (host.includes('firebasestorage.googleapis.com')) {
+                    const matches = u.pathname.match(/\/o\/(.+)/);
+                    if (matches && matches[1])
+                        parsedPath = decodeURIComponent(matches[1]);
+                }
+                else if (host.includes('storage.googleapis.com')) {
+                    const splits = u.pathname.split('/').filter(Boolean);
+                    if (splits.length >= 2)
+                        parsedPath = splits.slice(1).join('/');
+                }
+                else if (u.pathname.startsWith('/uploads/')) {
+                    parsedPath = u.pathname;
+                }
+            }
+            catch (e) {
+            }
+            if (parsedPath) {
+                if (parsedPath.startsWith('/uploads/')) {
+                    messageData.fileUrl = parsedPath;
+                }
+                else {
+                    messageData.fileUrl = parsedPath;
+                }
+            }
+            else {
+                messageData.fileUrl = sanitizedUrl;
+            }
             if (fileName)
                 messageData.fileName = fileName;
             if (fileType)
@@ -153,7 +196,7 @@ let ChatService = class ChatService {
             data: messageData,
             include: {
                 sender: {
-                    select: { id: true, username: true, email: true, lastSeen: true }
+                    select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
                 }
             }
         });
@@ -266,7 +309,7 @@ let ChatService = class ChatService {
     }
 };
 exports.ChatService = ChatService;
-exports.ChatService = ChatService = __decorate([
+exports.ChatService = ChatService = ChatService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], ChatService);

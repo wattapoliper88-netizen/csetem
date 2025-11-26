@@ -25,33 +25,51 @@ let AuthController = class AuthController {
     }
     async register(dto, res) {
         const { refreshToken, ...rest } = await this.authService.register(dto);
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         return rest;
     }
     async verify(dto, res) {
         const { refreshToken, ...rest } = await this.authService.verifyCode(dto);
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         return rest;
     }
     async login(dto, res) {
         const { refreshToken, ...rest } = await this.authService.login(dto);
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         return rest;
+    }
+    async refresh(req, res) {
+        const refreshToken = req.cookies && req.cookies.refreshToken;
+        if (!refreshToken)
+            throw new common_1.UnauthorizedException('Missing refresh token');
+        const tokens = await this.authService.refreshTokens(refreshToken);
+        if (tokens.refreshToken) {
+            res.cookie('refreshToken', tokens.refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+        }
+        return { accessToken: tokens.accessToken };
     }
 };
 exports.AuthController = AuthController;
@@ -82,6 +100,14 @@ __decorate([
     __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('refresh'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "refresh", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),

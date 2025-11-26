@@ -60,8 +60,8 @@ export class ChatService {
             username: true, 
             isAdmin: true, 
             verified: true, 
-            lastSeen: true,
-            avatarImage: true,
+            lastSeen: true
+            // avatarImage intentionally omitted
           } 
         } 
       },
@@ -109,8 +109,7 @@ export class ChatService {
       cursor: cursor ? { id: cursor } : undefined,
       include: {
         sender: {
-          // Include avatarImage so frontend can resolve and display avatars in the chat wall
-          select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
+          select: { id: true, username: true, email: true, lastSeen: true }
         }
       }
     });
@@ -215,8 +214,8 @@ export class ChatService {
       data: messageData,
       include: {
         sender: {
-            // Include avatarImage so the freshly created message includes the user's avatar for real-time display
-            select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
+            // Do not include avatarImage here to avoid returning large base64 blobs on every message create
+            select: { id: true, username: true, email: true, lastSeen: true }
         }
       }
     });

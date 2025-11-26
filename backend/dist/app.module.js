@@ -33,6 +33,7 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             user_module_1.UserModule,
             chat_module_1.ChatModule,
+            require('./modules/admin/admin.module').AdminModule,
             require('./modules/uploads/uploads.module').UploadsModule,
         ],
     })

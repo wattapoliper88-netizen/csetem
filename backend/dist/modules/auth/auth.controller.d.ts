@@ -2,7 +2,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { LoginDto } from './dto/login.dto';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -29,5 +29,8 @@ export declare class AuthController {
             email: string;
             username: string;
         };
+    }>;
+    refresh(req: Request, res: Response): Promise<{
+        accessToken: string;
     }>;
 }

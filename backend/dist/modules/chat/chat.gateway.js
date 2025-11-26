@@ -11,28 +11,34 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var ChatGateway_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatGateway = void 0;
 const websockets_1 = require("@nestjs/websockets");
 const socket_io_1 = require("socket.io");
+const common_1 = require("@nestjs/common");
 const chat_service_1 = require("./chat.service");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../../prisma/prisma.service");
-let ChatGateway = class ChatGateway {
+let ChatGateway = ChatGateway_1 = class ChatGateway {
     constructor(chatService, jwtService, config, prisma) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.config = config;
         this.prisma = prisma;
+        this.logger = new common_1.Logger(ChatGateway_1.name);
     }
     afterInit() {
     }
     async handleConnection(client) {
-        var _a;
+        var _a, _b;
+        this.logger.log('Socket connection attempt: ' + JSON.stringify({ id: client.id, transport: client.conn.transport.name, hasToken: !!((_a = client.handshake.auth) === null || _a === void 0 ? void 0 : _a.token) }));
         try {
-            const token = (_a = client.handshake.auth) === null || _a === void 0 ? void 0 : _a.token;
+            const token = (_b = client.handshake.auth) === null || _b === void 0 ? void 0 : _b.token;
+            this.logger.log('Socket connect attempt: ' + JSON.stringify({ id: client.id, hasToken: !!token }));
             if (!token) {
+                this.logger.warn('Socket connection rejected: missing auth token ' + JSON.stringify({ id: client.id, handshake: client.handshake }));
                 client.disconnect();
                 return;
             }
@@ -46,7 +52,8 @@ let ChatGateway = class ChatGateway {
             }).catch(() => { });
             this.server.emit('user:online', { userId: payload.sub, lastSeen: new Date() });
         }
-        catch {
+        catch (err) {
+            this.logger.error('Socket connection auth error: ' + (err instanceof Error ? err.message : JSON.stringify(err)), JSON.stringify({ id: client.id, handshake: client.handshake }));
             client.disconnect();
         }
     }
@@ -65,13 +72,13 @@ let ChatGateway = class ChatGateway {
         if (!user)
             return;
         const msg = await this.chatService.createMessage(payload.conversationId, user.userId, payload.content, user.isAdmin);
-        console.log('Broadcasting message to conversation:', { conversationId: payload.conversationId, messageId: msg.id });
+        this.logger.log('Broadcasting message to conversation: ' + JSON.stringify({ conversationId: payload.conversationId, messageId: msg.id }));
         this.server.to(payload.conversationId).emit('message:new', msg);
         client.to(payload.conversationId).emit('typing', { userId: user.userId, isTyping: false });
     }
     async handleJoin(client, data) {
         const user = client.user;
-        console.log('User joining conversation:', { userId: user === null || user === void 0 ? void 0 : user.userId, conversationId: data.conversationId });
+        this.logger.log('User joining conversation: ' + JSON.stringify({ userId: user === null || user === void 0 ? void 0 : user.userId, conversationId: data.conversationId }));
         client.join(data.conversationId);
     }
     async handleTyping(client, data) {
@@ -97,15 +104,15 @@ let ChatGateway = class ChatGateway {
     async handleFolderCreate(client, data) {
         const user = client.user;
         if (!user) {
-            console.log('❌ folder:create - No user found');
+            this.logger.warn('❌ folder:create - No user found');
             return;
         }
-        console.log('📁 folder:create received:', {
+        this.logger.log('📁 folder:create received: ' + JSON.stringify({
             userId: user.userId,
             conversationId: data.conversationId,
             folderName: data.folder.name,
             visibility: data.folder.visibility
-        });
+        }));
         try {
             const folder = await this.prisma.folder.create({
                 data: {
@@ -134,10 +141,10 @@ let ChatGateway = class ChatGateway {
                 ...folder,
                 messageIds: data.folder.messageIds || [],
             });
-            console.log('✅ Folder saved and broadcasted to conversation:', data.conversationId);
+            this.logger.log('✅ Folder saved and broadcasted to conversation: ' + data.conversationId);
         }
         catch (error) {
-            console.error('❌ Error creating folder:', error);
+            this.logger.error('❌ Error creating folder: ' + (error instanceof Error ? error.message : JSON.stringify(error)), JSON.stringify(error));
             client.emit('folder:error', { message: 'Failed to create folder' });
         }
     }
@@ -145,12 +152,12 @@ let ChatGateway = class ChatGateway {
         const user = client.user;
         if (!user)
             return;
-        console.log('🎵 Audio position received:', {
+        this.logger.log('🎵 Audio position received: ' + JSON.stringify({
             userId: user.userId,
             conversationId: data.conversationId,
             messageId: data.messageId,
             position: data.position
-        });
+        }));
         const userData = await this.prisma.user.findUnique({
             where: { id: user.userId },
             select: { username: true }
@@ -215,7 +222,7 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleAudioPosition", null);
-exports.ChatGateway = ChatGateway = __decorate([
+exports.ChatGateway = ChatGateway = ChatGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
             origin: [
@@ -228,7 +235,6 @@ exports.ChatGateway = ChatGateway = __decorate([
             methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         },
-        transports: ['websocket'],
         pingInterval: 25000,
         pingTimeout: 60000,
     }),
