@@ -162,6 +162,9 @@ export class UploadsController {
           } else if (parsed.hostname === 'csetem.onrender.com' || parsed.hostname.includes('localhost') || parsed.hostname.includes('127.0.0.1')) {
             // Backend URL, extract path after domain
             path = parsed.pathname.slice(1);
+          } else {
+            // Assume backend URL for unknown hostnames
+            path = parsed.pathname.slice(1);
           }
         } catch (e) {
           Logger.warn('Failed to parse provided url into path', e as any);
