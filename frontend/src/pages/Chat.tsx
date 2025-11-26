@@ -149,6 +149,57 @@ function ResolvableMedia({
   );
 }
 
+// Small avatar component which resolves avatar image paths to read URLs
+const Avatar: React.FC<{ avatar?: string | null; size?: string; className?: string; alt?: string; onClick?: (e: React.MouseEvent, url?: string) => void }> = ({ avatar, size = 'w-8 h-8', className = '', alt = 'Avatar', onClick }) => {
+  const [resolved, setResolved] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    let mounted = true;
+    const resolve = async () => {
+      if (!avatar) {
+        if (mounted) setResolved(undefined);
+        return;
+      }
+      if (avatar.includes('X-Goog-Signature') || avatar.includes('GoogleAccessId')) {
+        if (mounted) setResolved(avatar);
+        return;
+      }
+      if (readUrlCache.has(avatar)) {
+        if (mounted) setResolved(readUrlCache.get(avatar));
+        return;
+      }
+      try {
+        // If avatar is already a public host URL but not signed, still call backend to generate read-url
+        let pathToUse = avatar;
+        if (avatar.includes('firebasestorage.googleapis.com')) {
+          try {
+            const u = new URL(avatar);
+            if (u.pathname.startsWith('/v0/b/') && u.pathname.includes('/o/')) {
+              pathToUse = decodeURIComponent(u.pathname.split('/o/')[1]);
+            }
+          } catch {}
+        }
+        const url = await getReadUrl(pathToUse);
+        readUrlCache.set(avatar, url || avatar);
+        if (mounted) setResolved(url || avatar);
+      } catch (e) {
+        if (mounted) setResolved(avatar);
+      }
+    };
+    resolve();
+    return () => { mounted = false; };
+  }, [avatar]);
+
+  if (!avatar) return null;
+  return (
+    <img
+      src={resolved || avatar}
+      alt={alt}
+      className={`${size} ${className} rounded-full object-cover`}
+      onClick={(e) => onClick && onClick(e, resolved || avatar)}
+    />
+  );
+};
+
 // Custom Audio Player Component
 // Global map to store audio seek and pause callbacks for position sync and single playback
 interface AudioCallbacks {
@@ -942,6 +993,7 @@ export const ChatPage: React.FC = () => {
   const [showCustomFilter, setShowCustomFilter] = useState(false);
   const [customFilterDomain, setCustomFilterDomain] = useState<string>('');
   const [avatarImage, setAvatarImage] = useState<string>('');
+  const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
   // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
   const canonicalizeLink = (link: string): string => {
     const vid = extractYouTubeVideoId(link);
@@ -1270,6 +1322,42 @@ export const ChatPage: React.FC = () => {
       setAvatarImage(me.avatarImage);
     }
   }, [me?.avatarImage]);
+
+  // Resolve avatar to a browser-friendly read URL using backend read-url when necessary
+  useEffect(() => {
+    let mounted = true;
+    const resolveAvatar = async () => {
+      if (!avatarImage) {
+        if (mounted) setResolvedAvatarImage(undefined);
+        return;
+      }
+      // If it's already a signed URL, use as-is
+      if (avatarImage.includes('X-Goog-Signature') || avatarImage.includes('GoogleAccessId')) {
+        if (mounted) setResolvedAvatarImage(avatarImage);
+        return;
+      }
+      try {
+        // If it's already a full URL (firebasestorage.googleapis.com), we can use it as-is, but still request backend read-url for signed access
+        let pathToUse = avatarImage;
+        if (avatarImage.includes('firebasestorage.googleapis.com')) {
+          // Extract canonical path
+          try {
+            const u = new URL(avatarImage);
+            if (u.pathname.startsWith('/v0/b/') && u.pathname.includes('/o/')) {
+              const pathPart = u.pathname.split('/o/')[1];
+              pathToUse = decodeURIComponent(pathPart);
+            }
+          } catch {}
+        }
+        const url = await getReadUrl(pathToUse);
+        if (mounted) setResolvedAvatarImage(url || avatarImage);
+      } catch (err) {
+        if (mounted) setResolvedAvatarImage(avatarImage);
+      }
+    };
+    resolveAvatar();
+    return () => { mounted = false; };
+  }, [avatarImage]);
 
   useEffect(() => {
     const handleClickOutside = (_e: MouseEvent) => {
@@ -2315,10 +2403,12 @@ export const ChatPage: React.FC = () => {
                   )}
                   <div className="relative flex-shrink-0">
                     {avatarImage ? (
-                      <img 
-                        src={avatarImage} 
+                      <Avatar
+                        avatar={avatarImage}
+                        size={'w-8 h-8 md:w-10 md:h-10'}
+                        className={'shadow-lg ring-2 ring-green-500'}
                         alt="Avatar"
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover shadow-lg ring-2 ring-green-500"
+                        onClick={(e) => { e.stopPropagation(); setShowAvatarMenu(!showAvatarMenu); }}
                       />
                     ) : (
                       <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold shadow-lg text-sm md:text-base">
@@ -2900,15 +2990,20 @@ export const ChatPage: React.FC = () => {
                     {/* Partner info */}
                     <div className="flex items-center gap-2 md:gap-3">
                       {otherPersonLastMessage.sender?.avatarImage ? (
-                        <img 
-                          src={otherPersonLastMessage.sender.avatarImage} 
-                          alt="Avatar"
-                          className={`w-8 h-8 md:w-10 md:h-10 rounded-full object-cover shadow-lg ring-2 ${
+                        <Avatar
+                          avatar={otherPersonLastMessage.sender.avatarImage}
+                          size={'w-8 h-8 md:w-10 md:h-10'}
+                          className={`shadow-lg ring-2 ${
                             otherPersonLastMessage.sender.lastSeen && 
                             new Date().getTime() - new Date(otherPersonLastMessage.sender.lastSeen).getTime() < 60 * 1000
                               ? 'ring-green-500 avatar-online'
                               : 'ring-gray-500'
                           }`}
+                          onClick={(e, url) => {
+                            e.stopPropagation();
+                            const openUrl = url || (otherPersonLastMessage.overallLastMessage?.lastMessage?.fileUrl ? getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl) : undefined);
+                            if (openUrl) window.open(openUrl, '_blank');
+                          }}
                         />
                       ) : (
                         <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs md:text-sm font-bold shadow-lg">
@@ -3514,14 +3609,16 @@ export const ChatPage: React.FC = () => {
                   >
                     {/* Avatar */}
                     {group.messages[0]?.sender?.avatarImage ? (
-                      <img 
-                        src={group.messages[0].sender.avatarImage} 
-                        alt="Avatar"
-                        onClick={(e) => {
+                      <Avatar
+                        avatar={group.messages[0].sender.avatarImage}
+                        size={'w-8 h-8'}
+                        onClick={(e, url) => {
+                          // stop propagation and open viewer with resolved URL if available
                           e.stopPropagation();
-                          setViewingAvatar(group.messages[0].sender.avatarImage);
+                          if (url) setViewingAvatar(url);
+                          else setViewingAvatar(group.messages[0].sender.avatarImage);
                         }}
-                        className={`w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-lg ring-2 cursor-pointer hover:ring-4 transition-all ${
+                        className={`flex-shrink-0 cursor-pointer hover:ring-4 transition-all ${
                           group.messages[0].sender.lastSeen && 
                           new Date().getTime() - new Date(group.messages[0].sender.lastSeen).getTime() < 60 * 1000
                             ? 'ring-green-500 avatar-online'
