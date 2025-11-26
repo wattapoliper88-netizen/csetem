@@ -1370,7 +1370,8 @@ export const ChatPage: React.FC = () => {
     // Ensure we register stable handlers and cleanup with the exact same references
     const handleMessageNew = (msg: any) => {
       console.log('🔵 message:new event received', msg);
-      if (msg.conversationId === activeConversationId) {
+      console.log('💬 activeConversationId vs incoming message conversationId', typeof activeConversationId, activeConversationId, typeof msg.conversationId, msg.conversationId);
+      if (String(msg.conversationId) === String(activeConversationId)) {
         console.log('✅ Message is for active conversation');
         setMessages((prev) => [...prev, msg]);
         setFilteredMessages((prev) => [...prev, msg]);
