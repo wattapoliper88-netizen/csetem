@@ -109,7 +109,8 @@ export class ChatService {
       cursor: cursor ? { id: cursor } : undefined,
       include: {
         sender: {
-          select: { id: true, username: true, email: true, lastSeen: true }
+          // Include avatarImage so frontend can resolve and display avatars in the chat wall
+          select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
         }
       }
     });
