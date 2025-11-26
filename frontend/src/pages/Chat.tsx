@@ -708,14 +708,16 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       <div className="flex items-center gap-2 md:gap-3">
         {/* Audio Thumbnail */}
         {thumbnail ? (
-          <img 
-            src={thumbnail} 
+          <ResolvableMedia
+            fileUrl={thumbnail}
+            fileType={'image/*'}
             alt="Audio thumbnail"
             className={`w-12 h-12 sm:w-14 sm:h-14 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-lg object-cover flex-shrink-0 border-2 transition-all duration-500 ${
               isPlaying 
                 ? `opacity-100 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.4),0_0_60px_rgba(6,182,212,0.2)] scale-105 brightness-110 ${isCollapsedFirstAudio ? '' : 'animate-pulse'}` 
                 : 'opacity-50 border-cyan-500/30 shadow-[0_8px_30px_rgba(6,182,212,0.4)]'
             }`}
+            onClick={(url) => url && (audioRef.current ? (audioRef.current.currentTime = audioRef.current.currentTime) : undefined)}
           />
         ) : (
           <img 
@@ -2404,7 +2406,7 @@ export const ChatPage: React.FC = () => {
                   <div className="relative flex-shrink-0">
                     {avatarImage ? (
                       <Avatar
-                        avatar={avatarImage}
+                        avatar={resolvedAvatarImage || avatarImage}
                         size={'w-8 h-8 md:w-10 md:h-10'}
                         className={'shadow-lg ring-2 ring-green-500'}
                         alt="Avatar"
