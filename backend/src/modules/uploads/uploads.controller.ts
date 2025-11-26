@@ -148,6 +148,7 @@ export class UploadsController {
         try {
           const parsed = new URL(body.url);
           Logger.log('Parsing URL to path:', parsed.pathname);
+          Logger.log('Hostname:', parsed.hostname);
           if (parsed.hostname.includes('firebasestorage.googleapis.com')) {
             const matches = parsed.pathname.match(/\/o\/(.+)/);
             if (matches && matches[1]) path = decodeURIComponent(matches[1]);
