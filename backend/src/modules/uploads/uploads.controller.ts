@@ -180,6 +180,7 @@ export class UploadsController {
       const file = bucket.file(path);
       // Check if the file actually exists and return 404 if not
       const [exists] = await file.exists();
+      Logger.log('File exists check result:', exists);
       if (!exists) {
         Logger.warn('Requested file does not exist for path', path);
         throw new HttpException({ error: 'Not found' }, HttpStatus.NOT_FOUND);
