@@ -1519,6 +1519,10 @@ export const ChatPage: React.FC = () => {
       socketState?.off('user:offline');
       socketState?.off('audio-position:received');
       getSocketInst()?.off('folder:new');
+      if (socketState?.off && typeof socketState.off === 'function') {
+        try { socketState.off('reconnect', joinConversation); } catch (e) {}
+        try { socketState.off('connect', () => {}); } catch (e) {}
+      }
     };
   }, [socketState, activeConversationId, me?.id]);
 
