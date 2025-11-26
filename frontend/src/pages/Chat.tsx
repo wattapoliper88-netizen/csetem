@@ -41,6 +41,19 @@ function getFullUrl(fileUrl?: string | null): string | undefined {
   return `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
 }
 
+// Extract path from Firebase Storage URL for backend read-url endpoint
+function extractFirebasePath(url: string): string | null {
+  if (!url.includes('firebasestorage.googleapis.com')) return null;
+  try {
+    const u = new URL(url);
+    if (u.pathname.startsWith('/v0/b/') && u.pathname.includes('/o/')) {
+      const pathPart = u.pathname.split('/o/')[1];
+      return decodeURIComponent(pathPart);
+    }
+  } catch {}
+  return null;
+}
+
 // Custom Audio Player Component
 // Global map to store audio seek and pause callbacks for position sync and single playback
 interface AudioCallbacks {
@@ -101,6 +114,8 @@ interface AudioPlayerProps {
   otherUserPlaying?: { position: number } | null;
   onDisconnectOtherUser?: () => void;
   isCollapsedFirstAudio?: boolean;
+  showMobileControls?: boolean;
+  setShowMobileControls?: (v: boolean) => void;
 }
 
 // Reconstructed AudioPlayer component (was accidentally unwrapped during patch)
@@ -115,6 +130,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   otherUserPlaying,
   onDisconnectOtherUser,
   isCollapsedFirstAudio
+  , showMobileControls = false, setShowMobileControls
 }) => {
   // Normalize incoming MIME or extension to a browser supported MIME
   const normalizeMime = (raw?: string): string | undefined => {
@@ -146,7 +162,9 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   const [shareLivePosition, setShareLivePosition] = useState(true);
   const livePositionIntervalRef = useRef<number | null>(null);
   const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
-  const [showMobileControls] = useState(false);
+  // NOTE: The audio player previously had a separate local showMobileControls state which
+  // shadowed the top-level one; we removed it to ensure the global mobile toggle controls
+  // audio visibility consistently.
 
   // Register this audio player in the global map with seek and pause callbacks
   useEffect(() => {
@@ -204,9 +222,14 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         const durations: number[] = [];
         for (const item of playlist) {
                   const urlToPlay = getFullUrl(item.url);
-                  const resolvedUrl = urlToPlay && !urlToPlay.includes('X-Goog-Signature') && !urlToPlay.includes('GoogleAccessId')
-                    ? await getReadUrl(urlToPlay)
-                    : urlToPlay;
+                  let pathToUse = urlToPlay;
+                  if (urlToPlay && urlToPlay.includes('firebasestorage.googleapis.com')) {
+                    const extracted = extractFirebasePath(urlToPlay);
+                    if (extracted) pathToUse = extracted;
+                  }
+                  const resolvedUrl = pathToUse && !pathToUse.includes('X-Goog-Signature') && !pathToUse.includes('GoogleAccessId')
+                    ? await getReadUrl(pathToUse)
+                    : pathToUse;
                   const audio = new Audio(resolvedUrl || '');
           await new Promise<void>((resolve) => {
             audio.addEventListener('loadedmetadata', () => {
@@ -248,7 +271,12 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         return;
       }
       try {
-        const url = await getReadUrl(effectiveSrc);
+        let pathToUse = effectiveSrc;
+        if (effectiveSrc.includes('firebasestorage.googleapis.com')) {
+          const extracted = extractFirebasePath(effectiveSrc);
+          if (extracted) pathToUse = extracted;
+        }
+        const url = await getReadUrl(pathToUse);
         if (mounted) setResolvedSrc(url || effectiveSrc);
       } catch (err) {
         if (mounted) setResolvedSrc(effectiveSrc);
@@ -479,7 +507,12 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
           try {
             // If effectiveSrc is signed but expired or invalid, request a fresh read URL
             if (effectiveSrc && (effectiveSrc.includes('X-Goog-Signature') || effectiveSrc.includes('GoogleAccessId') || effectiveSrc.includes('firebasestorage.googleapis.com') || effectiveSrc.includes('storage.googleapis.com'))) {
-              const fresh = await getReadUrl(effectiveSrc);
+              let pathToUse = effectiveSrc;
+              if (effectiveSrc.includes('firebasestorage.googleapis.com')) {
+                const extracted = extractFirebasePath(effectiveSrc);
+                if (extracted) pathToUse = extracted;
+              }
+              const fresh = await getReadUrl(pathToUse);
               if (fresh) {
                 setResolvedSrc(fresh);
               }
@@ -2065,7 +2098,7 @@ export const ChatPage: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="overflow-y-auto h-[calc(100vh-140px)]">
+          <div className="flex-1 overflow-y-auto">
             {Array.isArray(convData) && convData.length === 0 && (
               <div className="p-4 text-center text-gray-500">
                 <p>Még nincsenek beszélgetések</p>
@@ -2790,6 +2823,8 @@ export const ChatPage: React.FC = () => {
                                   conversationId={activeConversationId || undefined}
                                   otherUserPlaying={audioPositions[otherPersonLastMessage.overallLastMessage.lastMessage.id] || null}
                                   isCollapsedFirstAudio={false}
+                                  showMobileControls={showMobileControls}
+                                  setShowMobileControls={setShowMobileControls}
                                   fileName={otherPersonLastMessage.overallLastMessage.lastMessage.content || otherPersonLastMessage.overallLastMessage.lastMessage.fileName}
                                 />
                               ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('image/') ? (
@@ -2915,6 +2950,8 @@ export const ChatPage: React.FC = () => {
                               conversationId={activeConversationId || undefined}
                               otherUserPlaying={audioPositions[otherPersonLastMessage.lastMessage.id] || null}
                               isCollapsedFirstAudio={false}
+                              showMobileControls={showMobileControls}
+                              setShowMobileControls={setShowMobileControls}
                               fileName={otherPersonLastMessage.lastMessage.content || otherPersonLastMessage.lastMessage.fileName}
                               onDisconnectOtherUser={() => {
                                 ignoredAudioPositionsRef.current.add(otherPersonLastMessage.lastMessage.id);
@@ -3641,7 +3678,9 @@ export const ChatPage: React.FC = () => {
                                                 }
                                               }
                                             }}
-                                          />
+                                                  showMobileControls={showMobileControls}
+                                                  setShowMobileControls={setShowMobileControls}
+                                                />
                                               </div>
                                             </div>
                                           );
@@ -4127,7 +4166,7 @@ export const ChatPage: React.FC = () => {
               )}
             </div>
 
-            <div className="border-t border-gray-700 bg-gray-800 shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0">
+            <div className="sticky bottom-0 z-20 border-t border-gray-700 bg-gray-800 shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0">
               {/* Filter buttons */}
               <div className="flex gap-1 sm:gap-1.5 md:gap-2 mb-1.5 sm:mb-2 md:mb-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-1">
                 <button
