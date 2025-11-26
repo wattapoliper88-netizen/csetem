@@ -4,11 +4,15 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
+import { ChatGateway } from './chat.gateway';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private chatService: ChatService) {}
+  constructor(
+    private chatService: ChatService,
+    private chatGateway: ChatGateway,
+  ) {}
 
   @Get('conversations/me')
   async myConversation(@Req() req: any) {
@@ -58,7 +62,7 @@ export class ChatController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     // If the client uploaded the file directly to Firebase, it will send fileUrl/fileName/fileType in the JSON body.
-    return this.chatService.createMessage(
+    const created = await this.chatService.createMessage(
       body.conversationId,
       req.user.userId,
       body.content || '',
@@ -69,6 +73,14 @@ export class ChatController {
       body.fileName,
       body.fileType,
     );
+
+    // Broadcast to the conversation room via WebSocket so other connected clients receive it in real-time
+    try {
+      this.chatGateway.server.to(body.conversationId).emit('message:new', created);
+    } catch (err) {
+      // Ignore broadcast errors; message is already created in DB
+    }
+    return created;
   }
 
   @Get('link-preview')
