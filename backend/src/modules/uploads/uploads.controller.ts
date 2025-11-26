@@ -180,11 +180,27 @@ export class UploadsController {
       }
 
       const bucket = admin.storage().bucket(bucketName);
-      const file = bucket.file(path);
+      const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+      Logger.log('Checking read-url against bucket and path', { bucketName, path: normalizedPath });
+      const file = bucket.file(normalizedPath);
       // Check if the file actually exists and return 404 if not
       const [exists] = await file.exists();
+      Logger.log('File exists check result:', exists);
       if (!exists) {
-        Logger.warn('Requested file does not exist for path', path);
+        Logger.warn('Requested file does not exist for path', normalizedPath);
+        // If allowed by env, list nearby files for debugging purposes
+        try {
+          if (process.env.DEBUG_STORAGE_LIST === '1') {
+            const parts = normalizedPath.split('/').filter(Boolean);
+            const prefix = parts.length >= 2 ? `${parts[0]}/${parts[1]}/` : `${parts[0]}/`;
+            Logger.log('DEBUG_STORAGE_LIST enabled; listing files with prefix', prefix);
+            const [files] = await bucket.getFiles({ prefix });
+            const names = (files || []).map(f => f.name).slice(0, 50);
+            Logger.log('Nearby files for prefix', { prefix, count: names.length, names });
+          }
+        } catch (listErr) {
+          Logger.warn('Failed to list nearby files for debugging', listErr as any);
+        }
         throw new HttpException({ error: 'Not found' }, HttpStatus.NOT_FOUND);
       }
       const expires = Date.now() + 60 * 60 * 1000;
