@@ -60,8 +60,9 @@ export class ChatService {
             username: true, 
             isAdmin: true, 
             verified: true, 
-            lastSeen: true
-            // avatarImage intentionally omitted
+            lastSeen: true,
+            // Include avatarImage so the frontend can display avatars consistently.
+            avatarImage: true
           } 
         } 
       },
