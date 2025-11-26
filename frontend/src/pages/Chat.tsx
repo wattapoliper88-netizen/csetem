@@ -1338,7 +1338,27 @@ export const ChatPage: React.FC = () => {
   useEffect(() => {
     if (!socketState || !activeConversationId) return;
 
-    socketState.emit('conversation:join', { conversationId: activeConversationId });
+    const joinConversation = () => {
+      try {
+        console.log('Attempting to join conversation via socket:', activeConversationId, 'connected:', socketState.connected);
+        socketState.emit('conversation:join', { conversationId: activeConversationId });
+      } catch (e) {
+        console.warn('Failed to emit conversation:join', e);
+      }
+    };
+
+    // If connected, join immediately; otherwise wait until connected
+    if (socketState.connected) {
+      joinConversation();
+    } else {
+      const onConnect = () => {
+        joinConversation();
+        socketState.off('connect', onConnect);
+      };
+      socketState.on('connect', onConnect);
+    }
+    // Ensure we re-join the room on reconnect as well
+    socketState.on('reconnect', joinConversation);
 
     // Send heartbeat every 20 seconds to keep online status active
     const heartbeatInterval = setInterval(() => {
