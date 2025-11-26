@@ -2324,7 +2324,9 @@ export const ChatPage: React.FC = () => {
               </div>
             )}
             {Array.isArray(convData) &&
-              convData.map((conv: any) => (
+                convData.map((conv: any) => (
+                  // Debug: log user avatar path for troubleshooting
+                  console.log('conv item loaded', { convId: conv.id, userId: conv.user?.id, avatarImage: conv.user?.avatarImage }),
                 <div
                   key={conv.id}
                   className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
