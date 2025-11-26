@@ -2289,7 +2289,7 @@ export const ChatPage: React.FC = () => {
         </aside>
         </>
       )}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-0">
         {!activeConversationId ? (
           <div className="flex-1 flex items-center justify-center bg-gray-850">
             <div className="text-center">
@@ -3393,7 +3393,7 @@ export const ChatPage: React.FC = () => {
             )}
 
             <div 
-              className="flex-1 overflow-y-auto p-2 md:p-4 pb-20 md:pb-24 bg-gray-850 particles-bg"
+              className="flex-1 overflow-y-auto p-2 md:p-4 pb-4 md:pb-6 bg-gray-850 particles-bg"
               ref={messagesContainerRef}
               onScroll={handleScroll}
             >
@@ -4277,7 +4277,7 @@ export const ChatPage: React.FC = () => {
                   </div>
                 );
               })()}
-              <div ref={bottomRef} className="h-16" />
+              <div ref={bottomRef} className="h-0" />
               
               {/* Scroll to bottom button */}
               {showScrollBottom && (
