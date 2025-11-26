@@ -215,8 +215,8 @@ export class ChatService {
       data: messageData,
       include: {
         sender: {
-            // Do not include avatarImage here to avoid returning large base64 blobs on every message create
-            select: { id: true, username: true, email: true, lastSeen: true }
+            // Include avatarImage so the freshly created message includes the user's avatar for real-time display
+            select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
         }
       }
     });
