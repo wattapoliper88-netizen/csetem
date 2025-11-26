@@ -2333,9 +2333,18 @@ export const ChatPage: React.FC = () => {
                   onClick={() => setActiveConversationId(conv.id)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
-                      {conv.user.username[0].toUpperCase()}
-                    </div>
+                    {conv.user.avatarImage ? (
+                      <Avatar
+                        avatar={conv.user.avatarImage}
+                        size={'w-10 h-10'}
+                        className={'shadow-lg'}
+                        onClick={(e, url) => { e.stopPropagation(); if (url) window.open(url, '_blank'); }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
+                        {conv.user.username[0].toUpperCase()}
+                      </div>
+                    )}
                     <div 
                       className="flex-1 select-none"
                       onTouchStart={(e) => {
@@ -4356,12 +4365,11 @@ export const ChatPage: React.FC = () => {
                 return (
                   <div className="mb-3 flex justify-start items-end gap-2 message-slide-in w-full">
                     {otherUserAvatar ? (
-                      <img 
-                        src={otherUserAvatar} 
-                        alt="Avatar"
-                        className={`w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-lg ring-2 ${
-                          isOnline ? 'ring-green-500 avatar-online' : 'ring-gray-500'
-                        }`}
+                      <Avatar
+                        avatar={otherUserAvatar}
+                        size={'w-8 h-8'}
+                        className={`shadow-lg ring-2 ${isOnline ? 'ring-green-500 avatar-online' : 'ring-gray-500'}`}
+                        onClick={(e, url) => { e.stopPropagation(); if (url) window.open(url, '_blank'); }}
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
