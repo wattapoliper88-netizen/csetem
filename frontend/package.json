@@ -22,6 +22,7 @@
     "axios": "^1.13.2",
     "emoji-picker-react": "^4.15.1",
     "firebase": "^12.6.0",
+    "playwright": "^1.57.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-query": "^3.39.3",

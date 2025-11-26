@@ -54,6 +54,101 @@ function extractFirebasePath(url: string): string | null {
   return null;
 }
 
+// Cache for resolved read URLs to avoid repeated network calls
+const readUrlCache = new Map<string, string | undefined>();
+
+// Component to resolve a canonical file path or URL into a browser-friendly read URL
+function ResolvableMedia({
+  fileUrl,
+  fileType,
+  alt,
+  className,
+  children,
+  controls,
+  onClick,
+}: {
+  fileUrl?: string | null;
+  fileType?: string | null;
+  alt?: string;
+  className?: string;
+  children?: React.ReactNode;
+  controls?: boolean;
+  onClick?: (url?: string) => void;
+}) {
+  const [resolved, setResolved] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!fileUrl) {
+        if (mounted) setResolved(undefined);
+        return;
+      }
+      const normalized = getFullUrl(fileUrl);
+      if (!normalized) {
+        if (mounted) setResolved(undefined);
+        return;
+      }
+
+      // If there's already a cached resolved URL, use it
+      if (readUrlCache.has(normalized)) {
+        if (mounted) setResolved(readUrlCache.get(normalized));
+        return;
+      }
+
+      // If the URL already contains Google signed parameters, use as-is
+      if (normalized.includes('X-Goog-Signature') || normalized.includes('GoogleAccessId')) {
+        readUrlCache.set(normalized, normalized);
+        if (mounted) setResolved(normalized);
+        return;
+      }
+
+      try {
+        let pathToUse = normalized;
+        if (normalized.includes('firebasestorage.googleapis.com')) {
+          const extracted = extractFirebasePath(normalized);
+          if (extracted) pathToUse = extracted;
+        }
+        const url = await getReadUrl(pathToUse!);
+        readUrlCache.set(normalized, url || normalized);
+        if (mounted) setResolved(url || normalized);
+      } catch (err) {
+        readUrlCache.set(normalized, normalized);
+        if (mounted) setResolved(normalized);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [fileUrl]);
+
+  // Render according to type
+  if (!fileUrl) return null;
+  if (fileType?.startsWith('image/')) {
+    return (
+      <img
+        src={resolved || getFullUrl(fileUrl)}
+        alt={alt || 'Kép'}
+        className={className}
+        onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}
+      />
+    );
+  }
+  if (fileType?.startsWith('video/')) {
+    return (
+      <video controls={controls ?? true} className={className} onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}>
+        <source src={resolved || getFullUrl(fileUrl)} type={fileType} />
+        A böngésződ nem támogatja a video lejátszást.
+      </video>
+    );
+  }
+  // Default: render an anchor to the resolved URL
+  return (
+    <a href={resolved || getFullUrl(fileUrl)} target="_blank" rel="noopener noreferrer" className={className} onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}>
+      {children || fileType || 'Fájl'}
+    </a>
+  );
+}
+
 // Custom Audio Player Component
 // Global map to store audio seek and pause callbacks for position sync and single playback
 interface AudioCallbacks {
@@ -2828,11 +2923,12 @@ export const ChatPage: React.FC = () => {
                                   fileName={otherPersonLastMessage.overallLastMessage.lastMessage.content || otherPersonLastMessage.overallLastMessage.lastMessage.fileName}
                                 />
                               ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('image/') ? (
-                                <img 
-                                  src={getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl)}
+                                <ResolvableMedia
+                                  fileUrl={otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl}
+                                  fileType={otherPersonLastMessage.overallLastMessage.lastMessage.fileType}
                                   alt={otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Kép'}
                                   className="max-w-full max-h-32 rounded-lg shadow-lg cursor-pointer border border-purple-500/30"
-                                  onClick={() => otherPersonLastMessage.overallLastMessage?.lastMessage?.fileUrl && window.open(getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl), '_blank')}
+                                  onClick={(url) => url && window.open(url, '_blank')}
                                 />
                               ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('video/') ? (
                                 <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
@@ -2973,11 +3069,12 @@ export const ChatPage: React.FC = () => {
                           </div>
                         ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('image/') ? (
                           /* Image - just the image */
-                          <img 
-                            src={getFullUrl(otherPersonLastMessage.lastMessage.fileUrl)}
+                          <ResolvableMedia
+                            fileUrl={otherPersonLastMessage.lastMessage.fileUrl}
+                            fileType={otherPersonLastMessage.lastMessage.fileType}
                             alt={otherPersonLastMessage.lastMessage.fileName || 'Kép'}
                             className="max-w-full max-h-64 rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-opacity border border-purple-500/30"
-                            onClick={() => window.open(getFullUrl(otherPersonLastMessage.lastMessage.fileUrl), '_blank')}
+                            onClick={(url) => url && window.open(url, '_blank')}
                           />
                         ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('video/') ? (
                           /* Video card */
@@ -3615,11 +3712,12 @@ export const ChatPage: React.FC = () => {
                                 {m.fileUrl && (
                                   <div className="mb-2">
                                     {m.fileType?.startsWith('image/') ? (
-                                      <img 
-                                          src={getFullUrl(m.fileUrl)}
+                                      <ResolvableMedia
+                                        fileUrl={m.fileUrl}
+                                        fileType={m.fileType}
                                         alt={m.fileName || 'Kép'}
                                         className="max-w-full max-h-96 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                        onClick={() => window.open(getFullUrl(m.fileUrl), '_blank')}
+                                        onClick={(url) => url && window.open(url, '_blank')}
                                       />
                                     ) : m.fileType?.startsWith('audio/') ? (
                                       <div className="space-y-3">
@@ -3687,15 +3785,17 @@ export const ChatPage: React.FC = () => {
                                         })()}
                                       </div>
                                     ) : m.fileType?.startsWith('video/') ? (
-                                      <video controls className="max-w-full max-h-96 rounded-lg">
-                                          <source src={getFullUrl(m.fileUrl)} type={m.fileType} />
-                                        A böngésződ nem támogatja a video lejátszást.
-                                      </video>
+                                      <ResolvableMedia
+                                        fileUrl={m.fileUrl}
+                                        fileType={m.fileType}
+                                        className="max-w-full max-h-96 rounded-lg"
+                                        controls={true}
+                                        onClick={(url) => url && window.open(url, '_blank')}
+                                      />
                                     ) : (
-                                      <a 
-                                          href={getFullUrl(m.fileUrl)} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
+                                      <ResolvableMedia
+                                        fileUrl={m.fileUrl}
+                                        fileType={m.fileType}
                                         className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors"
                                       >
                                         <span className="text-2xl">📄</span>
@@ -3704,7 +3804,7 @@ export const ChatPage: React.FC = () => {
                                           <p className="text-xs text-gray-400">{m.fileType || 'Fájl'}</p>
                                         </div>
                                         <span className="text-xs text-gray-400">⬇️</span>
-                                      </a>
+                                      </ResolvableMedia>
                                     )}
                                   </div>
                                 )}
