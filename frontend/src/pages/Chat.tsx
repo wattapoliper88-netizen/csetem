@@ -123,13 +123,18 @@ function ResolvableMedia({
 
   // Render according to type
   if (!fileUrl) return null;
-  if (fileType?.startsWith('image/')) {
+    if (fileType?.startsWith('image/')) {
     return (
       <img
         src={resolved || getFullUrl(fileUrl)}
         alt={alt || 'Kép'}
         className={className}
         onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}
+        onError={(e) => {
+          // Fallback to generic placeholder if read url fails
+          const img = e.currentTarget as HTMLImageElement;
+          if (img && img.src && !img.src.includes('/assets/zene.gif')) img.src = '/assets/zene.gif';
+        }}
       />
     );
   }
@@ -196,6 +201,10 @@ const Avatar: React.FC<{ avatar?: string | null; size?: string; className?: stri
       alt={alt}
       className={`${size} ${className} rounded-full object-cover`}
       onClick={(e) => onClick && onClick(e, resolved || avatar)}
+      onError={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (img && img.src && !img.src.includes('/assets/zene.gif')) img.src = '/assets/zene.gif';
+      }}
     />
   );
 };
