@@ -155,55 +155,65 @@ function ResolvableMedia({
 }
 
 // Small avatar component which resolves avatar image paths to read URLs
-const Avatar: React.FC<{ avatar?: string | null; size?: string; className?: string; alt?: string; onClick?: (e: React.MouseEvent, url?: string) => void }> = ({ avatar, size = 'w-8 h-8', className = '', alt = 'Avatar', onClick }) => {
+const Avatar: React.FC<{ avatar?: string | null; initials?: string; size?: string; className?: string; alt?: string; onClick?: (e: React.MouseEvent, url?: string) => void }> = ({ avatar, initials, size = 'w-8 h-8', className = '', alt = 'Avatar', onClick }) => {
+  const [loadError, setLoadError] = useState(false);
   const [resolved, setResolved] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    let mounted = true;
-    const resolve = async () => {
-      if (!avatar) {
-        if (mounted) setResolved(undefined);
-        return;
-      }
-      if (avatar.includes('X-Goog-Signature') || avatar.includes('GoogleAccessId')) {
-        if (mounted) setResolved(avatar);
-        return;
-      }
-      if (readUrlCache.has(avatar)) {
-        if (mounted) setResolved(readUrlCache.get(avatar));
-        return;
-      }
-      try {
-        // If avatar is already a public host URL but not signed, still call backend to generate read-url
-        let pathToUse = avatar;
-        if (avatar.includes('firebasestorage.googleapis.com')) {
-          try {
-            const u = new URL(avatar);
-            if (u.pathname.startsWith('/v0/b/') && u.pathname.includes('/o/')) {
-              pathToUse = decodeURIComponent(u.pathname.split('/o/')[1]);
+        useEffect(() => {
+          let mounted = true;
+          const resolve = async () => {
+            if (!avatar) {
+              if (mounted) setResolved(undefined);
+              return;
             }
-          } catch {}
-        }
-        const url = await getReadUrl(pathToUse);
-        readUrlCache.set(avatar, url || avatar);
-        if (mounted) setResolved(url || avatar);
-      } catch (e) {
-        if (mounted) setResolved(avatar);
-      }
-    };
-    resolve();
-    return () => { mounted = false; };
-  }, [avatar]);
+            if (avatar.includes('X-Goog-Signature') || avatar.includes('GoogleAccessId')) {
+              if (mounted) setResolved(avatar);
+              return;
+            }
+            if (readUrlCache.has(avatar)) {
+              if (mounted) setResolved(readUrlCache.get(avatar));
+              return;
+            }
+            try {
+              let pathToUse = avatar;
+              if (avatar.includes('firebasestorage.googleapis.com')) {
+                try {
+                  const u = new URL(avatar);
+                  if (u.pathname.startsWith('/v0/b/') && u.pathname.includes('/o/')) {
+                    pathToUse = decodeURIComponent(u.pathname.split('/o/')[1]);
+                  }
+                } catch {}
+              }
+              const url = await getReadUrl(pathToUse);
+              readUrlCache.set(avatar, url || avatar);
+              if (mounted) setResolved(url || avatar);
+            } catch (e) {
+              if (mounted) setResolved(avatar);
+            }
+          };
+          resolve();
+          return () => { mounted = false; };
+        }, [avatar]);
+  if (!avatar && !initials) return null;
+  if (!avatar && initials) {
+    return (
+      <div className={`${size} ${className} rounded-full object-cover bg-gray-800 flex items-center justify-center text-white font-bold`}>{initials}</div>
+    );
+  }
+  if (loadError && initials) {
+    return (
+      <div className={`${size} ${className} rounded-full object-cover bg-gray-800 flex items-center justify-center text-white font-bold`}>{initials}</div>
+    );
+  }
 
-  if (!avatar) return null;
+  const srcUrl = (resolved || avatar) as string | undefined;
   return (
     <img
-      src={resolved || avatar}
+      src={srcUrl}
       alt={alt}
       className={`${size} ${className} rounded-full object-cover`}
-      onClick={(e) => onClick && onClick(e, resolved || avatar)}
-      onError={(e) => {
-        const img = e.currentTarget as HTMLImageElement;
-        if (img && img.src && !img.src.includes('/assets/zene.gif')) img.src = '/assets/zene.gif';
+      onClick={(e) => onClick && onClick(e, srcUrl)}
+      onError={() => {
+        setLoadError(true);
       }}
     />
   );
@@ -2413,19 +2423,14 @@ export const ChatPage: React.FC = () => {
                     </button>
                   )}
                   <div className="relative flex-shrink-0">
-                    {avatarImage ? (
-                      <Avatar
-                        avatar={resolvedAvatarImage || avatarImage}
-                        size={'w-8 h-8 md:w-10 md:h-10'}
-                        className={'shadow-lg ring-2 ring-green-500'}
-                        alt="Avatar"
-                        onClick={(e) => { e.stopPropagation(); setShowAvatarMenu(!showAvatarMenu); }}
-                      />
-                    ) : (
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold shadow-lg text-sm md:text-base">
-                        {me?.isAdmin ? 'A' : 'U'}
-                      </div>
-                    )}
+                    <Avatar
+                      avatar={resolvedAvatarImage || avatarImage}
+                      initials={getInitials(me?.username || (me?.isAdmin ? 'A' : 'U'))}
+                      size={'w-8 h-8 md:w-10 md:h-10'}
+                      className={'shadow-lg ring-2 ring-green-500'}
+                      alt="Avatar"
+                      onClick={(e) => { e.stopPropagation(); setShowAvatarMenu(!showAvatarMenu); }}
+                    />
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -3003,6 +3008,7 @@ export const ChatPage: React.FC = () => {
                       {otherPersonLastMessage.sender?.avatarImage ? (
                         <Avatar
                           avatar={otherPersonLastMessage.sender.avatarImage}
+                          initials={getInitials(otherPersonLastMessage.sender?.username || 'User')}
                           size={'w-8 h-8 md:w-10 md:h-10'}
                           className={`shadow-lg ring-2 ${
                             otherPersonLastMessage.sender.lastSeen && 
@@ -3619,37 +3625,25 @@ export const ChatPage: React.FC = () => {
                     }}
                   >
                     {/* Avatar */}
-                    {group.messages[0]?.sender?.avatarImage ? (
-                      <Avatar
-                        avatar={group.messages[0].sender.avatarImage}
-                        size={'w-8 h-8'}
-                        onClick={(e, url) => {
-                          // stop propagation and open viewer with resolved URL if available
-                          e.stopPropagation();
-                          if (url) setViewingAvatar(url);
-                          else setViewingAvatar(group.messages[0].sender.avatarImage);
-                        }}
-                        className={`flex-shrink-0 cursor-pointer hover:ring-4 transition-all ${
-                          group.messages[0].sender.lastSeen && 
-                          new Date().getTime() - new Date(group.messages[0].sender.lastSeen).getTime() < 60 * 1000
-                            ? 'ring-green-500 avatar-online'
-                            : 'ring-gray-500'
-                        }`}
-                      />
-                    ) : (
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br flex-shrink-0 ${
-                        group.senderId === me?.id 
-                          ? 'from-cyan-500 to-teal-500' 
-                          : 'from-purple-500 to-pink-500'
-                      } flex items-center justify-center text-white text-xs font-bold shadow-lg ${
-                        group.messages[0]?.sender?.lastSeen && 
+                    <Avatar
+                      avatar={group.messages[0]?.sender?.avatarImage}
+                      initials={getInitials(group.messages[0]?.sender?.username || 'User')}
+                      size={'w-8 h-8'}
+                      onClick={(e, url) => {
+                        // stop propagation and open viewer with resolved URL if available
+                        e.stopPropagation();
+                        if (url) setViewingAvatar(url);
+                        else setViewingAvatar(group.messages[0].sender.avatarImage);
+                      }}
+                      className={`flex-shrink-0 cursor-pointer hover:ring-4 transition-all ${
+                        group.messages[0].sender.lastSeen && 
                         new Date().getTime() - new Date(group.messages[0].sender.lastSeen).getTime() < 60 * 1000
-                          ? 'avatar-online'
-                          : ''
-                      }`}>
-                        {getInitials(group.messages[0]?.sender?.username || 'User')}
-                      </div>
-                    )}
+                          ? 'ring-green-500 avatar-online'
+                          : 'ring-gray-500'
+                      }`}
+                    />
+                    
+                    
                     
                     <div className="flex-1 flex gap-1 sm:gap-2 md:gap-3 items-stretch flex-wrap md:flex-nowrap">
                       {/* Audio playlist panel - shown on the left of message when group has multiple audio files AND expanded */}
