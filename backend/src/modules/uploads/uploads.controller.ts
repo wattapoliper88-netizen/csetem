@@ -182,6 +182,15 @@ export class UploadsController {
       const bucket = admin.storage().bucket(bucketName);
       const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
       Logger.log('Checking read-url against bucket and path', { bucketName, path: normalizedPath });
+
+      // If path points to local server uploads (served by express), return direct URL instead of querying storage
+      if (normalizedPath.startsWith('uploads/')) {
+        const serverUrl = process.env.API_URL || process.env.APP_URL || `https://${process.env.RENDER_EXTERNAL_URL || 'csetem.onrender.com'}`;
+        const readUrlLocal = `${serverUrl}/${normalizedPath}`;
+        Logger.log('Detected local upload path, returning server-hosted read URL', { readUrlLocal });
+        return { readUrl: readUrlLocal };
+      }
+      Logger.log('Checking read-url against bucket and path', { bucketName, path: normalizedPath });
       const file = bucket.file(normalizedPath);
       // Check if the file actually exists and return 404 if not
       const [exists] = await file.exists();
