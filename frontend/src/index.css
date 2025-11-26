@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+:root {
+  /* Fallback for --app-vh; overwritten by main.tsx on load */
+  --app-vh: 1vh;
+}
+
 /* Hide scrollbar for all elements */
 * {
   scrollbar-width: none; /* Firefox */

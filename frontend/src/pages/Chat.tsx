@@ -2047,7 +2047,7 @@ export const ChatPage: React.FC = () => {
         </div>
       )}
 
-      <div className="h-screen flex flex-col md:flex-row bg-gray-900 overflow-hidden">
+      <div className="flex flex-col md:flex-row bg-gray-900 overflow-hidden" style={{ height: 'calc(var(--app-vh) * 100)' }}>
       {me?.isAdmin && (
         <>
           {/* Mobile hamburger button */}
