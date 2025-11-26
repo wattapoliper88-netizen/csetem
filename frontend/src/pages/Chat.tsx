@@ -1337,6 +1337,7 @@ export const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (!socketState || !activeConversationId) return;
+
     socketState.emit('conversation:join', { conversationId: activeConversationId });
 
     // Send heartbeat every 20 seconds to keep online status active
@@ -1346,21 +1347,16 @@ export const ChatPage: React.FC = () => {
       }
     }, 20000);
 
-    socketState?.on('message:new', (msg: any) => {
+    // Ensure we register stable handlers and cleanup with the exact same references
+    const handleMessageNew = (msg: any) => {
       console.log('🔵 message:new event received', msg);
       if (msg.conversationId === activeConversationId) {
         console.log('✅ Message is for active conversation');
         setMessages((prev) => [...prev, msg]);
         setFilteredMessages((prev) => [...prev, msg]);
-        
-        // Hide typing indicator when message is sent
         setIsTyping(false);
-        
-        // Only glow the latest message from the other person
         console.log('💡 Setting newMessageIds with:', msg.id, 'sender:', msg.senderId, 'me:', me?.id);
         setNewMessageIds(new Set([msg.id]));
-        
-        // If a folder is active, add the new message to that folder
         if (activeFolderId) {
           setFolders(prev => prev.map(folder => 
             folder.id === activeFolderId 
@@ -1368,17 +1364,21 @@ export const ChatPage: React.FC = () => {
               : folder
           ));
         }
-        
         if (msg.senderId !== me?.id && notificationSound.current) {
           notificationSound.current.play().catch(() => {});
         }
       }
-    });
+    };
 
-    socketState?.on('typing', (payload: any) => {
+    const handleTyping = (payload: any) => {
       setIsTyping(payload.isTyping);
       setTypingTextLength(payload.textLength || 0);
-    });
+    };
+
+    socketState?.on('message:new', handleMessageNew);
+    socketState?.on('typing', handleTyping);
+
+    // (user:online/offline/folder:new/audio-position:received handlers remain unchanged)
 
     socketState?.on('user:online', (payload: { userId: string; lastSeen: Date }) => {
       // Update messages with new online status
@@ -1493,14 +1493,14 @@ export const ChatPage: React.FC = () => {
 
     return () => {
       clearInterval(heartbeatInterval);
-      socketState?.off('message:new');
-      socketState?.off('typing');
+      socketState?.off('message:new', handleMessageNew);
+      socketState?.off('typing', handleTyping);
       socketState?.off('user:online');
       socketState?.off('user:offline');
       socketState?.off('audio-position:received');
       getSocketInst()?.off('folder:new');
     };
-  }, [socketState, activeConversationId, me?.id, messages]);
+  }, [socketState, activeConversationId, me?.id]);
 
   // Load folders from database when conversation changes
   useEffect(() => {
