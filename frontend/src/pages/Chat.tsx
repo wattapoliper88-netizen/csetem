@@ -140,8 +140,10 @@ function ResolvableMedia({
   }
   if (fileType?.startsWith('video/')) {
     return (
+      <div>
       <video
         controls={controls ?? true}
+        preload="metadata"
         playsInline
         crossOrigin="anonymous"
         className={className}
@@ -152,10 +154,18 @@ function ResolvableMedia({
           const url = resolved || getFullUrl(fileUrl);
           if (url) window.open(url, '_blank');
         }}
+        onLoadedData={() => {
+          console.log('✅ Video loaded metadata', { fileUrl, resolved, fileType });
+        }}
       >
         <source src={resolved || getFullUrl(fileUrl)} type={fileType} />
         A böngésződ nem támogatja a video lejátszást.
       </video>
+      {/* Fallback link so user can open video in a new tab if inline playback fails */}
+      <div className="mt-1 text-xs text-gray-400">
+        <a href={resolved || getFullUrl(fileUrl)} target="_blank" rel="noopener noreferrer">Megnyitás új ablakban</a>
+      </div>
+      </div>
     );
   }
   // Default: render an anchor to the resolved URL
