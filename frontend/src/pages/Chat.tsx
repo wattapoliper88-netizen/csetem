@@ -140,7 +140,7 @@ function ResolvableMedia({
   }
   if (fileType?.startsWith('video/')) {
     return (
-      <video controls={controls ?? true} className={className} onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}>
+      <video controls={controls ?? true} className={className} playsInline crossOrigin="anonymous" onClick={(e) => { e.stopPropagation(); }}>
         <source src={resolved || getFullUrl(fileUrl)} type={fileType} />
         A böngésződ nem támogatja a video lejátszást.
       </video>
