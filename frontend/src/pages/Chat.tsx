@@ -1013,6 +1013,7 @@ export const ChatPage: React.FC = () => {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const loggedConvIds = useRef<Set<string>>(new Set());
+  const userStatusRef = useRef<{ verified?: boolean; isAdmin?: boolean }>({});
   const previousMessagesLengthRef = useRef(0);
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
   // Állapot alapú link preview cache (stabil re-render)
@@ -1686,6 +1687,15 @@ export const ChatPage: React.FC = () => {
       }
     });
   }, [convData]);
+
+  // Log user status changes only when 'me' changes to reduce noise
+  useEffect(() => {
+    if (!me) return;
+    if (userStatusRef.current.verified !== me.verified || userStatusRef.current.isAdmin !== me.isAdmin) {
+      console.log('🔍 User status check:', { me, verified: me?.verified, isAdmin: me?.isAdmin });
+      userStatusRef.current = { verified: me.verified, isAdmin: me.isAdmin };
+    }
+  }, [me]);
 
   useEffect(() => {
     // Scroll when new messages are added or on initial load
