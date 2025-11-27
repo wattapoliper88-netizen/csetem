@@ -3793,7 +3793,7 @@ export const ChatPage: React.FC = () => {
                           })()
                         } ${
                           // If this is the last message and has new message highlight, make it sticky at bottom of scroll container
-                          (isLastMessage && hasNewMessage) ? 'invisible' : ''
+                          (isLastMessage && hasNewMessage && showScrollBottom) ? 'invisible' : ''
                         }`}
                       >
                         {/* Render all messages in the group */}
@@ -4431,7 +4431,7 @@ export const ChatPage: React.FC = () => {
                 const lastGroup = groupedMessages[groupedMessages.length - 1];
                 if (!lastGroup) return null;
                 const lastMsgId = lastGroup.lastMessageId;
-                if (!newMessageIds.has(lastMsgId)) return null;
+                if (!newMessageIds.has(lastMsgId) || !showScrollBottom) return null;
                 const group = lastGroup;
                 const msg = group.messages[group.messages.length - 1];
                 // overlay background classes use sender to decide gradient; folder status unused here
