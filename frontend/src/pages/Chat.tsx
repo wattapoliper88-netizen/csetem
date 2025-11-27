@@ -4434,9 +4434,11 @@ export const ChatPage: React.FC = () => {
                 if (!newMessageIds.has(lastMsgId)) return null;
                 const group = lastGroup;
                 const msg = group.messages[group.messages.length - 1];
+                // overlay background classes use sender to decide gradient; folder status unused here
+                const overlayBg = group.senderId === me?.id ? 'bg-gradient-to-r from-cyan-600/40 to-teal-600/40 border-cyan-500/30 text-gray-100 rounded-br-none' : 'bg-gray-700/40 border-gray-600/30 text-gray-100 rounded-bl-none';
                 return (
                   <div className="absolute left-1/2 transform -translate-x-1/2 bottom-4 z-50 w-full max-w-[850px] pointer-events-none">
-                    <div className={`mx-auto pointer-events-auto px-4 py-2 rounded-2xl break-words relative group message-bubble bubble-3d border transition-all duration-300 cursor-pointer ${group.senderId === me?.id ? 'glow-effect' : 'glow-effect-gray'}`}>
+                    <div className={`mx-auto pointer-events-auto px-4 py-2 rounded-2xl break-words relative group message-bubble bubble-3d border transition-all duration-300 cursor-pointer ${overlayBg} ${group.senderId === me?.id ? 'glow-effect' : 'glow-effect-gray'}`}>
                       {/* Minimal bubble render: avatar (small), content or media */}
                       <div className="flex items-center gap-3">
                         {group.sender?.avatarImage ? (
