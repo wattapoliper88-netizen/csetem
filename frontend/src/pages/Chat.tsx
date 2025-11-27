@@ -3799,8 +3799,8 @@ export const ChatPage: React.FC = () => {
                             }
                           })()
                         } ${
-                          // If this is the last message and has new message highlight, make it sticky at bottom of scroll container
-                          (isLastMessage && hasNewMessage && showScrollBottom) ? 'invisible' : ''
+                          // Previously this hid the original message when overlay was shown. We no longer hide it.
+                          ''
                         }`}
                       >
                         {/* Render all messages in the group */}
