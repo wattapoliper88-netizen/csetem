@@ -54,16 +54,6 @@ function extractFirebasePath(url: string): string | null {
   return null;
 }
 
-// Simple HEAD check to verify a resource exists (returns true for 2xx/3xx)
-async function checkUrlExists(url: string): Promise<boolean> {
-  try {
-    const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-    return res.ok;
-  } catch (err) {
-    return false;
-  }
-}
-
 // Cache for resolved read URLs to avoid repeated network calls
 const readUrlCache = new Map<string, string | undefined>();
 
@@ -86,7 +76,6 @@ function ResolvableMedia({
   onClick?: (url?: string) => void;
 }) {
   const [resolved, setResolved] = useState<string | undefined>(undefined);
-  const [missing, setMissing] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -121,29 +110,8 @@ function ResolvableMedia({
           if (extracted) pathToUse = extracted;
         }
         const url = await getReadUrl(pathToUse!);
-        const candidate = url || normalized;
-        // If the resolved URL looks like it's served by our backend (API_URL) or
-        // local server uploads/messages path, perform a HEAD check to make sure
-        // we don't try to inline a 404 resource.
-        const isServerHosted = candidate.startsWith(API_URL) || candidate.startsWith(window.location.origin + '/messages') || candidate.includes('/uploads/');
-        if (isServerHosted) {
-          const exists = await checkUrlExists(candidate);
-          if (!exists) {
-            // mark missing and keep the normalized value instead of the signed url
-            console.warn('ResolvableMedia: missing file detected via HEAD', { fileUrl, candidate });
-            readUrlCache.set(normalized, normalized);
-            if (mounted) {
-              setMissing(true);
-              setResolved(normalized);
-            }
-            return;
-          }
-        }
-        readUrlCache.set(normalized, candidate);
-        if (mounted) {
-          setMissing(false);
-          setResolved(candidate);
-        }
+        readUrlCache.set(normalized, url || normalized);
+        if (mounted) setResolved(url || normalized);
       } catch (err) {
         readUrlCache.set(normalized, normalized);
         if (mounted) setResolved(normalized);
@@ -171,77 +139,11 @@ function ResolvableMedia({
     );
   }
   if (fileType?.startsWith('video/')) {
-    const normalized = getFullUrl(fileUrl);
-    const retryCheck = async () => {
-      setMissing(false);
-      if (!normalized) return;
-      try {
-        let pathToUse = normalized;
-        if (normalized.includes('firebasestorage.googleapis.com')) {
-          const extracted = extractFirebasePath(normalized);
-          if (extracted) pathToUse = extracted;
-        }
-        const url = await getReadUrl(pathToUse!);
-        const candidate = url || normalized;
-        const isServerHosted = candidate.startsWith(API_URL) || candidate.startsWith(window.location.origin + '/messages') || candidate.includes('/uploads/');
-        if (isServerHosted) {
-          const exists = await checkUrlExists(candidate);
-          if (!exists) {
-            setMissing(true);
-            readUrlCache.set(normalized, normalized);
-            setResolved(normalized);
-            return;
-          }
-        }
-        readUrlCache.set(normalized, candidate);
-        setResolved(candidate);
-        setMissing(false);
-      } catch (err) {
-        setMissing(true);
-        readUrlCache.set(normalized, normalized);
-        setResolved(normalized);
-      }
-    };
-
     return (
-      <div className="relative inline-block">
-      <video
-        controls={controls ?? true}
-        preload="metadata"
-        playsInline
-        crossOrigin="anonymous"
-        className={className}
-        onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}
-        onError={(e) => {
-          console.error('🔴 Video playback error for', { fileUrl, resolved, fileType, event: e });
-          // Try to open in a new tab as a fallback so user can still view
-          const url = resolved || getFullUrl(fileUrl);
-          if (url) window.open(url, '_blank');
-        }}
-        onLoadedData={() => {
-          console.log('✅ Video loaded metadata', { fileUrl, resolved, fileType });
-        }}
-      >
+      <video controls={controls ?? true} className={className} onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}>
         <source src={resolved || getFullUrl(fileUrl)} type={fileType} />
         A böngésződ nem támogatja a video lejátszást.
       </video>
-      {missing && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 text-white p-3">
-          <div className="text-center">
-            <div className="font-semibold">Fájl nem található</div>
-            <div className="mt-2 text-xs text-gray-200">A fájl nem elérhető. Megpróbálhatod újra, vagy megnyithatod külön ablakban.</div>
-            <div className="mt-2 flex items-center justify-center gap-2">
-              <button className="bg-white text-black rounded px-2 py-1 text-xs" onClick={retryCheck}>Újra próbál</button>
-              <a href={resolved || getFullUrl(fileUrl)} target="_blank" rel="noopener noreferrer" className="underline text-xs">Megnyitás új ablakban</a>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Fallback link so user can open video in a new tab if inline playback fails */}
-      <div className="mt-1 text-xs text-gray-400">
-        <a href={resolved || getFullUrl(fileUrl)} target="_blank" rel="noopener noreferrer">Megnyitás új ablakban</a>
-      </div>
-      </div>
     );
   }
   // Default: render an anchor to the resolved URL
@@ -510,7 +412,6 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   }, [fallbackMode]);
 
   const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(undefined);
-  const [missingAudio, setMissingAudio] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -531,23 +432,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
           if (extracted) pathToUse = extracted;
         }
         const url = await getReadUrl(pathToUse);
-        const candidate = url || effectiveSrc;
-        const isServerHosted = candidate.startsWith(API_URL) || candidate.startsWith(window.location.origin + '/messages') || candidate.includes('/uploads/');
-        if (isServerHosted) {
-          const exists = await checkUrlExists(candidate);
-          if (!exists) {
-            console.warn('CustomAudioPlayer: missing audio detected via HEAD', { candidate, effectiveSrc });
-            if (mounted) {
-              setMissingAudio(true);
-              setResolvedSrc(effectiveSrc);
-            }
-            return;
-          }
-        }
-        if (mounted) {
-          setMissingAudio(false);
-          setResolvedSrc(candidate);
-        }
+        if (mounted) setResolvedSrc(url || effectiveSrc);
       } catch (err) {
         if (mounted) setResolvedSrc(effectiveSrc);
       }
@@ -825,34 +710,6 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
             className={`w-full h-10 sm:h-14 md:h-20 rounded-lg ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
             style={{ display: 'block' }}
           />
-        </div>
-      )}
-      {missingAudio && (
-        <div className="mt-1 text-xs text-red-500 flex gap-2 items-center">
-          <span>Fájl nem található</span>
-          <button className="underline" onClick={async () => {
-            setMissingAudio(false);
-            if (!effectiveSrc) return;
-            try {
-              let pathToUse = effectiveSrc;
-              if (effectiveSrc.includes('firebasestorage.googleapis.com')) {
-                const extracted = extractFirebasePath(effectiveSrc);
-                if (extracted) pathToUse = extracted;
-              }
-              const fresh = await getReadUrl(pathToUse);
-              const candidate = fresh || effectiveSrc;
-              const exists = await checkUrlExists(candidate);
-              if (exists) {
-                setResolvedSrc(candidate);
-                setMissingAudio(false);
-              } else {
-                setMissingAudio(true);
-              }
-            } catch (err) {
-              setMissingAudio(true);
-            }
-          }}>Újra próbál</button>
-          <a className="underline" href={resolvedSrc || effectiveSrc} target="_blank" rel="noopener noreferrer">Megnyitás új ablakban</a>
         </div>
       )}
       
@@ -1133,8 +990,6 @@ export const ChatPage: React.FC = () => {
   const [previousSelection, setPreviousSelection] = useState<Set<string>>(new Set());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const loggedConvIds = useRef<Set<string>>(new Set());
-  const userStatusRef = useRef<{ verified?: boolean; isAdmin?: boolean }>({});
   const previousMessagesLengthRef = useRef(0);
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
   // Állapot alapú link preview cache (stabil re-render)
@@ -1797,26 +1652,6 @@ export const ChatPage: React.FC = () => {
         console.error('❌ Failed to load folders:', err);
       });
   }, [activeConversationId]);
-
-  // Log new conversation items only once to avoid noisy repeated logs in dev
-  useEffect(() => {
-    if (!Array.isArray(convData)) return;
-    convData.forEach((conv: any) => {
-      if (!loggedConvIds.current.has(conv.id)) {
-        console.log('conv item loaded', { convId: conv.id, userId: conv.user?.id, avatarImage: conv.user?.avatarImage });
-        loggedConvIds.current.add(conv.id);
-      }
-    });
-  }, [convData]);
-
-  // Log user status changes only when 'me' changes to reduce noise
-  useEffect(() => {
-    if (!me) return;
-    if (userStatusRef.current.verified !== me.verified || userStatusRef.current.isAdmin !== me.isAdmin) {
-      console.log('🔍 User status check:', { me, verified: me?.verified, isAdmin: me?.isAdmin });
-      userStatusRef.current = { verified: me.verified, isAdmin: me.isAdmin };
-    }
-  }, [me]);
 
   useEffect(() => {
     // Scroll when new messages are added or on initial load
@@ -2515,7 +2350,9 @@ export const ChatPage: React.FC = () => {
               </div>
             )}
             {Array.isArray(convData) &&
-              convData.map((conv: any) => (
+                convData.map((conv: any) => (
+                  // Debug: log user avatar path for troubleshooting
+                  console.log('conv item loaded', { convId: conv.id, userId: conv.user?.id, avatarImage: conv.user?.avatarImage }),
                 <div
                   key={conv.id}
                   className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
@@ -4123,7 +3960,6 @@ export const ChatPage: React.FC = () => {
                                         fileType={m.fileType}
                                         className="max-w-full max-h-96 rounded-lg"
                                         controls={true}
-                                        onClick={(url) => url && window.open(url, '_blank')}
                                       />
                                     ) : (
                                       <ResolvableMedia
