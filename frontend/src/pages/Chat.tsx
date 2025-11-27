@@ -284,18 +284,20 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   playlist,
   otherUserPlaying,
   onDisconnectOtherUser,
-  isCollapsedFirstAudio
-  , showMobileControls = false, setShowMobileControls
+  isCollapsedFirstAudio,
+  showMobileControls = false,
+  setShowMobileControls,
 }) => {
+  // Provide a local handler to toggle mobile controls if parent passed the setter
+  const toggleMobileControls = () => setShowMobileControls && setShowMobileControls(!showMobileControls);
+  // Reference it to avoid unused variable errors while the feature is wired in elsewhere
+  useEffect(() => { void toggleMobileControls; }, [toggleMobileControls]);
   // Normalize incoming MIME or extension to a browser supported MIME
   const normalizeMime = (raw?: string): string | undefined => {
     if (!raw) return undefined;
     const lower = raw.toLowerCase();
     if (lower.includes('audio/mp3') || lower.endsWith('.mp3')) return 'audio/mpeg';
     if (lower.includes('audio/mpeg')) return 'audio/mpeg';
-    if (lower.includes('audio/wav') || lower.endsWith('.wav')) return 'audio/wav';
-    if (lower.includes('audio/ogg') || lower.endsWith('.ogg')) return 'audio/ogg';
-    if (lower.includes('audio/webm') || lower.endsWith('.webm')) return 'audio/webm';
     if (lower.includes('audio/x-m4a') || lower.endsWith('.m4a') || lower.endsWith('.mp4')) return 'audio/mp4';
     if (lower.includes('audio/aac') || lower.endsWith('.aac')) return 'audio/aac';
     return undefined; // Let browser sniff if unknown
@@ -965,6 +967,7 @@ export const ChatPage: React.FC = () => {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({});
   const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
+  // fixed overlay removed — we no longer render a sticky/fixed overlay that sticks to viewport
   const [showReactionsForMessage, setShowReactionsForMessage] = useState<string | null>(null);
   const [isLastMessagePanelCollapsed, setIsLastMessagePanelCollapsed] = useState(() => {
     const saved = localStorage.getItem('isLastMessagePanelCollapsed');
@@ -1477,6 +1480,8 @@ export const ChatPage: React.FC = () => {
         setIsTyping(false);
         console.log('💡 Setting newMessageIds with:', msg.id, 'sender:', msg.senderId, 'me:', me?.id);
         setNewMessageIds(new Set([msg.id]));
+        // If user is scrolled away and the message element exists, render a fixed overlay at its current screen position
+        // Do not capture a fixed overlay — we don't render a sticky overlay.
         if (activeFolderId) {
           setFolders(prev => prev.map(folder => 
             folder.id === activeFolderId 
@@ -1737,6 +1742,7 @@ export const ChatPage: React.FC = () => {
       
       // Remove glow from all previous messages, only glow the latest
       setNewMessageIds(new Set([msg.id]));
+      // Do not capture a fixed overlay — we don't render a sticky overlay.
       
       // If a folder is active, add the new message to that folder
       if (activeFolderId) {
@@ -1968,6 +1974,7 @@ export const ChatPage: React.FC = () => {
       setMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
       setFilteredMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
       setNewMessageIds(new Set([newMessage.id]));
+      // Do not capture a fixed overlay for newly created messages
 
       if (activeFolderId) {
         setFolders(prev => prev.map(folder => 
@@ -4436,8 +4443,10 @@ export const ChatPage: React.FC = () => {
                 const msg = group.messages[group.messages.length - 1];
                 // overlay background classes use sender to decide gradient; folder status unused here
                 const overlayBg = group.senderId === me?.id ? 'bg-gradient-to-r from-cyan-600/40 to-teal-600/40 border-cyan-500/30 text-gray-100 rounded-br-none' : 'bg-gray-700/40 border-gray-600/30 text-gray-100 rounded-bl-none';
+                // We no longer render a fixed/sticky overlay. Render inline bubble highlight instead.
+                // Render the last highlighted message inline (in the document flow) so it doesn't stick
                 return (
-                  <div className="absolute left-0 transform translate-x-0 top-0 z-50 w-full pointer-events-none">
+                  <div className="w-full pointer-events-none">
                     <div className={`mx-auto pointer-events-auto px-4 py-2 rounded-2xl break-words relative group message-bubble bubble-3d border transition-all duration-300 cursor-pointer ${overlayBg} ${group.senderId === me?.id ? 'glow-effect' : 'glow-effect-gray'}`} style={{ maxWidth: 'inherit' }}>
                       {/* Minimal bubble render: avatar (small), content or media */}
                       <div className="flex items-center gap-3">
