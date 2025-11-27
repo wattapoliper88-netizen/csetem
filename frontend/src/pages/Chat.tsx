@@ -3791,6 +3791,9 @@ export const ChatPage: React.FC = () => {
                                 : 'bg-gray-700/40 border-gray-600/30 text-gray-100 rounded-bl-none';
                             }
                           })()
+                        } ${
+                          // If this is the last message and has new message highlight, make it sticky at bottom of scroll container
+                          (isLastMessage && hasNewMessage) ? 'invisible' : ''
                         }`}
                       >
                         {/* Render all messages in the group */}
@@ -4423,6 +4426,48 @@ export const ChatPage: React.FC = () => {
                 );
               })()}
               <div ref={bottomRef} className="h-0" />
+              {/* Sticky overlay for last highlighted message (to keep it visible while scrolling) */}
+              {(() => {
+                const lastGroup = groupedMessages[groupedMessages.length - 1];
+                if (!lastGroup) return null;
+                const lastMsgId = lastGroup.lastMessageId;
+                if (!newMessageIds.has(lastMsgId)) return null;
+                const group = lastGroup;
+                const msg = group.messages[group.messages.length - 1];
+                return (
+                  <div className="absolute left-1/2 transform -translate-x-1/2 bottom-4 z-50 w-full max-w-[850px] pointer-events-none">
+                    <div className={`mx-auto pointer-events-auto px-4 py-2 rounded-2xl break-words relative group message-bubble bubble-3d border transition-all duration-300 cursor-pointer ${group.senderId === me?.id ? 'glow-effect' : 'glow-effect-gray'}`}>
+                      {/* Minimal bubble render: avatar (small), content or media */}
+                      <div className="flex items-center gap-3">
+                        {group.sender?.avatarImage ? (
+                          <Avatar avatar={group.sender.avatarImage} size={'w-8 h-8'} className="shadow-lg" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                            {getInitials(group.sender?.username || 'U')}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          {msg.fileUrl ? (
+                            msg.fileType?.startsWith('image/') ? (
+                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} alt={msg.fileName || 'Kép'} className="max-w-full max-h-40 rounded-lg" />
+                            ) : msg.fileType?.startsWith('audio/') ? (
+                              <CustomAudioPlayer src={getFullUrl(msg.fileUrl)} type={msg.fileType} thumbnail={msg.audioThumbnail} messageId={msg.id} conversationId={activeConversationId || undefined} showMobileControls={showMobileControls} setShowMobileControls={setShowMobileControls} />
+                            ) : msg.fileType?.startsWith('video/') ? (
+                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="max-w-full max-h-40 rounded-lg" controls={true} />
+                            ) : (
+                              <div className="inline-flex items-center gap-2 bg-gray-700/60 px-3 py-1 rounded">
+                                <span className="text-sm text-gray-200 truncate">{msg.fileName}</span>
+                              </div>
+                            )
+                          ) : (
+                            <p className="text-cyan-100 text-sm line-clamp-2">{msg.content}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
               
               {/* Scroll to bottom button */}
               {showScrollBottom && (
