@@ -1472,8 +1472,8 @@ export const ChatPage: React.FC = () => {
       console.log('💬 activeConversationId vs incoming message conversationId', typeof activeConversationId, activeConversationId, typeof msg.conversationId, msg.conversationId);
       if (String(msg.conversationId) === String(activeConversationId)) {
         console.log('✅ Message is for active conversation');
-        setMessages((prev) => [...prev, msg]);
-        setFilteredMessages((prev) => [...prev, msg]);
+        setMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
+        setFilteredMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
         setIsTyping(false);
         console.log('💡 Setting newMessageIds with:', msg.id, 'sender:', msg.senderId, 'me:', me?.id);
         setNewMessageIds(new Set([msg.id]));
@@ -1713,8 +1713,8 @@ export const ChatPage: React.FC = () => {
 
   const mutation = useMutation((content: string) => sendMessage(activeConversationId!, content), {
     onSuccess: (msg) => {
-      setMessages((prev) => [...prev, msg]);
-      setFilteredMessages((prev) => [...prev, msg]);
+      setMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
+      setFilteredMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
       
       // Remove glow from all previous messages, only glow the latest
       setNewMessageIds(new Set([msg.id]));
@@ -1824,8 +1824,8 @@ export const ChatPage: React.FC = () => {
           fileType: file.type,
         });
 
-        setMessages((prev) => [...prev, newMessage]);
-        setFilteredMessages((prev) => [...prev, newMessage]);
+        setMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+        setFilteredMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
         setNewMessageIds(prev => new Set([...prev, newMessage.id]));
 
         if (activeFolderId) {
@@ -1939,8 +1939,8 @@ export const ChatPage: React.FC = () => {
         fileType: payload.fileType,
         audioThumbnail: payload.audioThumbnail
       });
-      setMessages((prev) => [...prev, newMessage]);
-      setFilteredMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+      setFilteredMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
       setNewMessageIds(new Set([newMessage.id]));
 
       if (activeFolderId) {
