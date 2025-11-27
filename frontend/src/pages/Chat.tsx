@@ -140,7 +140,19 @@ function ResolvableMedia({
   }
   if (fileType?.startsWith('video/')) {
     return (
-      <video controls={controls ?? true} className={className} onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}>
+      <video
+        controls={controls ?? true}
+        playsInline
+        crossOrigin="anonymous"
+        className={className}
+        onClick={() => onClick && onClick(resolved || getFullUrl(fileUrl))}
+        onError={(e) => {
+          console.error('🔴 Video playback error for', { fileUrl, resolved, fileType, event: e });
+          // Try to open in a new tab as a fallback so user can still view
+          const url = resolved || getFullUrl(fileUrl);
+          if (url) window.open(url, '_blank');
+        }}
+      >
         <source src={resolved || getFullUrl(fileUrl)} type={fileType} />
         A böngésződ nem támogatja a video lejátszást.
       </video>
