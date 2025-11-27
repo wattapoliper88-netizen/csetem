@@ -1,3 +1,4 @@
+import { HealthModule } from './modules/health/health.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -25,6 +26,7 @@ import { EmailModule } from './email/email.module';
     // Uploads module provides signed upload URLs for Firebase Storage
     // (created to avoid CORS issues when frontend uploads directly to Firebase)
     require('./modules/uploads/uploads.module').UploadsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
