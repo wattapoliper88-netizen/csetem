@@ -2037,6 +2037,8 @@ export const ChatPage: React.FC = () => {
         top: messagesContainerRef.current.scrollHeight,
         behavior: 'smooth'
       });
+      // Clearing new message highlights when user actively scrolls to bottom
+      setNewMessageIds(new Set());
     }
   };
 
@@ -2066,6 +2068,11 @@ export const ChatPage: React.FC = () => {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShowScrollBottom(!isNearBottom);
+
+      if (isNearBottom) {
+        // User scrolled to bottom — clear new message highlight/sticky
+        setNewMessageIds(new Set());
+      }
 
       // Find the visible date based on scroll position
       const container = messagesContainerRef.current;
