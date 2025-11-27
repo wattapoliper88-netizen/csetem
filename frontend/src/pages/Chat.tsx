@@ -1012,6 +1012,7 @@ export const ChatPage: React.FC = () => {
   const [previousSelection, setPreviousSelection] = useState<Set<string>>(new Set());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const loggedConvIds = useRef<Set<string>>(new Set());
   const previousMessagesLengthRef = useRef(0);
   const [audioPositions, setAudioPositions] = useState<Record<string, { userId: string; position: number; username: string }>>({});
   // Állapot alapú link preview cache (stabil re-render)
@@ -1674,6 +1675,17 @@ export const ChatPage: React.FC = () => {
         console.error('❌ Failed to load folders:', err);
       });
   }, [activeConversationId]);
+
+  // Log new conversation items only once to avoid noisy repeated logs in dev
+  useEffect(() => {
+    if (!Array.isArray(convData)) return;
+    convData.forEach((conv: any) => {
+      if (!loggedConvIds.current.has(conv.id)) {
+        console.log('conv item loaded', { convId: conv.id, userId: conv.user?.id, avatarImage: conv.user?.avatarImage });
+        loggedConvIds.current.add(conv.id);
+      }
+    });
+  }, [convData]);
 
   useEffect(() => {
     // Scroll when new messages are added or on initial load
@@ -2372,9 +2384,7 @@ export const ChatPage: React.FC = () => {
               </div>
             )}
             {Array.isArray(convData) &&
-                convData.map((conv: any) => (
-                  // Debug: log user avatar path for troubleshooting
-                  console.log('conv item loaded', { convId: conv.id, userId: conv.user?.id, avatarImage: conv.user?.avatarImage }),
+              convData.map((conv: any) => (
                 <div
                   key={conv.id}
                   className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
