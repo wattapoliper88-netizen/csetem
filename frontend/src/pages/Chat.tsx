@@ -1484,6 +1484,18 @@ export const ChatPage: React.FC = () => {
               : folder
           ));
         }
+        // Determine if we should auto-scroll to the new message
+        const autoScrollForSender = msg.senderId === me?.id;
+        let nearBottom = false;
+        if (messagesContainerRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+          nearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        }
+
+        if (autoScrollForSender || nearBottom) {
+          scrollToBottom();
+        }
+
         if (msg.senderId !== me?.id && notificationSound.current) {
           notificationSound.current.play().catch(() => {});
         }
@@ -1715,6 +1727,13 @@ export const ChatPage: React.FC = () => {
     onSuccess: (msg) => {
       setMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
       setFilteredMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
+      // Always scroll for our own messages, or if near bottom already.
+      const shouldScroll = msg.senderId === me?.id || (() => {
+        if (!messagesContainerRef.current) return false;
+        const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+        return scrollHeight - scrollTop - clientHeight < 100;
+      })();
+      if (shouldScroll) scrollToBottom();
       
       // Remove glow from all previous messages, only glow the latest
       setNewMessageIds(new Set([msg.id]));
@@ -1826,6 +1845,13 @@ export const ChatPage: React.FC = () => {
 
         setMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
         setFilteredMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+        // If this is our message, scroll to bottom. Also scroll if user is near bottom.
+        const shouldScrollFile = newMessage.senderId === me?.id || (() => {
+          if (!messagesContainerRef.current) return false;
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+          return scrollHeight - scrollTop - clientHeight < 100;
+        })();
+        if (shouldScrollFile) scrollToBottom();
         setNewMessageIds(prev => new Set([...prev, newMessage.id]));
 
         if (activeFolderId) {
