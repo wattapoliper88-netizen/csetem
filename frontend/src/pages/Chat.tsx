@@ -3789,6 +3789,9 @@ export const ChatPage: React.FC = () => {
                                 : 'bg-gray-700/40 border-gray-600/30 text-gray-100 rounded-bl-none';
                             }
                           })()
+                        } ${
+                          // If this is the last message and has new message highlight, make it sticky at bottom of scroll container
+                          (isLastMessage && hasNewMessage) ? 'sticky bottom-4 z-30' : ''
                         }`}
                       >
                         {/* Render all messages in the group */}
