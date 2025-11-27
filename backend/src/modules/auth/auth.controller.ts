@@ -42,6 +42,7 @@ export class AuthController {
   @Post('login')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    console.log('AuthController.login called, pid=', process.pid, 'uptime=', process.uptime());
     const { refreshToken, ...rest } = await this.authService.login(dto);
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', refreshToken, {
