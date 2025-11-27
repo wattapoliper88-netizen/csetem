@@ -3032,7 +3032,7 @@ export const ChatPage: React.FC = () => {
 
             {/* Last message panel - below header */}
             {otherPersonLastMessage && (
-              <div className="bg-gray-900/30 border-b border-gray-700/50 relative backdrop-blur-md flex-shrink-0">
+              <div className="sticky top-0 md:top-14 z-30 bg-gray-900/30 border-b border-gray-700/50 relative backdrop-blur-md flex-shrink-0">
                 {!isLastMessagePanelCollapsed ? (
                   <div className="px-2 md:px-4 py-1.5 md:py-2 flex flex-col items-center justify-center gap-1 md:gap-2">
                     {/* Partner info */}
