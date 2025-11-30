@@ -67,7 +67,6 @@ function ResolvableMedia({
   alt,
   className,
   children,
-  controls,
   onClick,
 }: {
   fileUrl?: string | null;
@@ -75,7 +74,6 @@ function ResolvableMedia({
   alt?: string;
   className?: string;
   children?: React.ReactNode;
-  controls?: boolean;
   onClick?: (url?: string) => void;
 }) {
   const [resolved, setResolved] = useState<string | undefined>(undefined);
@@ -143,10 +141,13 @@ function ResolvableMedia({
   }
   if (fileType?.startsWith('video/')) {
     return (
-      <video controls={controls ?? true} className={className} playsInline crossOrigin="anonymous" onClick={(e) => { e.stopPropagation(); }}>
-        <source src={resolved || getFullUrl(fileUrl)} type={fileType} />
-        A böngésződ nem támogatja a video lejátszást.
-      </video>
+      <CustomVideoPlayer
+        src={resolved || getFullUrl(fileUrl)}
+        type={fileType}
+        fileName={alt || fileUrl?.split('/').pop()}
+        className={className}
+        thumbnail={undefined}
+      />
     );
   }
   // Default: render an anchor to the resolved URL
@@ -934,6 +935,124 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         )}
         </div>
       </div>
+      </div>
+    </div>
+  );
+};
+
+// Custom video player component
+interface VideoPlayerProps {
+  src?: string;
+  type?: string;
+  fileName?: string;
+  className?: string;
+  thumbnail?: string | null;
+}
+
+const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4', fileName, className, thumbnail }) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTime = () => setCurrentTime(v.currentTime || 0);
+    const onDuration = () => setDuration(v.duration || 0);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('loadedmetadata', onDuration);
+    v.addEventListener('play', onPlay);
+    v.addEventListener('pause', onPause);
+    return () => {
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('loadedmetadata', onDuration);
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('pause', onPause);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.volume = volume;
+  }, [volume]);
+
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play(); else v.pause();
+  };
+
+  const seek = (t: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = t;
+    setCurrentTime(t);
+  };
+
+  const toggleFullscreen = async () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      if (!document.fullscreenElement) {
+        if (v.requestFullscreen) await v.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (e) {
+      console.error('Failed to toggle fullscreen', e);
+    }
+  };
+
+  return (
+    <div className={`relative ${className || ''} ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : ''}`}>
+      <video
+        ref={videoRef}
+        className={`w-full ${isFullscreen ? 'h-screen' : 'max-h-[480px]'} rounded-lg bg-black`}
+        playsInline
+        crossOrigin="anonymous"
+        src={src}
+        poster={thumbnail || undefined}
+        onClick={(e) => { e.stopPropagation(); }}
+        controls={false}
+      >
+        <source src={src} type={type} />
+      </video>
+      {/* overlay controls */}
+      <div className="absolute inset-0 flex items-end justify-between p-2 pointer-events-none">
+        <div className="pointer-events-auto bg-black/30 rounded px-2 py-1 flex items-center gap-2">
+          <button onClick={togglePlay} className="text-white text-xl">
+            {isPlaying ? '⏸️' : '▶️'}
+          </button>
+          <span className="text-xs text-white">{fileName || 'Video'}</span>
+        </div>
+        <div className="pointer-events-auto bg-black/30 rounded px-2 py-1 flex items-center gap-2">
+          <input
+            type="range"
+            min={0}
+            max={duration || 1}
+            value={currentTime}
+            step={0.1}
+            onChange={(e) => seek(Number(e.target.value))}
+            className="w-40"
+            aria-label="progress"
+          />
+          <div className="flex items-center gap-2">
+            <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24" aria-label="volume" />
+            <button onClick={toggleFullscreen} className="text-white">⛶</button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -4078,7 +4197,6 @@ export const ChatPage: React.FC = () => {
                                         fileUrl={m.fileUrl}
                                         fileType={m.fileType}
                                         className="max-w-full max-h-96 rounded-lg"
-                                        controls={true}
                                       />
                                     ) : (
                                       <ResolvableMedia
@@ -4571,7 +4689,7 @@ export const ChatPage: React.FC = () => {
                             ) : msg.fileType?.startsWith('audio/') ? (
                               <CustomAudioPlayer src={getFullUrl(msg.fileUrl)} type={msg.fileType} thumbnail={msg.audioThumbnail} messageId={msg.id} conversationId={activeConversationId || undefined} showMobileControls={showMobileControls} setShowMobileControls={setShowMobileControls} />
                             ) : msg.fileType?.startsWith('video/') ? (
-                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="max-w-full max-h-40 rounded-lg" controls={true} />
+                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="max-w-full max-h-40 rounded-lg" />
                             ) : (
                               <div className="inline-flex items-center gap-2 bg-gray-700/60 px-3 py-1 rounded">
                                 <span className="text-sm text-gray-200 truncate">{msg.fileName}</span>
