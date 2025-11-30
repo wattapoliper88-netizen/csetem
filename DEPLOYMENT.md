@@ -124,6 +124,7 @@ Most, hogy megvan a Vercel URL (pl. `https://csetem-xyz.vercel.app`):
 - Railway dashboardon nyisd meg a PostgreSQL szolgáltatást
 - Ellenőrizd, hogy fut-e
 - Backend logs-ban keresd: `prisma migrate deploy`
+ - Ha szükséges (pl. új modellek hozzáadása), futtasd a migration parancsot: `npx prisma migrate deploy` vagy a fejlesztői gépen: `npx prisma migrate dev --name add_user_folders`
 
 ---
 
