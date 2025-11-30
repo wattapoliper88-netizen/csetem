@@ -1096,6 +1096,12 @@ export const ChatPage: React.FC = () => {
   const [expandedAudioGroups, setExpandedAudioGroups] = useState<Set<string>>(new Set());
   const [rotatingFileNameIndex, setRotatingFileNameIndex] = useState<Record<string, number>>({});
   const [userContextMenu, setUserContextMenu] = useState<{ userId: string; x: number; y: number; user: any } | null>(null);
+  const [showUserFolderModal, setShowUserFolderModal] = useState(false);
+  const [folderList, setFolderList] = useState<any[]>([]);
+  const [modalUserId, setModalUserId] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderParentId, setNewFolderParentId] = useState<string | undefined | null>(null);
+  const [newFolderThumbnail, setNewFolderThumbnail] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<number | null>(null);
   const [longPressStartPos, setLongPressStartPos] = useState<{x: number; y: number} | null>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -1242,6 +1248,62 @@ export const ChatPage: React.FC = () => {
       } catch (error) {
         alert('Hiba történt a felhasználó törlésekor');
       }
+    }
+  };
+
+  const openUserFolderModal = async (userId: string) => {
+    try {
+      const res = await import('../api/adminFolders');
+      const data = await res.listUserFolders();
+      setFolderList(data || []);
+      setModalUserId(userId);
+      setShowUserFolderModal(true);
+      setUserContextMenu(null);
+    } catch (error) {
+      alert('Hiba történt a mappák lekérésekor');
+    }
+  };
+
+  const handleAssignUserToFolder = async (folderId: string) => {
+    if (!modalUserId) return;
+    try {
+      const res = await import('../api/adminFolders');
+      await res.assignUserToFolder(folderId, modalUserId);
+      // Refresh folder list to show membership
+      const data = await res.listUserFolders();
+      setFolderList(data || []);
+      alert('Felhasználó hozzárendelve a mappához');
+    } catch (error) {
+      alert('Hiba történt a felhasználó hozzárendelésekor');
+    }
+  };
+
+  const handleUnassignUserFromFolder = async (folderId: string) => {
+    if (!modalUserId) return;
+    try {
+      const res = await import('../api/adminFolders');
+      await res.unassignUserFromFolder(folderId, modalUserId);
+      const data = await res.listUserFolders();
+      setFolderList(data || []);
+      alert('Felhasználó eltávolítva a mappából');
+    } catch (error) {
+      alert('Hiba történt a felhasználó eltávolításakor');
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    if (newFolderName.trim() === '') return alert('Adj meg nevet a mappának');
+    try {
+      const res = await import('../api/adminFolders');
+      await res.createUserFolder({ name: newFolderName.trim(), parentId: newFolderParentId || undefined, thumbnail: newFolderThumbnail || undefined });
+      const data = await res.listUserFolders();
+      setFolderList(data || []);
+      setNewFolderName('');
+      setNewFolderParentId(null);
+      setNewFolderThumbnail(null);
+      alert('Mappa létrehozva');
+    } catch (error) {
+      alert('Hiba a mappa létrehozásakor');
     }
   };
 
@@ -4924,6 +4986,60 @@ export const ChatPage: React.FC = () => {
               <span>🗑️</span>
               <span>Felhasználó törlése</span>
             </button>
+            <button
+              onClick={() => openUserFolderModal(userContextMenu.userId)}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-cyan-300 flex items-center gap-2"
+            >
+              <span>📁</span>
+              <span>Hozzárendelés mappához</span>
+            </button>
+          </div>
+        </div>
+      </>
+    )}
+    {showUserFolderModal && modalUserId && (
+      <>
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => { setShowUserFolderModal(false); setModalUserId(null); }} />
+        <div className="fixed z-50 left-1/2 top-1/3 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-gray-700 rounded-lg p-4 w-[420px] shadow-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white">Mappakezelő</h3>
+            <button className="text-xs text-gray-400" onClick={() => { setShowUserFolderModal(false); setModalUserId(null); }}>Bezár</button>
+          </div>
+          <div className="mb-3 border border-gray-700 rounded p-2">
+            <div className="flex flex-col gap-2">
+              <input value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="Mappa neve" className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white" />
+              <select value={newFolderParentId || ''} onChange={(e) => setNewFolderParentId(e.target.value || null)} className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white">
+                <option value=''>Gyökér mappa</option>
+                {folderList.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+              <input value={newFolderThumbnail || ''} onChange={(e) => setNewFolderThumbnail(e.target.value || null)} placeholder="Bélyegkép URL" className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white" />
+              <div className="flex gap-2">
+                <button onClick={handleCreateFolder} className="px-3 py-1 bg-cyan-600 rounded text-xs text-white">Létrehoz</button>
+                <button onClick={() => { setNewFolderName(''); setNewFolderParentId(null); setNewFolderThumbnail(null); }} className="px-3 py-1 bg-gray-700 rounded text-xs text-white">Mégse</button>
+              </div>
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {folderList.length === 0 && <p className="text-xs text-gray-400">Nincsenek mappák</p>}
+            {folderList.map((f:any) => {
+              const isMember = f.members?.some((m:any) => m.userId === modalUserId);
+              return (
+                <div key={f.id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-800">
+                  {f.thumbnail ? <img src={f.thumbnail} width={32} height={32} className="rounded" alt="thumb" /> : <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">📁</div>}
+                  <div className="flex-1">
+                    <p className="text-sm text-white">{f.name}</p>
+                    <p className="text-xs text-gray-400">{f.parentId ? 'Almappa': 'Mappa'}</p>
+                  </div>
+                  {isMember ? (
+                    <button onClick={() => handleUnassignUserFromFolder(f.id)} className="text-xs bg-red-600 px-2 py-1 rounded text-white">Eltávolít</button>
+                  ) : (
+                    <button onClick={() => handleAssignUserToFolder(f.id)} className="text-xs bg-cyan-500 px-2 py-1 rounded text-white">Hozzárendel</button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </>

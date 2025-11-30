@@ -92,3 +92,33 @@ model FolderMessage {
   @@index([folderId])
   @@index([messageId])
 }
+
+// Admin user folder structure for organizing users in admin panel
+model UserFolder {
+  id          String    @id @default(cuid())
+  name        String
+  thumbnail   String?   // URL to a thumbnail image
+  parentId    String?   // nullable for root folders
+  createdBy   String
+  createdAt   DateTime  @default(now())
+
+  parent      UserFolder? @relation("UserFolderParent", fields: [parentId], references: [id], onDelete: Cascade)
+  children    UserFolder[] @relation("UserFolderParent")
+  members     UserFolderMember[]
+
+  @@index([parentId])
+  @@index([createdBy])
+}
+
+model UserFolderMember {
+  id        String   @id @default(cuid())
+  folderId  String
+  userId    String
+
+  folder    UserFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, userId])
+  @@index([folderId])
+  @@index([userId])
+}
