@@ -1417,6 +1417,7 @@ export const ChatPage: React.FC = () => {
   const [messageLongPressTimer, setMessageLongPressTimer] = useState<number | null>(null);
   const [messageLongPressStartPos, setMessageLongPressStartPos] = useState<{ x: number; y: number } | null>(null);
   const messageLongPressCleanupRef = useRef<() => void>(() => {});
+  const messageImmediateTimerRef = useRef<number | null>(null);
 
   const handleMessageLongPressStart = (e: React.TouchEvent | React.MouseEvent, messageId: string) => {
     setIsUserScrolling(false);
@@ -1430,6 +1431,12 @@ export const ChatPage: React.FC = () => {
     const rect = target.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.bottom + 5;
+    // Start immediate select timer for mobile to show selection quickly on hold
+    if (isMobile) {
+      messageImmediateTimerRef.current = window.setTimeout(() => {
+        setSelectedMessages(new Set([messageId]));
+      }, 120);
+    }
     const timer = window.setTimeout(() => {
       if (!isUserScrolling) {
         setPreviousSelection(new Set(selectedMessages));
@@ -1471,6 +1478,10 @@ export const ChatPage: React.FC = () => {
       clearTimeout(messageLongPressTimer);
       setMessageLongPressTimer(null);
     }
+    if (messageImmediateTimerRef.current) {
+      clearTimeout(messageImmediateTimerRef.current);
+      messageImmediateTimerRef.current = null;
+    }
     if (messageLongPressCleanupRef.current) {
       messageLongPressCleanupRef.current();
     }
@@ -1494,6 +1505,10 @@ export const ChatPage: React.FC = () => {
     if (dx > 8 || dy > 8) {
       clearTimeout(messageLongPressTimer);
       setMessageLongPressTimer(null);
+      if (messageImmediateTimerRef.current) {
+        clearTimeout(messageImmediateTimerRef.current);
+        messageImmediateTimerRef.current = null;
+      }
     }
   };
 
