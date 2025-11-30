@@ -11,14 +11,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var UserController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const prisma_service_1 = require("../../prisma/prisma.service");
-let UserController = class UserController {
+let UserController = UserController_1 = class UserController {
     constructor(prisma) {
         this.prisma = prisma;
+        this.logger = new common_1.Logger(UserController_1.name);
     }
     async checkAdmin(userId) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -44,7 +46,29 @@ let UserController = class UserController {
     }
     async deleteUser(req, userId) {
         await this.checkAdmin(req.user.userId);
-        await this.prisma.user.delete({ where: { id: userId } });
+        try {
+            const convs = await this.prisma.conversation.findMany({ where: { OR: [{ userId }, { adminId: userId }] }, select: { id: true } });
+            const convIds = convs.map(c => c.id);
+            const msgRecords = convIds.length > 0 ? await this.prisma.message.findMany({ where: { conversationId: { in: convIds } }, select: { id: true } }) : [];
+            const msgIds = msgRecords.map(m => m.id);
+            const ops = [];
+            if (msgIds.length > 0)
+                ops.push(this.prisma.folderMessage.deleteMany({ where: { messageId: { in: msgIds } } }));
+            if (convIds.length > 0)
+                ops.push(this.prisma.folder.deleteMany({ where: { conversationId: { in: convIds } } }));
+            if (convIds.length > 0)
+                ops.push(this.prisma.message.deleteMany({ where: { conversationId: { in: convIds } } }));
+            if (convIds.length > 0)
+                ops.push(this.prisma.conversation.deleteMany({ where: { id: { in: convIds } } }));
+            ops.push(this.prisma.message.deleteMany({ where: { senderId: userId } }));
+            ops.push(this.prisma.user.delete({ where: { id: userId } }));
+            await this.prisma.$transaction(ops);
+            this.logger.log(`Deleted user and cleaned up related records for userId=${userId}`);
+        }
+        catch (error) {
+            this.logger.error('Failed to delete user or related entities: ' + (error instanceof Error ? error.message : JSON.stringify(error)), JSON.stringify(error));
+            throw new Error('Failed to delete user due to related data. Please check server logs.');
+        }
         return { success: true };
     }
     async toggleBanUser(req, userId, body) {
@@ -106,7 +130,7 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "toggleAdmin", null);
-exports.UserController = UserController = __decorate([
+exports.UserController = UserController = UserController_1 = __decorate([
     (0, common_1.Controller)('me'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])

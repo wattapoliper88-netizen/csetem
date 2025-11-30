@@ -4,50 +4,9 @@ export declare class ChatController {
     private chatService;
     private chatGateway;
     constructor(chatService: ChatService, chatGateway: ChatGateway);
-    myConversation(req: any): Promise<{
-        id: string;
-        userId: string;
-        adminId: string;
-        createdAt: Date;
-    }>;
-    listConversations(req: any): Promise<({
-        user: {
-            id: string;
-            email: string;
-            username: string;
-            avatarImage: string;
-            verified: boolean;
-            isAdmin: boolean;
-            lastSeen: Date;
-        };
-    } & {
-        id: string;
-        userId: string;
-        adminId: string;
-        createdAt: Date;
-    })[]>;
-    getMessages(req: any, conversationId: string, limit?: number, cursor?: string): Promise<({
-        sender: {
-            id: string;
-            email: string;
-            username: string;
-            avatarImage: string;
-            lastSeen: Date;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        conversationId: string;
-        senderId: string;
-        content: string;
-        fileUrl: string | null;
-        fileName: string | null;
-        fileType: string | null;
-        audioThumbnail: string | null;
-        readAt: Date | null;
-        deleted: boolean;
-        deletedBy: string;
-    })[]>;
+    myConversation(req: any): Promise<any>;
+    listConversations(req: any): Promise<any>;
+    getMessages(req: any, conversationId: string, limit?: number, cursor?: string): Promise<any>;
     sendMessage(req: any, body: {
         conversationId: string;
         content?: string;
@@ -55,28 +14,7 @@ export declare class ChatController {
         fileUrl?: string;
         fileName?: string;
         fileType?: string;
-    }, file?: Express.Multer.File): Promise<{
-        sender: {
-            id: string;
-            email: string;
-            username: string;
-            avatarImage: string;
-            lastSeen: Date;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        conversationId: string;
-        senderId: string;
-        content: string;
-        fileUrl: string | null;
-        fileName: string | null;
-        fileType: string | null;
-        audioThumbnail: string | null;
-        readAt: Date | null;
-        deleted: boolean;
-        deletedBy: string;
-    }>;
+    }, file?: Express.Multer.File): Promise<any>;
     getLinkPreview(url: string): Promise<{
         url: string;
         title: string;
@@ -84,39 +22,9 @@ export declare class ChatController {
         image: string;
         siteName: string;
     }>;
-    getFolders(req: any, conversationId: string): Promise<{
-        id: string;
-        name: string;
-        icon: string;
-        visibility: string;
-        createdBy: string;
-        closedBy: any;
-        messageIds: string[];
-    }[]>;
-    closeFolder(req: any, folderId: string): Promise<{
-        id: string;
-        createdAt: Date;
-        name: string;
-        conversationId: string;
-        icon: string;
-        visibility: string;
-        createdBy: string;
-        closedBy: string;
-    }>;
+    getFolders(req: any, conversationId: string): Promise<any>;
+    closeFolder(req: any, folderId: string): Promise<any>;
     deleteMessages(req: any, body: {
         messageIds: string[];
-    }): Promise<{
-        id: string;
-        createdAt: Date;
-        conversationId: string;
-        senderId: string;
-        content: string;
-        fileUrl: string | null;
-        fileName: string | null;
-        fileType: string | null;
-        audioThumbnail: string | null;
-        readAt: Date | null;
-        deleted: boolean;
-        deletedBy: string;
-    }[]>;
+    }): Promise<any[]>;
 }

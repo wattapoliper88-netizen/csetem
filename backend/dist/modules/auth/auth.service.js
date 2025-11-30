@@ -88,18 +88,22 @@ let AuthService = class AuthService {
         return { user: { id: user.id, email: user.email, username: user.username }, ...tokens };
     }
     async login(dto) {
-        console.log('Login attempt:', { username: dto.username });
+        const start = Date.now();
+        console.log('Login attempt:', { username: dto.username, time: new Date().toISOString() });
+        const userStart = Date.now();
         const user = await this.prisma.user.findUnique({
             where: { username: dto.username },
         });
-        console.log('User found:', user ? { id: user.id, username: user.username, verified: user.verified } : null);
+        console.log('User found:', user ? { id: user.id, username: user.username, verified: user.verified } : null, 'db_ms=', Date.now() - userStart);
         if (!user)
             throw new common_1.UnauthorizedException('Invalid credentials');
+        const compareStart = Date.now();
         const valid = await bcrypt.compare(dto.password, user.passwordHash);
-        console.log('Password valid:', valid);
+        console.log('Password valid:', valid, 'bcrypt_ms=', Date.now() - compareStart);
         if (!valid)
             throw new common_1.UnauthorizedException('Invalid credentials');
         const tokens = this.issueTokens(user.id, user.isAdmin);
+        console.log('Issued tokens in ms:', Date.now() - start);
         return { user: { id: user.id, email: user.email, username: user.username }, ...tokens };
     }
     async refreshTokens(refreshToken) {

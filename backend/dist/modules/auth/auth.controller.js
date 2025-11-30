@@ -46,6 +46,7 @@ let AuthController = class AuthController {
         return rest;
     }
     async login(dto, res) {
+        console.log('AuthController.login called, pid=', process.pid, 'uptime=', process.uptime());
         const { refreshToken, ...rest } = await this.authService.login(dto);
         const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, {

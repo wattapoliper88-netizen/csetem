@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
+import { UserFolderModule } from './modules/user-folder/user-folder.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -18,6 +19,7 @@ import { EmailModule } from './email/email.module';
       },
     ]),
     PrismaModule,
+    UserFolderModule,
     EmailModule,
     AuthModule,
     UserModule,

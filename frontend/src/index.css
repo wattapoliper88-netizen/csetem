@@ -465,8 +465,8 @@ audio::-moz-range-thumb {
 
 .audio-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
   cursor: pointer;
@@ -479,8 +479,8 @@ audio::-moz-range-thumb {
 }
 
 .audio-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
   cursor: pointer;

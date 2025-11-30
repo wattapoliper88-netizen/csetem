@@ -7,10 +7,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const health_module_1 = require("./modules/health/health.module");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
 const prisma_module_1 = require("./prisma/prisma.module");
+const user_folder_module_1 = require("./modules/user-folder/user-folder.module");
 const auth_module_1 = require("./modules/auth/auth.module");
 const user_module_1 = require("./modules/user/user.module");
 const chat_module_1 = require("./modules/chat/chat.module");
@@ -29,12 +31,14 @@ exports.AppModule = AppModule = __decorate([
                 },
             ]),
             prisma_module_1.PrismaModule,
+            user_folder_module_1.UserFolderModule,
             email_module_1.EmailModule,
             auth_module_1.AuthModule,
             user_module_1.UserModule,
             chat_module_1.ChatModule,
             require('./modules/admin/admin.module').AdminModule,
             require('./modules/uploads/uploads.module').UploadsModule,
+            health_module_1.HealthModule,
         ],
     })
 ], AppModule);

@@ -9,25 +9,25 @@ export declare class AuthController {
     register(dto: RegisterDto, res: Response): Promise<{
         accessToken: string;
         user: {
-            id: string;
-            email: string;
-            username: string;
+            id: any;
+            email: any;
+            username: any;
         };
     }>;
     verify(dto: VerifyCodeDto, res: Response): Promise<{
         accessToken: string;
         user: {
-            id: string;
-            email: string;
-            username: string;
+            id: any;
+            email: any;
+            username: any;
         };
     }>;
     login(dto: LoginDto, res: Response): Promise<{
         accessToken: string;
         user: {
-            id: string;
-            email: string;
-            username: string;
+            id: any;
+            email: any;
+            username: any;
         };
     }>;
     refresh(req: Request, res: Response): Promise<{

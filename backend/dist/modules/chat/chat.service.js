@@ -64,7 +64,7 @@ let ChatService = ChatService_1 = class ChatService {
                         isAdmin: true,
                         verified: true,
                         lastSeen: true,
-                        avatarImage: true,
+                        avatarImage: true
                     }
                 }
             },
@@ -196,7 +196,7 @@ let ChatService = ChatService_1 = class ChatService {
             data: messageData,
             include: {
                 sender: {
-                    select: { id: true, username: true, email: true, lastSeen: true, avatarImage: true }
+                    select: { id: true, username: true, email: true, lastSeen: true }
                 }
             }
         });
