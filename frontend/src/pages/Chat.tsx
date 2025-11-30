@@ -2404,10 +2404,6 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  const handleCopyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
-  };
-
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
@@ -4549,23 +4545,6 @@ export const ChatPage: React.FC = () => {
                             return null;
                           })()}
                         </div>
-                        
-                        {/* Action buttons on hover */}
-                        {hoveredMessageId === group.lastMessageId && (
-                          <div
-                            className={`absolute top-0 ${
-                              group.senderId === me?.id ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'
-                            } flex gap-1 px-2`}
-                          >
-                            <button
-                              onClick={() => handleCopyMessage(group.messages.map((m: any) => m.content).join('\n'))}
-                              className="p-1 bg-gray-600 text-white rounded hover:bg-gray-500 text-xs shadow-lg ripple"
-                              title="Másolás"
-                            >
-                              📋
-                            </button>
-                          </div>
-                        )}
                         
                         {/* Reaction buttons for the last message in group - show on hover/click or if has reactions */}
                         <div className={`flex gap-1 mt-2 transition-all duration-300 ease-out ${
