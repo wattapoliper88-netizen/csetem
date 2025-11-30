@@ -949,7 +949,7 @@ interface VideoPlayerProps {
   thumbnail?: string | null;
 }
 
-const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4', fileName, className, thumbnail }) => {
+const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4', className, thumbnail }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -958,6 +958,8 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoWidth, setVideoWidth] = useState<number | null>(null);
   const [videoHeight, setVideoHeight] = useState<number | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [displayWidth, setDisplayWidth] = useState<number | null>(null);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -965,8 +967,23 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
     const onTime = () => setCurrentTime(v.currentTime || 0);
     const onDuration = () => setDuration(v.duration || 0);
     const onLoadedMeta = () => {
-      setVideoWidth(v.videoWidth || null);
-      setVideoHeight(v.videoHeight || null);
+      const vw = v.videoWidth || null;
+      const vh = v.videoHeight || null;
+      setVideoWidth(vw);
+      setVideoHeight(vh);
+      // compute a reasonable display width capped by parent/bubble width
+      try {
+        const parentWidth = wrapperRef.current?.parentElement?.clientWidth || window.innerWidth;
+        const maxAllowed = Math.min(Math.round(parentWidth * 0.9), Math.round(window.innerWidth * 0.9));
+        if (vw) {
+          const desired = Math.min(vw, maxAllowed);
+          setDisplayWidth(desired);
+        } else {
+          setDisplayWidth(Math.min(640, maxAllowed));
+        }
+      } catch (e) {
+        setDisplayWidth(vw || 640);
+      }
     };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
@@ -1035,11 +1052,17 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
     }
   };
 
+  const wrapperStyle: any = {
+    ...(aspectStyle || {}),
+    width: displayWidth ? `${displayWidth}px` : undefined,
+    maxWidth: '90%',
+  };
+
   return (
-    <div style={aspectStyle} className={`relative ${className || ''} ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : ''}`}>
+    <div ref={wrapperRef} style={wrapperStyle} className={`inline-block ${className || ''} ${isFullscreen ? 'fixed inset-0 z-50 bg-black flex items-center justify-center' : ''}`}>
       <video
         ref={videoRef}
-        className={`w-full ${isFullscreen ? 'h-screen' : 'max-h-[480px]'} rounded-lg bg-black object-contain`}
+        className={`w-full ${isFullscreen ? 'h-screen' : ''} rounded-lg bg-black object-contain`}
         playsInline
         crossOrigin="anonymous"
         src={src}
@@ -1049,31 +1072,34 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
       >
         <source src={src} type={type} />
       </video>
-      {/* overlay controls */}
-      <div className="absolute inset-0 flex items-end justify-between p-2 pointer-events-none">
-        <div className="pointer-events-auto bg-black/30 rounded px-2 py-1 flex items-center gap-2">
-          <button onClick={togglePlay} className="text-white text-xl">
-            {isPlaying ? '⏸️' : '▶️'}
-          </button>
-          <span className="text-xs text-white">{fileName || 'Video'}</span>
-        </div>
-        <div className="pointer-events-auto bg-black/30 rounded px-2 py-1 flex items-center gap-2">
-          <input
-            type="range"
-            min={0}
-            max={duration || 1}
-            value={currentTime}
-            step={0.1}
-            onChange={(e) => seek(Number(e.target.value))}
-            className="w-40"
-            aria-label="progress"
-          />
+      {/* Controls below the video (not overlay) */}
+      {!isFullscreen && (
+        <div className="mt-2 flex flex-col gap-2 pointer-events-auto">
           <div className="flex items-center gap-2">
-            <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24" aria-label="volume" />
-            <button onClick={toggleFullscreen} className="text-white">⛶</button>
+            <button onClick={togglePlay} className="text-white text-2xl bg-gray-800/50 px-3 py-1 rounded">
+              {isPlaying ? '⏸️' : '▶️'}
+            </button>
+            {/* NOTE: file name intentionally hidden in the inline player */}
+            <div className="flex-1">
+              <input
+                type="range"
+                min={0}
+                max={duration || 1}
+                value={currentTime}
+                step={0.1}
+                onChange={(e) => seek(Number(e.target.value))}
+                className="w-full"
+                aria-label="progress"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24" aria-label="volume" />
+              <button onClick={toggleFullscreen} className="text-white px-2 py-1 bg-gray-800/50 rounded">⛶</button>
+            </div>
           </div>
+          <div className="text-xs text-gray-400 text-right">{formatDuration(currentTime)} / {formatDuration(duration)}</div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
