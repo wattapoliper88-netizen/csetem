@@ -23,6 +23,7 @@ model User {
   conversationsAdmin Conversation[] @relation("AdminConversation")
   messages           Message[]
   verificationCodes  VerificationCode[]
+  folderMemberships   UserFolderMember[]
 }
 
 model VerificationCode {
