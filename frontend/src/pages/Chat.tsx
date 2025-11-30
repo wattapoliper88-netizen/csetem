@@ -4541,31 +4541,42 @@ export const ChatPage: React.FC = () => {
                           {isMobile && group.messages.some((m: any) => m.fileType?.startsWith('audio/')) && (() => {
                             const firstAudio = group.messages.find((m: any) => m.fileType?.startsWith('audio/'));
                             const actions = firstAudio ? mobileAudioActions[firstAudio.id] : undefined;
-                            return actions ? (
+                            const liveLabel = actions?.shareLiveEnabled ? '?? ?l?' : '?? Ki';
+                            return (
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    actions.toggleShareLive();
+                                    actions?.toggleShareLive();
                                   }}
-                                  className="px-1.5 py-0.5 text-[10px] bg-gray-700/70 hover:bg-gray-700/90 text-gray-100 rounded-full border border-gray-600/40 transition-colors whitespace-nowrap"
-                                  title={actions.shareLiveEnabled ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
+                                  disabled={!actions}
+                                  className="px-1.5 py-0.5 text-[10px] rounded-full border transition-colors whitespace-nowrap "
+                                  style={{
+                                    opacity: actions ? 1 : 0.5,
+                                    background: actions?.shareLiveEnabled ? 'rgba(34,197,94,0.4)' : 'rgba(107,114,128,0.6)',
+                                    color: '#e5e7eb',
+                                    borderColor: actions?.shareLiveEnabled ? 'rgba(74,222,128,0.5)' : 'rgba(156,163,175,0.5)'
+                                  }}
+                                  title={actions?.shareLiveEnabled ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
                                 >
-                                  {actions.shareLiveEnabled ? '?? ?l?' : '?? Ki'}
+                                  {liveLabel}
                                 </button>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    actions.sendPosition();
+                                    actions?.sendPosition();
                                   }}
+                                  disabled={!actions}
                                   className="px-1.5 py-0.5 text-[10px] bg-cyan-700/70 hover:bg-cyan-700/90 text-white rounded-full border border-cyan-500/40 transition-colors whitespace-nowrap"
+                                  style={{ opacity: actions ? 1 : 0.5 }}
                                   title="Poz?ci? k?ld?se"
                                 >
                                   ?? Poz?ci?
                                 </button>
                               </div>
-                            ) : null;
+                            );
                           })()}
+
 
                           {(() => {
                             const messageFolders = folders.filter(f => 
