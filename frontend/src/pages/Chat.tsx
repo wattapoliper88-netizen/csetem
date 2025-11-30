@@ -4542,7 +4542,7 @@ export const ChatPage: React.FC = () => {
                           {isMobile && group.messages.some((m: any) => m.fileType?.startsWith('audio/')) && (() => {
                             const firstAudio = group.messages.find((m: any) => m.fileType?.startsWith('audio/'));
                             const actions = firstAudio ? mobileAudioActions[firstAudio.id] : undefined;
-                            const liveLabel = actions?.shareLiveEnabled ? '?? ?l?' : '?? Ki';
+                            const liveLabel = actions?.shareLiveEnabled ? '📡 Élő' : '📡 Ki';
                             return (
                               <div className="flex items-center gap-1">
                                 <button
@@ -4558,7 +4558,7 @@ export const ChatPage: React.FC = () => {
                                     color: '#e5e7eb',
                                     borderColor: actions?.shareLiveEnabled ? 'rgba(74,222,128,0.5)' : 'rgba(156,163,175,0.5)'
                                   }}
-                                  title={actions?.shareLiveEnabled ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
+                                  title={actions?.shareLiveEnabled ? 'Élő megosztás bekapcsolva' : 'Élő megosztás kikapcsolva'}
                                 >
                                   {liveLabel}
                                 </button>
@@ -4570,9 +4570,9 @@ export const ChatPage: React.FC = () => {
                                   disabled={!actions}
                                   className="px-1.5 py-0.5 text-[10px] bg-cyan-700/70 hover:bg-cyan-700/90 text-white rounded-full border border-cyan-500/40 transition-colors whitespace-nowrap"
                                   style={{ opacity: actions ? 1 : 0.5 }}
-                                  title="Poz?ci? k?ld?se"
+                                  title="Pozíció küldése"
                                 >
-                                  ?? Poz?ci?
+                                  📍 Pozíció
                                 </button>
                               </div>
                             );
