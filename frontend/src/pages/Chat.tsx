@@ -989,7 +989,11 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) v.play(); else v.pause();
+    if (v.paused) {
+      // Pause other videos
+      document.querySelectorAll('video').forEach((vid) => { if (vid !== v) (vid as HTMLVideoElement).pause(); });
+      v.play();
+    } else v.pause();
   };
 
   const seek = (t: number) => {
