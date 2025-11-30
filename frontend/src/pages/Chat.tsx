@@ -451,18 +451,6 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     return () => { mounted = false; };
   }, [effectiveSrc]);
 
-  useEffect(() => {
-    if (!registerMobileActions || !messageId) return;
-    registerMobileActions(messageId, {
-      shareLiveEnabled: shareLivePosition,
-      toggleShareLive,
-      sendPosition: handleSendPosition,
-    });
-    return () => {
-      registerMobileActions(messageId, null);
-    };
-  }, [registerMobileActions, messageId, shareLivePosition, toggleShareLive, handleSendPosition]);
-
   // Draw animated circular waveform
   const drawWaveform = () => {
     if (!canvasRef.current) return;
@@ -583,6 +571,18 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       console.error('Nincs socket kapcsolat!');
     }
   }, [conversationId, messageId]);
+
+  useEffect(() => {
+    if (!registerMobileActions || !messageId) return;
+    registerMobileActions(messageId, {
+      shareLiveEnabled: shareLivePosition,
+      toggleShareLive,
+      sendPosition: handleSendPosition,
+    });
+    return () => {
+      registerMobileActions(messageId, null);
+    };
+  }, [registerMobileActions, messageId, shareLivePosition, toggleShareLive, handleSendPosition]);
 
   const togglePlay = () => {
     if (audioRef.current) {
