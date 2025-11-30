@@ -1417,7 +1417,6 @@ export const ChatPage: React.FC = () => {
   const [messageLongPressTimer, setMessageLongPressTimer] = useState<number | null>(null);
   const [messageLongPressStartPos, setMessageLongPressStartPos] = useState<{ x: number; y: number } | null>(null);
   const messageLongPressCleanupRef = useRef<() => void>(() => {});
-  const messageImmediateTimerRef = useRef<number | null>(null);
 
   const handleMessageLongPressStart = (e: React.TouchEvent | React.MouseEvent, messageId: string) => {
     setIsUserScrolling(false);
@@ -1431,12 +1430,7 @@ export const ChatPage: React.FC = () => {
     const rect = target.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.bottom + 5;
-    // Start immediate select timer for mobile to show selection quickly on hold
-    if (isMobile) {
-      messageImmediateTimerRef.current = window.setTimeout(() => {
-        setSelectedMessages(new Set([messageId]));
-      }, 120);
-    }
+    // Mobile selection requires the full long-press, no immediate select
     const timer = window.setTimeout(() => {
       if (!isUserScrolling) {
         setPreviousSelection(new Set(selectedMessages));
@@ -1478,10 +1472,7 @@ export const ChatPage: React.FC = () => {
       clearTimeout(messageLongPressTimer);
       setMessageLongPressTimer(null);
     }
-    if (messageImmediateTimerRef.current) {
-      clearTimeout(messageImmediateTimerRef.current);
-      messageImmediateTimerRef.current = null;
-    }
+    // no immediate select timer to clear for mobile
     if (messageLongPressCleanupRef.current) {
       messageLongPressCleanupRef.current();
     }
@@ -1505,10 +1496,7 @@ export const ChatPage: React.FC = () => {
     if (dx > 8 || dy > 8) {
       clearTimeout(messageLongPressTimer);
       setMessageLongPressTimer(null);
-      if (messageImmediateTimerRef.current) {
-        clearTimeout(messageImmediateTimerRef.current);
-        messageImmediateTimerRef.current = null;
-      }
+      // no immediate select timer to clear
     }
   };
 
@@ -3866,10 +3854,11 @@ export const ChatPage: React.FC = () => {
                           if (newSet.has(messageId)) {
                             // If tapped a selected message -> deselect it
                             newSet.delete(messageId);
-                            return newSet;
+                          } else {
+                            // Otherwise add this message to selection (multi-select)
+                            newSet.add(messageId);
                           }
-                          // Otherwise select only this message
-                          return new Set([messageId]);
+                          return newSet;
                         });
                       } else if (!longPressTriggeredRef.current) {
                         e.preventDefault();
