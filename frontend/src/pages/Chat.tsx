@@ -3960,7 +3960,7 @@ export const ChatPage: React.FC = () => {
                     {group.messages[0]?.sender?.avatarImage ? (
                       <Avatar
                         avatar={group.messages[0].sender.avatarImage}
-                        size={'w-8 h-8'}
+                        size={'w-10 h-10'}
                         onClick={(e, url) => {
                           // stop propagation and open viewer with resolved URL if available
                           e.stopPropagation();
@@ -3975,7 +3975,7 @@ export const ChatPage: React.FC = () => {
                         }`}
                       />
                     ) : (
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br flex-shrink-0 ${
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br flex-shrink-0 ${
                         group.senderId === me?.id 
                           ? 'from-cyan-500 to-teal-500' 
                           : 'from-purple-500 to-pink-500'
@@ -4695,14 +4695,14 @@ export const ChatPage: React.FC = () => {
                 return (
                   <div className="mb-3 flex justify-start items-end gap-2 message-slide-in w-full">
                     {otherUserAvatar ? (
-                      <Avatar
-                        avatar={otherUserAvatar}
-                        size={'w-8 h-8'}
+                          <Avatar
+                          avatar={otherUserAvatar}
+                          size={'w-10 h-10'}
                         className={`shadow-lg ring-2 ${isOnline ? 'ring-green-500 avatar-online' : 'ring-gray-500'}`}
                         onClick={(e, url) => { e.stopPropagation(); if (url) window.open(url, '_blank'); }}
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
                         U
                       </div>
                     )}
@@ -4742,9 +4742,9 @@ export const ChatPage: React.FC = () => {
                       {/* Minimal bubble render: avatar (small), content or media */}
                       <div className="flex items-center gap-3">
                         {group.sender?.avatarImage ? (
-                          <Avatar avatar={group.sender.avatarImage} size={'w-8 h-8'} className="shadow-lg" />
+                          <Avatar avatar={group.sender.avatarImage} size={'w-10 h-10'} className="shadow-lg" />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
+                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
                             {getInitials(group.sender?.username || 'U')}
                           </div>
                         )}
@@ -4815,7 +4815,7 @@ export const ChatPage: React.FC = () => {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  🎞️ {filterVideos ? 'Csak feltöltött videók' : 'Feltöltött videók szűrése'}
+                  🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}
                 </button>
                 <button
                   onClick={() => {
