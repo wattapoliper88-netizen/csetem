@@ -751,14 +751,15 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         {/* Play/Pause Button */}
         <button
           onClick={togglePlay}
-          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center bg-gradient-to-br from-cyan-700 to-cyan-600 rounded-full hover:from-cyan-600 hover:to-cyan-500 transition-all shadow-lg flex-shrink-0 border border-cyan-500/30 hover:border-cyan-400/50"
+          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full transition-all shadow-lg flex-shrink-0 border border-cyan-500/30 hover:border-cyan-400/50"
+          style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.14), rgba(6,182,212,0.08))' }}
         >
         {isPlaying ? (
-          <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
           </svg>
         ) : (
-          <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 ml-0.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 ml-0.5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         )}
@@ -796,7 +797,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
                     onMouseDown={(e) => e.stopPropagation()}
                     className="flex-1 h-2 bg-transparent appearance-none cursor-pointer audio-slider"
                     style={{
-                      background: `linear-gradient(to right, rgba(6, 182, 212, 0.6) 0%, rgba(6, 182, 212, 0.6) ${progressPercent}%, rgba(255, 255, 255, 0.2) ${progressPercent}%, rgba(255, 255, 255, 0.2) 100%)`,
+                      background: `linear-gradient(to right, rgba(6, 182, 212, 0.95) 0%, rgba(6, 182, 212, 0.95) ${progressPercent}%, rgba(255, 255, 255, 0.15) ${progressPercent}%, rgba(255, 255, 255, 0.15) 100%)`,
                       boxShadow: otherUserPlaying && !isPlaying ? '0 0 12px 2px rgba(239, 68, 68, 0.6), 0 0 24px 4px rgba(239, 68, 68, 0.3)' : undefined
                     }}
                   />
@@ -820,7 +821,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
                   onMouseDown={(e) => e.stopPropagation()}
                   className="flex-1 h-2 bg-transparent appearance-none cursor-pointer audio-slider"
                   style={{
-                    background: `linear-gradient(to right, rgba(6, 182, 212, 0.6) 0%, rgba(6, 182, 212, 0.6) ${(currentTime / duration) * 100}%, rgba(255, 255, 255, 0.2) ${(currentTime / duration) * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
+                    background: `linear-gradient(to right, rgba(6, 182, 212, 0.95) 0%, rgba(6, 182, 212, 0.95) ${(currentTime / duration) * 100}%, rgba(255, 255, 255, 0.15) ${(currentTime / duration) * 100}%, rgba(255, 255, 255, 0.15) 100%)`,
                     boxShadow: otherUserPlaying && !isPlaying ? '0 0 12px 2px rgba(239, 68, 68, 0.6), 0 0 24px 4px rgba(239, 68, 68, 0.3)' : undefined
                   }}
                 />
@@ -862,7 +863,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
             onMouseDown={(e) => e.stopPropagation()}
             className="w-12 sm:w-16 md:w-20 h-2 bg-transparent appearance-none cursor-pointer audio-slider"
             style={{
-              background: `linear-gradient(to right, rgba(6, 182, 212, 0.6) 0%, rgba(6, 182, 212, 0.6) ${(isMuted ? 0 : volume) * 100}%, rgba(255, 255, 255, 0.2) ${(isMuted ? 0 : volume) * 100}%, rgba(255, 255, 255, 0.2) 100%)`
+              background: `linear-gradient(to right, rgba(6, 182, 212, 0.95) 0%, rgba(6, 182, 212, 0.95) ${(isMuted ? 0 : volume) * 100}%, rgba(255, 255, 255, 0.15) ${(isMuted ? 0 : volume) * 100}%, rgba(255, 255, 255, 0.15) 100%)`
             }}
           />
         </div>
@@ -1081,8 +1082,12 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
       {(
         <div className="mt-2 flex flex-col gap-2 pointer-events-auto">
           <div className="flex items-center gap-2">
-            <button onClick={togglePlay} className="text-white text-2xl bg-cyan-600 hover:bg-cyan-700 px-3 py-1 rounded transition-colors">
-              {isPlaying ? '⏸️' : '▶️'}
+            <button onClick={togglePlay} className="w-10 h-10 flex items-center justify-center rounded-full transition-colors shadow-lg" style={{ background: isPlaying ? 'linear-gradient(135deg, #06b6d4, #14b8a6)' : 'linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.92))' }}>
+              {isPlaying ? (
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+              ) : (
+                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+              )}
             </button>
             {/* NOTE: file name intentionally hidden in the inline player */}
             <div className="flex-1">
@@ -1101,7 +1106,7 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
               />
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24 h-2 appearance-none cursor-pointer media-slider" aria-label="volume" style={{ background: `linear-gradient(to right, rgba(6, 182, 212, 0.8) 0%, rgba(6, 182, 212, 0.8) ${volumePercent}%, rgba(255, 255, 255, 0.12) ${volumePercent}%, rgba(255, 255, 255, 0.12) 100%)` }} />
+              <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24 h-2 appearance-none cursor-pointer media-slider" aria-label="volume" style={{ background: `linear-gradient(to right, rgba(6, 182, 212, 0.95) 0%, rgba(6, 182, 212, 0.95) ${volumePercent}%, rgba(255, 255, 255, 0.15) ${volumePercent}%, rgba(255, 255, 255, 0.15) 100%)` }} />
               <button onClick={toggleFullscreen} className="text-white px-2 py-1 bg-cyan-600 hover:bg-cyan-700 rounded">⛶</button>
             </div>
           </div>
@@ -1191,6 +1196,7 @@ export const ChatPage: React.FC = () => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [filterLinks, setFilterLinks] = useState(false);
   const [filterYouTube, setFilterYouTube] = useState(false);
+  const [filterVideos, setFilterVideos] = useState(false);
   const [filterTikTok, setFilterTikTok] = useState(false);
   const [showCustomFilter, setShowCustomFilter] = useState(false);
   const [customFilterDomain, setCustomFilterDomain] = useState<string>('');
@@ -1978,6 +1984,21 @@ export const ChatPage: React.FC = () => {
       result = result.filter((m) => extractLinks(m.content).length > 0);
     }
     
+    // Video filter (uploaded video files or video links)
+    if (filterVideos) {
+      result = result.filter((m) => {
+        // Uploaded video files
+        if (m.fileType && m.fileType.startsWith('video/')) return true;
+        // Video file link extensions
+        const links = extractLinks(m.content);
+        const videoExt = /(\.mp4|\.webm|\.mov|\.m4v|\.ogg|\.ogv|\.avi|\.mkv)(\?.*)?$/i;
+        if (links.some(link => videoExt.test(link))) return true;
+        // include YouTube/TikTok/video providers as well
+        if (links.some(link => link.includes('youtube.com') || link.includes('youtu.be') || link.includes('tiktok.com') || link.includes('vm.tiktok.com'))) return true;
+        return false;
+      });
+    }
+
     // YouTube filter
     if (filterYouTube) {
       result = result.filter((m) => {
@@ -2003,7 +2024,7 @@ export const ChatPage: React.FC = () => {
     }
     
     setFilteredMessages(result);
-  }, [searchQuery, messages, filterLinks, filterYouTube, filterTikTok, customFilterDomain]);
+  }, [searchQuery, messages, filterLinks, filterYouTube, filterTikTok, filterVideos, customFilterDomain]);
 
   const mutation = useMutation((content: string) => sendMessage(activeConversationId!, content), {
     onSuccess: (msg) => {
@@ -4789,6 +4810,22 @@ export const ChatPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
+                    setFilterVideos(!filterVideos);
+                    setFilterLinks(false);
+                    setFilterYouTube(false);
+                    setFilterTikTok(false);
+                    setCustomFilterDomain('');
+                  }}
+                  className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                    filterVideos
+                      ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-500/30'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}
+                </button>
+                <button
+                  onClick={() => {
                     setFilterYouTube(!filterYouTube);
                     setFilterLinks(false);
                     setFilterTikTok(false);
@@ -4827,10 +4864,11 @@ export const ChatPage: React.FC = () => {
                 >
                   🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}
                 </button>
-                {(filterLinks || filterYouTube || filterTikTok || customFilterDomain) && (
+                {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
                   <button
                     onClick={() => {
                       setFilterLinks(false);
+                      setFilterVideos(false);
                       setFilterYouTube(false);
                       setFilterTikTok(false);
                       setCustomFilterDomain('');
