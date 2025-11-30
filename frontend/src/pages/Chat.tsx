@@ -1434,7 +1434,12 @@ export const ChatPage: React.FC = () => {
     const timer = window.setTimeout(() => {
       if (!isUserScrolling) {
         setPreviousSelection(new Set(selectedMessages));
-        setSelectedMessages(new Set([messageId]));
+        // Add to the current selection instead of replacing it so multi-select stays active
+        setSelectedMessages((prev) => {
+          const next = new Set(prev);
+          next.add(messageId);
+          return next;
+        });
         longPressTriggeredRef.current = true;
         setMessageContextMenu({ messageId, x, y });
       }
