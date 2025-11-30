@@ -537,6 +537,11 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
+  // Keep latest playback position in a ref for cross-callback access
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
   // Send live position to other users
   useEffect(() => {
     if (isPlaying && shareLivePosition && messageId && conversationId) {
@@ -2483,10 +2488,6 @@ export const ChatPage: React.FC = () => {
       setHighlightedMessageId(null);
     }
   };
-
-  useEffect(() => {
-    currentTimeRef.current = currentTime;
-  }, [currentTime]);
 
   const registerMobileAudioActions = useCallback((messageId: string, actions?: { shareLiveEnabled: boolean; toggleShareLive: () => void; sendPosition: () => void } | null) => {
     setMobileAudioActions((prev) => {
