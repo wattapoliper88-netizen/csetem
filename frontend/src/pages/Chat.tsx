@@ -3846,17 +3846,15 @@ export const ChatPage: React.FC = () => {
                     onMouseLeave={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
                     onTouchCancel={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
                     onClick={(e) => {
-                      if (selectedMessages.size > 0 && !longPressTriggeredRef.current) {
+                      if (selectedMessages.size > 0) {
                         e.preventDefault();
                         const messageId = group.lastMessageId;
                         setSelectedMessages(prev => {
                           const newSet = new Set(prev);
                           if (newSet.has(messageId)) {
-                            // If tapped a selected message -> deselect it
-                            newSet.delete(messageId);
+                            newSet.delete(messageId); // deselect
                           } else {
-                            // Otherwise add this message to selection (multi-select)
-                            newSet.add(messageId);
+                            newSet.add(messageId);  // add
                           }
                           return newSet;
                         });
