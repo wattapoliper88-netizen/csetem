@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { socketCorsConfig } from './socket-cors.config';
 import { Server, Socket } from 'socket.io';
+import { Logger } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -35,6 +36,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
+  private readonly logger = new Logger(ChatGateway.name);
 
   constructor(
     private chatService: ChatService,
@@ -49,13 +51,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleConnection(client: Socket) {
-    console.log('Socket connection attempt:', { id: client.id, transport: client.conn.transport.name, hasToken: !!client.handshake.auth?.token });
+    this.logger.log('Socket connection attempt: ' + JSON.stringify({ id: client.id, transport: client.conn.transport.name, hasToken: !!client.handshake.auth?.token }));
     try {
       const token = client.handshake.auth?.token;
       // Log for diagnostics so we can tell why the server closes sockets
-      console.log('Socket connect attempt:', { id: client.id, hasToken: !!token });
+      this.logger.log('Socket connect attempt: ' + JSON.stringify({ id: client.id, hasToken: !!token }));
       if (!token) {
-        console.warn('Socket connection rejected: missing auth token', { id: client.id, handshake: client.handshake });
+        this.logger.warn('Socket connection rejected: missing auth token ' + JSON.stringify({ id: client.id, handshake: client.handshake }));
         client.disconnect();
         return;
       }
@@ -73,7 +75,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Broadcast online status
       this.server.emit('user:online', { userId: payload.sub, lastSeen: new Date() });
     } catch (err) {
-      console.error('Socket connection auth error:', err instanceof Error ? err.message : err, { id: client.id, handshake: client.handshake });
+      this.logger.error('Socket connection auth error: ' + (err instanceof Error ? err.message : JSON.stringify(err)), JSON.stringify({ id: client.id, handshake: client.handshake }));
       client.disconnect();
     }
   }
@@ -107,7 +109,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       user.isAdmin,
     );
 
-    console.log('Broadcasting message to conversation:', { conversationId: payload.conversationId, messageId: msg.id });
+    this.logger.log('Broadcasting message to conversation: ' + JSON.stringify({ conversationId: payload.conversationId, messageId: msg.id }));
     this.server.to(payload.conversationId).emit('message:new', msg);
     
     // Stop typing indicator when message is sent
@@ -117,7 +119,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('conversation:join')
   async handleJoin(@ConnectedSocket() client: Socket, @MessageBody() data: { conversationId: string }) {
     const user = (client as any).user;
-    console.log('User joining conversation:', { userId: user?.userId, conversationId: data.conversationId });
+    this.logger.log('User joining conversation: ' + JSON.stringify({ userId: user?.userId, conversationId: data.conversationId }));
     client.join(data.conversationId);
   }
 
@@ -157,16 +159,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const user = (client as any).user;
     if (!user) {
-      console.log('❌ folder:create - No user found');
+      this.logger.warn('❌ folder:create - No user found');
       return;
     }
     
-    console.log('📁 folder:create received:', { 
+    this.logger.log('📁 folder:create received: ' + JSON.stringify({ 
       userId: user.userId, 
       conversationId: data.conversationId, 
       folderName: data.folder.name,
       visibility: data.folder.visibility 
-    });
+    }));
     
     try {
       // Save folder to database
@@ -204,9 +206,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageIds: data.folder.messageIds || [],
       });
       
-      console.log('✅ Folder saved and broadcasted to conversation:', data.conversationId);
+      this.logger.log('✅ Folder saved and broadcasted to conversation: ' + data.conversationId);
     } catch (error) {
-      console.error('❌ Error creating folder:', error);
+      this.logger.error('❌ Error creating folder: ' + (error instanceof Error ? error.message : JSON.stringify(error)), JSON.stringify(error));
       client.emit('folder:error', { message: 'Failed to create folder' });
     }
   }
@@ -219,12 +221,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = (client as any).user;
     if (!user) return;
     
-    console.log('🎵 Audio position received:', { 
+    this.logger.log('🎵 Audio position received: ' + JSON.stringify({ 
       userId: user.userId, 
       conversationId: data.conversationId, 
       messageId: data.messageId,
       position: data.position
-    });
+    }));
     
     // Get user details to send username
     const userData = await this.prisma.user.findUnique({
