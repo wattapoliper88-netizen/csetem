@@ -9,7 +9,8 @@
     "start:prod": "npm run build && node dist/main.js",
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     ,
     "migrate:avatars": "ts-node scripts/migrate-avatars-to-firebase.ts"
     ,
