@@ -956,21 +956,29 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [videoWidth, setVideoWidth] = useState<number | null>(null);
+  const [videoHeight, setVideoHeight] = useState<number | null>(null);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     const onTime = () => setCurrentTime(v.currentTime || 0);
     const onDuration = () => setDuration(v.duration || 0);
+    const onLoadedMeta = () => {
+      setVideoWidth(v.videoWidth || null);
+      setVideoHeight(v.videoHeight || null);
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('loadedmetadata', onDuration);
+    v.addEventListener('loadedmetadata', onLoadedMeta);
     v.addEventListener('play', onPlay);
     v.addEventListener('pause', onPause);
     return () => {
       v.removeEventListener('timeupdate', onTime);
       v.removeEventListener('loadedmetadata', onDuration);
+      v.removeEventListener('loadedmetadata', onLoadedMeta);
       v.removeEventListener('play', onPlay);
       v.removeEventListener('pause', onPause);
     };
@@ -985,6 +993,14 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
     document.addEventListener('fullscreenchange', onFs);
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, []);
+
+  const aspectStyle: any = (() => {
+    if (videoWidth && videoHeight) {
+      return { aspectRatio: `${Math.round(videoWidth)}/${Math.round(videoHeight)}` };
+    }
+    // default aspect ratio fallback
+    return { aspectRatio: '16/9' };
+  })();
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -1020,10 +1036,10 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
   };
 
   return (
-    <div className={`relative ${className || ''} ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : ''}`}>
+    <div style={aspectStyle} className={`relative ${className || ''} ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : ''}`}>
       <video
         ref={videoRef}
-        className={`w-full ${isFullscreen ? 'h-screen' : 'max-h-[480px]'} rounded-lg bg-black`}
+        className={`w-full ${isFullscreen ? 'h-screen' : 'max-h-[480px]'} rounded-lg bg-black object-contain`}
         playsInline
         crossOrigin="anonymous"
         src={src}
@@ -4200,7 +4216,7 @@ export const ChatPage: React.FC = () => {
                                       <ResolvableMedia
                                         fileUrl={m.fileUrl}
                                         fileType={m.fileType}
-                                        className="max-w-full max-h-96 rounded-lg"
+                                        className="w-full rounded-lg"
                                       />
                                     ) : (
                                       <ResolvableMedia
@@ -4693,7 +4709,7 @@ export const ChatPage: React.FC = () => {
                             ) : msg.fileType?.startsWith('audio/') ? (
                               <CustomAudioPlayer src={getFullUrl(msg.fileUrl)} type={msg.fileType} thumbnail={msg.audioThumbnail} messageId={msg.id} conversationId={activeConversationId || undefined} showMobileControls={showMobileControls} setShowMobileControls={setShowMobileControls} />
                             ) : msg.fileType?.startsWith('video/') ? (
-                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="max-w-full max-h-40 rounded-lg" />
+                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="w-full rounded-lg" />
                             ) : (
                               <div className="inline-flex items-center gap-2 bg-gray-700/60 px-3 py-1 rounded">
                                 <span className="text-sm text-gray-200 truncate">{msg.fileName}</span>
