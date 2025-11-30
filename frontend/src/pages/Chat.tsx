@@ -648,6 +648,8 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   };
 
+  
+
   return (
     <div className={`w-full ${isMobileViewport ? 'max-w-[280px]' : 'max-w-[360px]'} sm:max-w-full rounded-lg p-2 md:p-3 transition-all duration-300 overflow-hidden ${
       isCollapsedFirstAudio 
@@ -749,7 +751,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         {/* Play/Pause Button */}
         <button
           onClick={togglePlay}
-          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 rounded-full hover:from-gray-600 hover:to-gray-800 transition-all shadow-lg flex-shrink-0 border border-cyan-500/30 hover:border-cyan-400/50"
+          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center bg-gradient-to-br from-cyan-700 to-cyan-600 rounded-full hover:from-cyan-600 hover:to-cyan-500 transition-all shadow-lg flex-shrink-0 border border-cyan-500/30 hover:border-cyan-400/50"
         >
         {isPlaying ? (
           <svg className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
@@ -1058,6 +1060,9 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
     maxWidth: '90%',
   };
 
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+  const volumePercent = (volume || 0) * 100;
+
   return (
     <div ref={wrapperRef} style={wrapperStyle} className={`inline-block ${className || ''} ${isFullscreen ? 'fixed inset-0 z-50 bg-black flex items-center justify-center' : ''}`}>
       <video
@@ -1076,7 +1081,7 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
       {(
         <div className="mt-2 flex flex-col gap-2 pointer-events-auto">
           <div className="flex items-center gap-2">
-            <button onClick={togglePlay} className="text-white text-2xl bg-gray-800/50 px-3 py-1 rounded">
+            <button onClick={togglePlay} className="text-white text-2xl bg-cyan-600 hover:bg-cyan-700 px-3 py-1 rounded transition-colors">
               {isPlaying ? '⏸️' : '▶️'}
             </button>
             {/* NOTE: file name intentionally hidden in the inline player */}
@@ -1088,13 +1093,16 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
                 value={currentTime}
                 step={0.1}
                 onChange={(e) => seek(Number(e.target.value))}
-                className="w-full"
+                className="w-full h-2 appearance-none cursor-pointer media-slider"
                 aria-label="progress"
+                style={{
+                  background: `linear-gradient(to right, rgba(6, 182, 212, 0.8) 0%, rgba(6, 182, 212, 0.8) ${progressPercent}%, rgba(255, 255, 255, 0.12) ${progressPercent}%, rgba(255, 255, 255, 0.12) 100%)`
+                }}
               />
             </div>
             <div className="flex items-center gap-2">
-              <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24" aria-label="volume" />
-              <button onClick={toggleFullscreen} className="text-white px-2 py-1 bg-gray-800/50 rounded">⛶</button>
+              <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24 h-2 appearance-none cursor-pointer media-slider" aria-label="volume" style={{ background: `linear-gradient(to right, rgba(6, 182, 212, 0.8) 0%, rgba(6, 182, 212, 0.8) ${volumePercent}%, rgba(255, 255, 255, 0.12) ${volumePercent}%, rgba(255, 255, 255, 0.12) 100%)` }} />
+              <button onClick={toggleFullscreen} className="text-white px-2 py-1 bg-cyan-600 hover:bg-cyan-700 rounded">⛶</button>
             </div>
           </div>
           <div className="text-xs text-gray-400 text-right">{formatDuration(currentTime)} / {formatDuration(duration)}</div>
@@ -4240,7 +4248,7 @@ export const ChatPage: React.FC = () => {
                                       <ResolvableMedia
                                         fileUrl={m.fileUrl}
                                         fileType={m.fileType}
-                                        className="w-full rounded-lg"
+                                        className="rounded-lg"
                                       />
                                     ) : (
                                       <ResolvableMedia
@@ -4733,7 +4741,7 @@ export const ChatPage: React.FC = () => {
                             ) : msg.fileType?.startsWith('audio/') ? (
                               <CustomAudioPlayer src={getFullUrl(msg.fileUrl)} type={msg.fileType} thumbnail={msg.audioThumbnail} messageId={msg.id} conversationId={activeConversationId || undefined} showMobileControls={showMobileControls} setShowMobileControls={setShowMobileControls} />
                             ) : msg.fileType?.startsWith('video/') ? (
-                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="w-full rounded-lg" />
+                              <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="rounded-lg" />
                             ) : (
                               <div className="inline-flex items-center gap-2 bg-gray-700/60 px-3 py-1 rounded">
                                 <span className="text-sm text-gray-200 truncate">{msg.fileName}</span>
