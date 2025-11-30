@@ -1412,6 +1412,109 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  // Message-specific long-press state and handlers
+  const [messageContextMenu, setMessageContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
+  const [messageLongPressTimer, setMessageLongPressTimer] = useState<number | null>(null);
+  const [messageLongPressStartPos, setMessageLongPressStartPos] = useState<{ x: number; y: number } | null>(null);
+  const messageLongPressCleanupRef = useRef<() => void>(() => {});
+
+  const handleMessageLongPressStart = (e: React.TouchEvent | React.MouseEvent, messageId: string) => {
+    setIsUserScrolling(false);
+    scrollStartRef.current = window.scrollY;
+    if ('touches' in e && (e as React.TouchEvent).touches[0]) {
+      setMessageLongPressStartPos({ x: (e as React.TouchEvent).touches[0].clientX, y: (e as React.TouchEvent).touches[0].clientY });
+    } else if ('clientX' in e) {
+      setMessageLongPressStartPos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
+    }
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.bottom + 5;
+    const timer = window.setTimeout(() => {
+      if (!isUserScrolling) {
+        setPreviousSelection(new Set(selectedMessages));
+        setSelectedMessages(new Set([messageId]));
+        longPressTriggeredRef.current = true;
+        setMessageContextMenu({ messageId, x, y });
+      }
+    }, 500);
+    setMessageLongPressTimer(timer);
+    const cancelOnInteraction = () => {
+      if (messageLongPressTimer) {
+        const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
+        if (scrollDelta > 2) {
+          clearTimeout(messageLongPressTimer);
+          setMessageLongPressTimer(null);
+        }
+      }
+    };
+    const cancelOnWheel = () => {
+      if (messageLongPressTimer) {
+        clearTimeout(messageLongPressTimer);
+        setMessageLongPressTimer(null);
+      }
+    };
+    window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
+    window.addEventListener('touchmove', cancelOnInteraction, { passive: true, capture: true });
+    window.addEventListener('mousemove', cancelOnInteraction, { passive: true });
+    window.addEventListener('wheel', cancelOnWheel, { passive: true, capture: true });
+    messageLongPressCleanupRef.current = () => {
+      window.removeEventListener('scroll', cancelOnInteraction, true);
+      window.removeEventListener('touchmove', cancelOnInteraction, true);
+      window.removeEventListener('mousemove', cancelOnInteraction);
+      window.removeEventListener('wheel', cancelOnWheel, true);
+    };
+  };
+
+  const handleMessageLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
+    if (messageLongPressTimer) {
+      clearTimeout(messageLongPressTimer);
+      setMessageLongPressTimer(null);
+    }
+    if (messageLongPressCleanupRef.current) {
+      messageLongPressCleanupRef.current();
+    }
+    if (messageContextMenu) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setMessageLongPressStartPos(null);
+  };
+
+  const handleMessageLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!messageLongPressTimer || !messageLongPressStartPos) return;
+    let cx: number, cy: number;
+    if ('touches' in e && (e as React.TouchEvent).touches[0]) {
+      cx = (e as React.TouchEvent).touches[0].clientX; cy = (e as React.TouchEvent).touches[0].clientY;
+    } else if ('clientX' in e) {
+      cx = (e as React.MouseEvent).clientX; cy = (e as React.MouseEvent).clientY;
+    } else return;
+    const dx = Math.abs(cx - messageLongPressStartPos.x);
+    const dy = Math.abs(cy - messageLongPressStartPos.y);
+    if (dx > 8 || dy > 8) {
+      clearTimeout(messageLongPressTimer);
+      setMessageLongPressTimer(null);
+    }
+  };
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (messageLongPressTimer) {
+        setIsUserScrolling(true);
+        clearTimeout(messageLongPressTimer);
+        setMessageLongPressTimer(null);
+      }
+    };
+    document.addEventListener('scroll', onScroll, true);
+    return () => document.removeEventListener('scroll', onScroll, true);
+  }, [messageLongPressTimer]);
+
+  useEffect(() => {
+    if (messageContextMenu) {
+      if (!selectedMessages.has(messageContextMenu.messageId)) setMessageContextMenu(null);
+    }
+  }, [selectedMessages, messageContextMenu]);
+
   const handleDeleteUser = async (userId: string) => {
     if (confirm('Biztosan törölni szeretnéd ezt a felhasználót?')) {
       try {
@@ -3869,69 +3972,14 @@ export const ChatPage: React.FC = () => {
                     }`}
                     style={{ maxWidth: isMobile ? '95%' : isTablet ? '90%' : '75%' }}
                     onMouseEnter={() => setHoveredMessageId(group.lastMessageId)}
-                    onTouchStart={(e) => {
-                      const touch = e.touches[0];
-                      if (!touch) return;
-                      const target = e.currentTarget as HTMLElement;
-                      target.dataset.swipeStart = String(touch.clientX);
-                      target.dataset.swiping = '1';
-                      target.style.transition = 'none';
-                    }}
-                    onTouchMove={(e) => {
-                      const touch = e.touches[0];
-                      const target = e.currentTarget as HTMLElement;
-                      const start = Number(target.dataset.swipeStart || touch?.clientX || 0);
-                      const dx = Math.max(0, (touch?.clientX || 0) - start);
-                      if (dx > 6) {
-                        e.preventDefault();
-                      }
-                      const clamped = Math.min(dx, 120);
-                      target.style.transform = `translateX(${clamped}px)`;
-                      target.style.boxShadow = clamped > 8 ? '0 10px 25px rgba(6,182,212,0.35)' : '';
-                      // Add visual feedback for selection
-                      if (clamped > 20) {
-                        target.style.backgroundColor = 'rgba(6,182,212,0.1)';
-                        target.style.borderColor = 'rgba(6,182,212,0.5)';
-                      } else {
-                        target.style.backgroundColor = '';
-                        target.style.borderColor = '';
-                      }
-                    }}
-                    onTouchEnd={(e) => {
-                      const target = e.currentTarget as HTMLElement;
-                      const endX = e.changedTouches[0]?.clientX || 0;
-                      const start = Number(target.dataset.swipeStart || endX);
-                      const dx = Math.max(0, endX - start);
-                      const shouldToggle = dx > 40;
-                      target.style.transition = 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease';
-                      target.style.transform = '';
-                      target.style.boxShadow = '';
-                      target.style.backgroundColor = '';
-                      target.style.borderColor = '';
-                      delete target.dataset.swiping;
-                      delete target.dataset.swipeStart;
-                      if (shouldToggle) {
-                        setSelectedMessages(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(group.lastMessageId)) {
-                            newSet.delete(group.lastMessageId);
-                          } else {
-                            newSet.add(group.lastMessageId);
-                          }
-                          return newSet;
-                        });
-                      }
-                    }}
-                    onTouchCancel={(e) => {
-                      const target = e.currentTarget as HTMLElement;
-                      target.style.transition = 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease';
-                      target.style.transform = '';
-                      target.style.boxShadow = '';
-                      target.style.backgroundColor = '';
-                      target.style.borderColor = '';
-                      delete target.dataset.swiping;
-                      delete target.dataset.swipeStart;
-                    }}
+                    onTouchStart={(e) => { e.stopPropagation(); handleMessageLongPressStart(e, group.lastMessageId); }}
+                    onMouseDown={(e) => { e.stopPropagation(); handleMessageLongPressStart(e, group.lastMessageId); }}
+                    onTouchMove={(e) => handleMessageLongPressMove(e)}
+                    onMouseMove={(e) => handleMessageLongPressMove(e)}
+                    onTouchEnd={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
+                    onMouseUp={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
+                    onMouseLeave={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
+                    onTouchCancel={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
                     onClick={(e) => {
                       if (selectedMessages.size > 0 && !longPressTriggeredRef.current) {
                         e.preventDefault();
