@@ -40,6 +40,9 @@ function getFullUrl(fileUrl?: string | null): string | undefined {
   // Otherwise, assume it's a backend relative path. Ensure single slash between API_URL and path
   return `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
 }
+    // Helper to ensure our own avatar is present on messages returned from server
+    // NOTE: defined later after `me` is available
+
 
 // Extract path from Firebase Storage URL for backend read-url endpoint
 function extractFirebasePath(url: string): string | null {
@@ -953,6 +956,18 @@ export const ChatPage: React.FC = () => {
       navigate('/login');
     },
   });
+  // Helper to ensure our own avatar is present on messages returned from server
+  const ensureSenderAvatar = (msg: any) => {
+    if (!msg) return msg;
+    if (msg.senderId === me?.id) {
+      // If server didn't return avatarImage for sender (to avoid large payloads), inject our cached one
+      if (!msg.sender) msg.sender = { id: me?.id, username: me?.username };
+      if (!msg.sender.avatarImage && me?.avatarImage) {
+        msg = { ...msg, sender: { ...msg.sender, avatarImage: me.avatarImage } };
+      }
+    }
+    return msg;
+  };
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -1473,10 +1488,11 @@ export const ChatPage: React.FC = () => {
     const handleMessageNew = (msg: any) => {
       console.log('🔵 message:new event received', msg);
       console.log('💬 activeConversationId vs incoming message conversationId', typeof activeConversationId, activeConversationId, typeof msg.conversationId, msg.conversationId);
-      if (String(msg.conversationId) === String(activeConversationId)) {
+        if (String(msg.conversationId) === String(activeConversationId)) {
         console.log('✅ Message is for active conversation');
-        setMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
-        setFilteredMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
+        const filledMsg = ensureSenderAvatar(msg);
+        setMessages((prev) => prev.some((m: any) => m.id === filledMsg.id) ? prev : [...prev, filledMsg]);
+        setFilteredMessages((prev) => prev.some((m: any) => m.id === filledMsg.id) ? prev : [...prev, filledMsg]);
         setIsTyping(false);
         console.log('💡 Setting newMessageIds with:', msg.id, 'sender:', msg.senderId, 'me:', me?.id);
         setNewMessageIds(new Set([msg.id]));
@@ -1730,8 +1746,9 @@ export const ChatPage: React.FC = () => {
 
   const mutation = useMutation((content: string) => sendMessage(activeConversationId!, content), {
     onSuccess: (msg) => {
-      setMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
-      setFilteredMessages((prev) => prev.some((m: any) => m.id === msg.id) ? prev : [...prev, msg]);
+      const filled = ensureSenderAvatar(msg);
+      setMessages((prev) => prev.some((m: any) => m.id === filled.id) ? prev : [...prev, filled]);
+      setFilteredMessages((prev) => prev.some((m: any) => m.id === filled.id) ? prev : [...prev, filled]);
       // Always scroll for our own messages, or if near bottom already.
       const shouldScroll = msg.senderId === me?.id || (() => {
         if (!messagesContainerRef.current) return false;
@@ -1849,8 +1866,9 @@ export const ChatPage: React.FC = () => {
           fileType: file.type,
         });
 
-        setMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
-        setFilteredMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+        const filledNewMessage = ensureSenderAvatar(newMessage);
+        setMessages((prev) => prev.some((m: any) => m.id === filledNewMessage.id) ? prev : [...prev, filledNewMessage]);
+        setFilteredMessages((prev) => prev.some((m: any) => m.id === filledNewMessage.id) ? prev : [...prev, filledNewMessage]);
         // If this is our message, scroll to bottom. Also scroll if user is near bottom.
         const shouldScrollFile = newMessage.senderId === me?.id || (() => {
           if (!messagesContainerRef.current) return false;
@@ -1971,8 +1989,9 @@ export const ChatPage: React.FC = () => {
         fileType: payload.fileType,
         audioThumbnail: payload.audioThumbnail
       });
-      setMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
-      setFilteredMessages((prev) => prev.some((m: any) => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+      const filledNewMessage2 = ensureSenderAvatar(newMessage);
+      setMessages((prev) => prev.some((m: any) => m.id === filledNewMessage2.id) ? prev : [...prev, filledNewMessage2]);
+      setFilteredMessages((prev) => prev.some((m: any) => m.id === filledNewMessage2.id) ? prev : [...prev, filledNewMessage2]);
       setNewMessageIds(new Set([newMessage.id]));
       // Do not capture a fixed overlay for newly created messages
 
