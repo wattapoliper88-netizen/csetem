@@ -4283,7 +4283,7 @@ export const ChatPage: React.FC = () => {
                                 
                                 {/* Don't show content text for audio files - filename is shown in player */}
                                 {!m.fileType?.startsWith('audio/') && (
-                                  <p className={`whitespace-pre-wrap text-cyan-100 font-light ${isLastMessage && msgIndex === group.messages.length - 1 ? `typewriter-text ${isScrolling ? 'hidden-text' : ''}` : ''}`}>
+                                  <p className={`whitespace-pre-wrap ${group.senderId === me?.id ? 'text-cyan-100' : 'text-red-400'} font-light ${isLastMessage && msgIndex === group.messages.length - 1 ? `typewriter-text ${isScrolling ? 'hidden-text' : ''}` : ''}`}>
                                     {isLastMessage && msgIndex === group.messages.length - 1 ? (
                                       (extractLinks(m.content).length > 0 
                                         ? m.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
@@ -4762,7 +4762,7 @@ export const ChatPage: React.FC = () => {
                               </div>
                             )
                           ) : (
-                            <p className="text-cyan-100 text-sm line-clamp-2">{msg.content}</p>
+                            <p className={`${group.senderId === me?.id ? 'text-cyan-100' : 'text-red-400'} text-sm line-clamp-2`}>{msg.content}</p>
                           )}
                         </div>
                       </div>
