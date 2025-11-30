@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards, Post, Body, Delete, Param, Put } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards, Post, Body, Delete, Param, Put, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserFolderService } from './user-folder.service';
@@ -16,7 +16,16 @@ export class UserFolderController {
   @Get()
   async list(@Req() req: any) {
     await this.checkAdmin(req.user.userId);
-    return this.folderService.listFolders();
+    try {
+      return this.folderService.listFolders();
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      // If the DB table(s) do not exist (Prisma or SQL error), return a clear 501 so client can detect
+      if (msg.includes('relation "UserFolder"') || msg.includes('UserFolder')) {
+        throw new HttpException('Database migration for user folders has not been applied', HttpStatus.NOT_IMPLEMENTED);
+      }
+      throw err;
+    }
   }
 
   @Post()

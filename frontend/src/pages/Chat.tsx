@@ -1259,8 +1259,13 @@ export const ChatPage: React.FC = () => {
       setModalUserId(userId);
       setShowUserFolderModal(true);
       setUserContextMenu(null);
-    } catch (error) {
-      alert('Hiba történt a mappák lekérésekor');
+    } catch (error: any) {
+      const status = Number(error?.response?.status || error?.status || 0);
+      if (status === 404 || status === 501 || status === 405) {
+        alert('A backend jelenleg nem támogatja a mappa funkciót (vagy nincs telepítve). Kérlek telepítsd a legfrissebb backend verziót és futtasd a Prisma migrációt.');
+      } else {
+        alert('Hiba történt a mappák lekérésekor');
+      }
     }
   };
 
@@ -1273,8 +1278,13 @@ export const ChatPage: React.FC = () => {
       const data = await res.listUserFolders();
       setFolderList(data || []);
       alert('Felhasználó hozzárendelve a mappához');
-    } catch (error) {
-      alert('Hiba történt a felhasználó hozzárendelésekor');
+    } catch (error: any) {
+      const status = Number(error?.response?.status || 0);
+      if (status === 404 || status === 501 || status === 405) {
+        alert('A backend még nem támogatja a mappa hozzárendelést. Frissítsd a backendet és futtasd a Prisma migrációt.');
+      } else {
+        alert('Hiba történt a felhasználó hozzárendelésekor');
+      }
     }
   };
 
@@ -1286,8 +1296,13 @@ export const ChatPage: React.FC = () => {
       const data = await res.listUserFolders();
       setFolderList(data || []);
       alert('Felhasználó eltávolítva a mappából');
-    } catch (error) {
-      alert('Hiba történt a felhasználó eltávolításakor');
+    } catch (error: any) {
+      const status = Number(error?.response?.status || 0);
+      if (status === 404 || status === 501 || status === 405) {
+        alert('A backend még nem támogatja a mappa hozzárendelés eltávolítását. Frissítsd a backendet és futtasd a Prisma migrációt.');
+      } else {
+        alert('Hiba történt a felhasználó eltávolításakor');
+      }
     }
   };
 
@@ -1302,8 +1317,13 @@ export const ChatPage: React.FC = () => {
       setNewFolderParentId(null);
       setNewFolderThumbnail(null);
       alert('Mappa létrehozva');
-    } catch (error) {
-      alert('Hiba a mappa létrehozásakor');
+    } catch (error: any) {
+      const status = Number(error?.response?.status || 0);
+      if (status === 404 || status === 501 || status === 405) {
+        alert('A backend még nem támogatja a mappa létrehozását. Frissítsd a backendet és futtasd a Prisma migrációt.');
+      } else {
+        alert('Hiba a mappa létrehozásakor');
+      }
     }
   };
 
@@ -1478,7 +1498,7 @@ export const ChatPage: React.FC = () => {
       refetchOnWindowFocus: true,
     },
   );
-
+      
   // For non-admin users, set their single conversation ID
   useEffect(() => {
     if (!me || !convData) return;
