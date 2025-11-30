@@ -4783,7 +4783,127 @@ export const ChatPage: React.FC = () => {
               )}
             </div>
 
-            <div className="sticky bottom-0 z-20 border-t border-gray-700 bg-gray-800 shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0">
+            <div className="sticky bottom-0 z-20 border-t border-gray-700 bg-gray-800 shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0 relative">
+              {/* Selection toolbar moved here so it appears under messages and above filters */}
+              {selectedMessages.size > 0 && (
+                <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 w-[calc(100%-2rem)] md:w-auto z-50 bg-gray-800/30 backdrop-blur-md border border-gray-700/30 rounded-xl p-2 md:p-4 shadow-none">
+                  <div className="flex flex-wrap items-center gap-2 justify-center">
+                    <span className="text-xs md:text-sm font-medium text-cyan-400 whitespace-nowrap">{selectedMessages.size} kijelölve</span>
+                    <div className="h-6 w-px bg-gray-700 hidden md:block"></div>
+                    <button
+                      onClick={() => {
+                        setShowFolderDialog(true);
+                        setFolderVisibility('private');
+                        setFolderIcon('📁');
+                      }}
+                      className="px-2 md:px-4 py-1.5 md:py-2 bg-gray-800/60 hover:bg-gray-700/60 text-gray-100 text-xs md:text-sm rounded-lg transition-all border border-gray-700/40 flex items-center gap-1 md:gap-2 whitespace-nowrap"
+                    >
+                      <span className="md:hidden">📁</span>
+                      <span className="hidden md:inline">📁 Mappába</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const allMessageIds = filteredMessages.map(m => m.id);
+                        const allSelected = allMessageIds.every(id => selectedMessages.has(id)) && selectedMessages.size === allMessageIds.length;
+                        if (allSelected) {
+                          setSelectedMessages(previousSelection);
+                          setPreviousSelection(new Set());
+                        } else {
+                          setPreviousSelection(new Set(selectedMessages));
+                          setSelectedMessages(new Set(allMessageIds));
+                        }
+                      }}
+                      className="px-2 md:px-4 py-1.5 md:py-2 bg-gray-800/60 hover:bg-gray-700/60 text-gray-100 text-xs md:text-sm rounded-lg transition-all border border-gray-700/40 flex items-center gap-1 md:gap-2 whitespace-nowrap"
+                      title="Összes kijelölése / Visszaállítás"
+                    >
+                      <span className="md:hidden">☑️</span>
+                      <span className="hidden md:inline">☑️ Összes</span>
+                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowEditMenu(!showEditMenu)}
+                        className="px-2 md:px-4 py-1.5 md:py-2 bg-gray-800/60 hover:bg-gray-700/60 text-gray-100 text-xs md:text-sm rounded-lg transition-all border border-gray-700/40 flex items-center gap-1 md:gap-2 whitespace-nowrap"
+                      >
+                        <span className="md:hidden">⚙️</span>
+                        <span className="hidden md:inline">⚙️ Műveletek</span>
+                      </button>
+                      {showEditMenu && (
+                        <div className="absolute top-full mt-2 left-0 bg-gray-850/80 border border-gray-700/40 rounded-lg shadow-2xl overflow-hidden min-w-[160px] backdrop-blur-md text-gray-100">
+                          {selectedMessages.size === 1 && (
+                            <button
+                              onClick={() => {
+                                const messageId = Array.from(selectedMessages)[0];
+                                const message = messages.find(m => m.id === messageId);
+                                if (message) {
+                                  setEditingMessageId(messageId);
+                                  setEditingContent(message.content || '');
+                                  setSelectedMessages(new Set());
+                                  setShowEditMenu(false);
+                                }
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-800 transition-colors flex items-center gap-2 border-b border-gray-700/50"
+                            >
+                              ✏️ Szerkesztés
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (activeFolderId) {
+                                if (window.confirm(`Biztosan eltávolítod ${selectedMessages.size} üzenetet a mappából?`)) {
+                                  const allSelectedMessageIds: string[] = [];
+                                  groupedMessages.forEach(group => {
+                                    if (selectedMessages.has(group.lastMessageId)) {
+                                      group.messages.forEach((msg: any) => allSelectedMessageIds.push(msg.id));
+                                    }
+                                  });
+                                  setFolders(prev => prev.map(folder => (
+                                    folder.id === activeFolderId ? { ...folder, messageIds: folder.messageIds.filter(id => !allSelectedMessageIds.includes(id)) } : folder
+                                  )));
+                                  setSelectedMessages(new Set());
+                                  setShowEditMenu(false);
+                                }
+                              } else {
+                                if (window.confirm(`Biztosan törölni szeretnéd ${selectedMessages.size} üzenetet?`)) {
+                                  const messageIdsToDelete = Array.from(selectedMessages);
+                                  apiDeleteMessages(messageIdsToDelete)
+                                    .then(() => {
+                                      setMessages(prev => prev.filter(m => !selectedMessages.has(m.id)));
+                                      setFilteredMessages(prev => prev.filter(m => !selectedMessages.has(m.id)));
+                                      setFolders(prev => prev.map(folder => ({
+                                        ...folder,
+                                        messageIds: folder.messageIds.filter(id => !selectedMessages.has(id))
+                                      })));
+                                      setSelectedMessages(new Set());
+                                      setShowEditMenu(false);
+                                    })
+                                    .catch((err) => {
+                                      console.error('❌ Failed to delete messages:', err);
+                                      alert('Hiba történt az üzenetek törlése közben');
+                                    });
+                                }
+                              }
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-800 hover:text-red-400 transition-colors flex items-center gap-2"
+                          >
+                            {activeFolderId ? '📤 Eltávolítás a mappából' : '🗑️ Törlés'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="h-6 w-px bg-gray-700 hidden md:block"></div>
+                    <button
+                      onClick={() => {
+                        setSelectedMessages(new Set());
+                        setShowEditMenu(false);
+                      }}
+                      className="px-2 md:px-4 py-1.5 md:py-2 bg-gray-800/60 hover:bg-gray-700/60 text-gray-100 text-xs md:text-sm rounded-lg transition-all border border-gray-700/40 whitespace-nowrap"
+                    >
+                      <span className="md:hidden">✕</span>
+                      <span className="hidden md:inline">Kijelölés törlése</span>
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* Filter buttons */}
               <div className="flex gap-1 sm:gap-1.5 md:gap-2 mb-1.5 sm:mb-2 md:mb-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-1">
                 <button
