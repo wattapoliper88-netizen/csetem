@@ -1073,7 +1073,7 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
         <source src={src} type={type} />
       </video>
       {/* Controls below the video (not overlay) */}
-      {!isFullscreen && (
+      {(
         <div className="mt-2 flex flex-col gap-2 pointer-events-auto">
           <div className="flex items-center gap-2">
             <button onClick={togglePlay} className="text-white text-2xl bg-gray-800/50 px-3 py-1 rounded">
@@ -3388,7 +3388,7 @@ export const ChatPage: React.FC = () => {
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-red-400 text-sm">📹</span>
                                       <span className="text-red-300 text-xs font-medium truncate max-w-[150px]">
-                                        {otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Video'}
+                                        {'Video'}
                                       </span>
                                     </div>
                                     <span className="text-gray-400 text-xs">Video fájl</span>
@@ -3534,9 +3534,7 @@ export const ChatPage: React.FC = () => {
                             <div className="flex flex-col items-start">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-red-400 text-sm">📹</span>
-                                <span className="text-red-300 text-xs md:text-sm font-medium">
-                                  {otherPersonLastMessage.lastMessage.fileName || 'Video'}
-                                </span>
+                                <span className="text-red-300 text-xs md:text-sm font-medium">Video</span>
                               </div>
                               <span className="text-gray-400 text-xs">Video fájl</span>
                             </div>
