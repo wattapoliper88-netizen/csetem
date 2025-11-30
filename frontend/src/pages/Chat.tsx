@@ -1986,16 +1986,9 @@ export const ChatPage: React.FC = () => {
     
     // Video filter (uploaded video files or video links)
     if (filterVideos) {
+      // Only uploaded video files (no links or third-party providers)
       result = result.filter((m) => {
-        // Uploaded video files
-        if (m.fileType && m.fileType.startsWith('video/')) return true;
-        // Video file link extensions
-        const links = extractLinks(m.content);
-        const videoExt = /(\.mp4|\.webm|\.mov|\.m4v|\.ogg|\.ogv|\.avi|\.mkv)(\?.*)?$/i;
-        if (links.some(link => videoExt.test(link))) return true;
-        // include YouTube/TikTok/video providers as well
-        if (links.some(link => link.includes('youtube.com') || link.includes('youtu.be') || link.includes('tiktok.com') || link.includes('vm.tiktok.com'))) return true;
-        return false;
+        return (m.fileType && m.fileType.startsWith('video/'));
       });
     }
 
@@ -4822,7 +4815,7 @@ export const ChatPage: React.FC = () => {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}
+                  🎞️ {filterVideos ? 'Csak feltöltött videók' : 'Feltöltött videók szűrése'}
                 </button>
                 <button
                   onClick={() => {
