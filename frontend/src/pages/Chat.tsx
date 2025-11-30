@@ -3845,14 +3845,16 @@ export const ChatPage: React.FC = () => {
                     onClick={(e) => {
                       if (selectedMessages.size > 0 && !longPressTriggeredRef.current) {
                         e.preventDefault();
+                        const messageId = group.lastMessageId;
                         setSelectedMessages(prev => {
                           const newSet = new Set(prev);
-                          if (newSet.has(group.lastMessageId)) {
-                            newSet.delete(group.lastMessageId);
-                          } else {
-                            newSet.add(group.lastMessageId);
+                          if (newSet.has(messageId)) {
+                            // If tapped a selected message -> deselect it
+                            newSet.delete(messageId);
+                            return newSet;
                           }
-                          return newSet;
+                          // Otherwise select only this message
+                          return new Set([messageId]);
                         });
                       } else if (!longPressTriggeredRef.current) {
                         e.preventDefault();
