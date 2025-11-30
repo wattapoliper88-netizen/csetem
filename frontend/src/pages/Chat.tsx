@@ -4541,46 +4541,32 @@ export const ChatPage: React.FC = () => {
                           {isMobile && group.messages.some((m: any) => m.fileType?.startsWith('audio/')) && (() => {
                             const firstAudio = group.messages.find((m: any) => m.fileType?.startsWith('audio/'));
                             const actions = firstAudio ? mobileAudioActions[firstAudio.id] : undefined;
-                            return (
+                            return actions ? (
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowMobileControls(!showMobileControls);
+                                    actions.toggleShareLive();
                                   }}
-                                  className="px-1.5 py-0.5 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded-full border border-gray-600/30 transition-colors flex items-center gap-0.5"
-                                  title="Audio vez?rl?k"
+                                  className="px-1.5 py-0.5 text-[10px] bg-gray-700/70 hover:bg-gray-700/90 text-gray-100 rounded-full border border-gray-600/40 transition-colors whitespace-nowrap"
+                                  title={actions.shareLiveEnabled ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
                                 >
-                                  <span className="text-[10px]">??</span>
-                                  <span className="text-[9px]">{showMobileControls ? '?' : '?'}</span>
+                                  {actions.shareLiveEnabled ? '?? ?l?' : '?? Ki'}
                                 </button>
-                                {showMobileControls && actions && (
-                                  <>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        actions.toggleShareLive();
-                                      }}
-                                      className="px-1.5 py-0.5 text-[10px] bg-gray-700/70 hover:bg-gray-700/90 text-gray-100 rounded-full border border-gray-600/40 transition-colors whitespace-nowrap"
-                                      title={actions.shareLiveEnabled ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
-                                    >
-                                      {actions.shareLiveEnabled ? '?? ?l?' : '?? Ki'}
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        actions.sendPosition();
-                                      }}
-                                      className="px-1.5 py-0.5 text-[10px] bg-cyan-700/70 hover:bg-cyan-700/90 text-white rounded-full border border-cyan-500/40 transition-colors whitespace-nowrap"
-                                      title="Poz?ci? k?ld?se"
-                                    >
-                                      ?? Poz?ci?
-                                    </button>
-                                  </>
-                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    actions.sendPosition();
+                                  }}
+                                  className="px-1.5 py-0.5 text-[10px] bg-cyan-700/70 hover:bg-cyan-700/90 text-white rounded-full border border-cyan-500/40 transition-colors whitespace-nowrap"
+                                  title="Poz?ci? k?ld?se"
+                                >
+                                  ?? Poz?ci?
+                                </button>
                               </div>
-                            );
+                            ) : null;
                           })()}
+
                           {(() => {
                             const messageFolders = folders.filter(f => 
                               !f.closedBy.includes(me?.id || '') && 
