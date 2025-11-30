@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useQuery, useMutation } from 'react-query';
 import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
@@ -275,6 +275,7 @@ interface AudioPlayerProps {
   isCollapsedFirstAudio?: boolean;
   showMobileControls?: boolean;
   setShowMobileControls?: (v: boolean) => void;
+  registerMobileActions?: (messageId: string, actions?: { shareLiveEnabled: boolean; toggleShareLive: () => void; sendPosition: () => void } | null) => void;
 }
 
 // Reconstructed AudioPlayer component (was accidentally unwrapped during patch)
@@ -291,6 +292,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   isCollapsedFirstAudio,
   showMobileControls = false,
   setShowMobileControls,
+  registerMobileActions,
 }) => {
   // Provide a local handler to toggle mobile controls if parent passed the setter
   const toggleMobileControls = () => setShowMobileControls && setShowMobileControls(!showMobileControls);
@@ -316,11 +318,13 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const currentTimeRef = useRef(0);
   const [playlistDurations, setPlaylistDurations] = useState<number[]>([]);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [shareLivePosition, setShareLivePosition] = useState(true);
+  const toggleShareLive = useCallback(() => setShareLivePosition((prev) => !prev), []);
   const livePositionIntervalRef = useRef<number | null>(null);
   const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
   // NOTE: The audio player previously had a separate local showMobileControls state which
@@ -447,6 +451,18 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
     return () => { mounted = false; };
   }, [effectiveSrc]);
 
+  useEffect(() => {
+    if (!registerMobileActions || !messageId) return;
+    registerMobileActions(messageId, {
+      shareLiveEnabled: shareLivePosition,
+      toggleShareLive,
+      sendPosition: handleSendPosition,
+    });
+    return () => {
+      registerMobileActions(messageId, null);
+    };
+  }, [registerMobileActions, messageId, shareLivePosition, toggleShareLive, handleSendPosition]);
+
   // Draw animated circular waveform
   const drawWaveform = () => {
     if (!canvasRef.current) return;
@@ -548,6 +564,20 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
       }
     };
   }, [isPlaying, shareLivePosition, messageId, conversationId]);
+
+  const handleSendPosition = useCallback(() => {
+    if (!messageId || !conversationId) return;
+    const sock = getSocket();
+    if (sock) {
+      sock.emit('audio-position', {
+        conversationId,
+        messageId,
+        position: currentTimeRef.current
+      });
+    } else {
+      console.error('Nincs socket kapcsolat!');
+    }
+  }, [conversationId, messageId]);
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -869,13 +899,12 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
         </div>
         
         {/* Other User Listening Status or Live Sharing Toggle */}
-        <div className="flex items-center gap-2">
-          {messageId && conversationId && (
-            otherUserPlaying ? (
-              // Show who is listening with disconnect button
+        {messageId && conversationId && (
+          <div className="flex items-center gap-2">
+            {otherUserPlaying ? (
               <>
                 <div className="px-2 py-1 bg-cyan-600/20 border border-cyan-500/30 rounded flex items-center gap-2">
-                  <span className="text-cyan-300 text-xs">🎧</span>
+                  <span className="text-cyan-300 text-xs">??</span>
                   <span className="text-xs text-cyan-300 font-mono">
                     {formatDuration(otherUserPlaying.position)}
                   </span>
@@ -888,52 +917,37 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
                     }
                   }}
                   className="px-2 py-1 text-xs bg-red-600/40 hover:bg-red-600/60 text-red-100 rounded border border-red-500/30 transition-colors"
-                  title="Kapcsolat megszakítása"
+                  title="Kapcsolat megszak?t?sa"
                 >
-                  ✕
+                  ?
                 </button>
               </>
             ) : (
-              // Show live sharing toggle when nobody is listening
-              <button
-                onClick={() => setShareLivePosition(!shareLivePosition)}
-                className={`px-2 py-1 text-xs rounded border transition-colors whitespace-nowrap ${
-                  shareLivePosition 
-                    ? 'bg-green-600/40 hover:bg-green-600/60 text-green-100 border-green-500/30' 
-                    : 'bg-gray-600/40 hover:bg-gray-600/60 text-gray-300 border-gray-500/30'
-                }`}
-                title={shareLivePosition ? 'Élő megosztás bekapcsolva' : 'Élő megosztás kikapcsolva'}
-              >
-                {shareLivePosition ? '📡 Élő' : '📡 Ki'}
-              </button>
-            )
-          )}
-        </div>
+              !isMobileViewport && (
+                <button
+                  onClick={toggleShareLive}
+                  className={`px-2 py-1 text-xs rounded border transition-colors whitespace-nowrap ${
+                    shareLivePosition
+                      ? 'bg-green-600/40 hover:bg-green-600/60 text-green-100 border-green-500/30'
+                      : 'bg-gray-600/40 hover:bg-gray-600/60 text-gray-300 border-gray-500/30'
+                  }`}
+                  title={shareLivePosition ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
+                >
+                  {shareLivePosition ? '?? ?l?' : '?? Ki'}
+                </button>
+              )
+            )}
+          </div>
+        )}
         
         {/* Send Position Button */}
-        {messageId && conversationId && (
+        {messageId && conversationId && !isMobileViewport && (
           <button
-              onClick={() => {
-              console.log('📍 Pozíció küldése gombra kattintás');
-              console.log('📍 Adatok:', { conversationId, messageId, position: currentTime });
-              const sock = getSocket();
-              console.log('📍 Socket létezik?', !!sock);
-              console.log('📍 Socket csatlakozva?', sock?.connected);
-              if (sock) {
-                sock.emit('audio-position', {
-                  conversationId,
-                  messageId,
-                  position: currentTime
-                });
-                console.log('📍 audio-position esemény elküldve');
-              } else {
-                console.error('❌ Nincs socket kapcsolat!');
-              }
-            }}
+            onClick={handleSendPosition}
             className="px-2 py-1 text-xs bg-cyan-600/40 hover:bg-cyan-600/60 text-cyan-100 rounded border border-cyan-500/30 transition-colors whitespace-nowrap"
-            title="Pozíció küldése"
+            title="Poz?ci? k?ld?se"
           >
-            📍 Pozíció küldése
+            ?? Poz?ci? k?ld?se
           </button>
         )}
         </div>
@@ -1173,6 +1187,7 @@ export const ChatPage: React.FC = () => {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const longPressTriggeredRef = useRef<boolean>(false);
   const [showMobileControls, setShowMobileControls] = useState(false);
+  const [mobileAudioActions, setMobileAudioActions] = useState<Record<string, { shareLiveEnabled: boolean; toggleShareLive: () => void; sendPosition: () => void }>>({});
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showCreateNewFolder, setShowCreateNewFolder] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -2469,6 +2484,22 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  const registerMobileAudioActions = useCallback((messageId: string, actions?: { shareLiveEnabled: boolean; toggleShareLive: () => void; sendPosition: () => void } | null) => {
+    setMobileAudioActions((prev) => {
+      const next = { ...prev };
+      if (!actions) {
+        delete next[messageId];
+      } else {
+        next[messageId] = actions;
+      }
+      return next;
+    });
+  }, []);
+
   const handleScroll = () => {
     if (messagesContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
@@ -3360,6 +3391,7 @@ export const ChatPage: React.FC = () => {
                                   isCollapsedFirstAudio={false}
                                   showMobileControls={showMobileControls}
                                   setShowMobileControls={setShowMobileControls}
+                                  registerMobileActions={registerMobileAudioActions}
                                   fileName={otherPersonLastMessage.overallLastMessage.lastMessage.content || otherPersonLastMessage.overallLastMessage.lastMessage.fileName}
                                 />
                               ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('image/') ? (
@@ -3488,6 +3520,7 @@ export const ChatPage: React.FC = () => {
                               isCollapsedFirstAudio={false}
                               showMobileControls={showMobileControls}
                               setShowMobileControls={setShowMobileControls}
+                              registerMobileActions={registerMobileAudioActions}
                               fileName={otherPersonLastMessage.lastMessage.content || otherPersonLastMessage.lastMessage.fileName}
                               onDisconnectOtherUser={() => {
                                 ignoredAudioPositionsRef.current.add(otherPersonLastMessage.lastMessage.id);
@@ -4167,6 +4200,7 @@ export const ChatPage: React.FC = () => {
                                             }}
                                                   showMobileControls={showMobileControls}
                                                   setShowMobileControls={setShowMobileControls}
+                                                  registerMobileActions={registerMobileAudioActions}
                                                 />
                                               </div>
                                             </div>
@@ -4504,19 +4538,49 @@ export const ChatPage: React.FC = () => {
                             {formatTime(group.messages[group.messages.length - 1].createdAt)}
                           </p>
                           {/* Mobile: Toggle button for audio controls (only if group has audio) */}
-                          {isMobile && group.messages.some((m: any) => m.fileType?.startsWith('audio/')) && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowMobileControls(!showMobileControls);
-                              }}
-                              className="px-1.5 py-0.5 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded-full border border-gray-600/30 transition-colors flex items-center gap-0.5"
-                              title="Audio vezérlők"
-                            >
-                              <span className="text-[10px]">⚙️</span>
-                              <span className="text-[9px]">{showMobileControls ? '▲' : '▼'}</span>
-                            </button>
-                          )}
+                          {isMobile && group.messages.some((m: any) => m.fileType?.startsWith('audio/')) && (() => {
+                            const firstAudio = group.messages.find((m: any) => m.fileType?.startsWith('audio/'));
+                            const actions = firstAudio ? mobileAudioActions[firstAudio.id] : undefined;
+                            return (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowMobileControls(!showMobileControls);
+                                  }}
+                                  className="px-1.5 py-0.5 text-xs bg-gray-700/60 hover:bg-gray-700/80 text-gray-200 rounded-full border border-gray-600/30 transition-colors flex items-center gap-0.5"
+                                  title="Audio vez?rl?k"
+                                >
+                                  <span className="text-[10px]">??</span>
+                                  <span className="text-[9px]">{showMobileControls ? '?' : '?'}</span>
+                                </button>
+                                {showMobileControls && actions && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        actions.toggleShareLive();
+                                      }}
+                                      className="px-1.5 py-0.5 text-[10px] bg-gray-700/70 hover:bg-gray-700/90 text-gray-100 rounded-full border border-gray-600/40 transition-colors whitespace-nowrap"
+                                      title={actions.shareLiveEnabled ? '?l? megoszt?s bekapcsolva' : '?l? megoszt?s kikapcsolva'}
+                                    >
+                                      {actions.shareLiveEnabled ? '?? ?l?' : '?? Ki'}
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        actions.sendPosition();
+                                      }}
+                                      className="px-1.5 py-0.5 text-[10px] bg-cyan-700/70 hover:bg-cyan-700/90 text-white rounded-full border border-cyan-500/40 transition-colors whitespace-nowrap"
+                                      title="Poz?ci? k?ld?se"
+                                    >
+                                      ?? Poz?ci?
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {(() => {
                             const messageFolders = folders.filter(f => 
                               !f.closedBy.includes(me?.id || '') && 
@@ -4652,6 +4716,7 @@ export const ChatPage: React.FC = () => {
                               <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} alt={msg.fileName || 'Kép'} className="max-w-full max-h-40 rounded-lg" />
                             ) : msg.fileType?.startsWith('audio/') ? (
                               <CustomAudioPlayer src={getFullUrl(msg.fileUrl)} type={msg.fileType} thumbnail={msg.audioThumbnail} messageId={msg.id} conversationId={activeConversationId || undefined} showMobileControls={showMobileControls} setShowMobileControls={setShowMobileControls} />
+                              registerMobileActions={registerMobileAudioActions}
                             ) : msg.fileType?.startsWith('video/') ? (
                               <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="rounded-lg" />
                             ) : (
