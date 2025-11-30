@@ -4712,8 +4712,16 @@ export const ChatPage: React.FC = () => {
                             msg.fileType?.startsWith('image/') ? (
                               <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} alt={msg.fileName || 'Kép'} className="max-w-full max-h-40 rounded-lg" />
                             ) : msg.fileType?.startsWith('audio/') ? (
-                              <CustomAudioPlayer src={getFullUrl(msg.fileUrl)} type={msg.fileType} thumbnail={msg.audioThumbnail} messageId={msg.id} conversationId={activeConversationId || undefined} showMobileControls={showMobileControls} setShowMobileControls={setShowMobileControls} />
-                              registerMobileActions={registerMobileAudioActions}
+                              <CustomAudioPlayer
+                                src={getFullUrl(msg.fileUrl)}
+                                type={msg.fileType}
+                                thumbnail={msg.audioThumbnail}
+                                messageId={msg.id}
+                                conversationId={activeConversationId || undefined}
+                                showMobileControls={showMobileControls}
+                                setShowMobileControls={setShowMobileControls}
+                                registerMobileActions={registerMobileAudioActions}
+                              />
                             ) : msg.fileType?.startsWith('video/') ? (
                               <ResolvableMedia fileUrl={msg.fileUrl} fileType={msg.fileType} className="rounded-lg" />
                             ) : (
