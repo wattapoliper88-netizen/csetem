@@ -1,0 +1,15 @@
+name: Keep Alive Backend
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  ping-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          echo "Pinging health endpoint"
+          curl -s -f -X GET https://csetem.onrender.com/health || echo "ping failed with status $?"
