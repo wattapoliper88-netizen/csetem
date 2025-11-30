@@ -1275,8 +1275,6 @@ export const ChatPage: React.FC = () => {
   const [expandedAudioGroups, setExpandedAudioGroups] = useState<Set<string>>(new Set());
   const [rotatingFileNameIndex, setRotatingFileNameIndex] = useState<Record<string, number>>({});
   const [userContextMenu, setUserContextMenu] = useState<{ userId: string; x: number; y: number; user: any } | null>(null);
-  // Message context menu for long-press on message bubbles
-  const [messageContextMenu, setMessageContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
   const [showUserFolderModal, setShowUserFolderModal] = useState(false);
   const [folderList, setFolderList] = useState<any[]>([]);
   const [modalUserId, setModalUserId] = useState<string | null>(null);
@@ -1288,11 +1286,6 @@ export const ChatPage: React.FC = () => {
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const scrollStartRef = useRef<number>(0);
   const longPressCleanupRef = useRef<() => void>(() => {});
-
-  // Separate timers/state for message long-press to avoid interference with user long-press
-  const [messageLongPressTimer, setMessageLongPressTimer] = useState<number | null>(null);
-  const [messageLongPressStartPos, setMessageLongPressStartPos] = useState<{x: number; y: number} | null>(null);
-  const messageLongPressCleanupRef = useRef<() => void>(() => {});
 
   const [socketState, setSocketState] = useState<any | null>(null);
   const getSocketInst = () => socketState || (window as any).socket;
@@ -1386,118 +1379,6 @@ export const ChatPage: React.FC = () => {
       e.stopPropagation();
     }
     setLongPressStartPos(null);
-  };
-
-  // Long press handlers for messages (select & open message context menu)
-  const handleMessageLongPressStart = (e: React.TouchEvent | React.MouseEvent, messageId: string) => {
-    // Reset scroll flag
-    setIsUserScrolling(false);
-    scrollStartRef.current = window.scrollY;
-    // Store start position for move threshold
-    if ('touches' in e && (e as React.TouchEvent).touches[0]) {
-      setMessageLongPressStartPos({ x: (e as React.TouchEvent).touches[0].clientX, y: (e as React.TouchEvent).touches[0].clientY });
-    } else if ('clientX' in e) {
-      setMessageLongPressStartPos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
-    }
-
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.bottom + 5;
-
-    const timer = window.setTimeout(() => {
-      if (!isUserScrolling) {
-        // Select only this message
-        setPreviousSelection(new Set(selectedMessages));
-        setSelectedMessages(new Set([messageId]));
-        longPressTriggeredRef.current = true;
-        setMessageContextMenu({ messageId, x, y });
-      }
-    }, 500);
-    setMessageLongPressTimer(timer);
-
-    // Global listeners to cancel long press if user starts scrolling or performing large movements
-    const cancelOnInteraction = () => {
-      if (messageLongPressTimer) {
-        const scrollDelta = Math.abs(window.scrollY - scrollStartRef.current);
-        if (scrollDelta > 2) {
-          clearTimeout(messageLongPressTimer);
-          setMessageLongPressTimer(null);
-        }
-      }
-    };
-    const cancelOnWheel = () => {
-      if (messageLongPressTimer) {
-        clearTimeout(messageLongPressTimer);
-        setMessageLongPressTimer(null);
-      }
-    };
-    window.addEventListener('scroll', cancelOnInteraction, { passive: true, capture: true });
-    window.addEventListener('touchmove', cancelOnInteraction, { passive: true, capture: true });
-    window.addEventListener('mousemove', cancelOnInteraction, { passive: true });
-    window.addEventListener('wheel', cancelOnWheel, { passive: true, capture: true });
-    messageLongPressCleanupRef.current = () => {
-      window.removeEventListener('scroll', cancelOnInteraction, true);
-      window.removeEventListener('touchmove', cancelOnInteraction, true);
-      window.removeEventListener('mousemove', cancelOnInteraction);
-      window.removeEventListener('wheel', cancelOnWheel, true);
-    };
-  };
-
-  const handleMessageLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
-    if (messageLongPressTimer) {
-      clearTimeout(messageLongPressTimer);
-      setMessageLongPressTimer(null);
-    }
-    // Cleanup global listeners
-    if (messageLongPressCleanupRef.current) {
-      messageLongPressCleanupRef.current();
-    }
-    // Prevent click event if long press was triggered
-    if (messageContextMenu) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    setMessageLongPressStartPos(null);
-  };
-
-  // Cancel long press on scroll (for messages as well)
-  useEffect(() => {
-    const onScroll = () => {
-      if (messageLongPressTimer) {
-        setIsUserScrolling(true);
-        clearTimeout(messageLongPressTimer);
-        setMessageLongPressTimer(null);
-      }
-    };
-    document.addEventListener('scroll', onScroll, true);
-    return () => document.removeEventListener('scroll', onScroll, true);
-  }, [messageLongPressTimer]);
-
-  // Close message menu if selection changes (or message not selected)
-  useEffect(() => {
-    if (messageContextMenu) {
-      if (!selectedMessages.has(messageContextMenu.messageId)) {
-        setMessageContextMenu(null);
-      }
-    }
-  }, [selectedMessages, messageContextMenu]);
-
-  // Cancel on move threshold > 8px (for messages)
-  const handleMessageLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!messageLongPressTimer || !messageLongPressStartPos) return;
-    let cx: number, cy: number;
-    if ('touches' in e && (e as React.TouchEvent).touches[0]) {
-      cx = (e as React.TouchEvent).touches[0].clientX; cy = (e as React.TouchEvent).touches[0].clientY;
-    } else if ('clientX' in e) {
-      cx = (e as React.MouseEvent).clientX; cy = (e as React.MouseEvent).clientY;
-    } else return;
-    const dx = Math.abs(cx - messageLongPressStartPos.x);
-    const dy = Math.abs(cy - messageLongPressStartPos.y);
-    if (dx > 8 || dy > 8) {
-      clearTimeout(messageLongPressTimer);
-      setMessageLongPressTimer(null);
-    }
   };
 
   // Cancel long press on scroll
@@ -3989,39 +3870,67 @@ export const ChatPage: React.FC = () => {
                     style={{ maxWidth: isMobile ? '95%' : isTablet ? '90%' : '75%' }}
                     onMouseEnter={() => setHoveredMessageId(group.lastMessageId)}
                     onTouchStart={(e) => {
-                      e.stopPropagation();
-                      // Start message long-press timer
-                      handleMessageLongPressStart(e, group.lastMessageId);
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      handleMessageLongPressStart(e, group.lastMessageId);
-                    }}
-                    onTouchMove={(e) => handleMessageLongPressMove(e)}
-                    onMouseMove={(e) => handleMessageLongPressMove(e)}
-                    onTouchEnd={(e) => {
-                      e.stopPropagation();
-                      handleMessageLongPressEnd(e);
-                    }}
-                    onMouseUp={(e) => {
-                      e.stopPropagation();
-                      handleMessageLongPressEnd(e);
-                    }}
-                    onMouseLeave={(e) => { e.stopPropagation(); handleMessageLongPressEnd(e); }}
-                    onTouchCancel={(e) => {
-                      e.stopPropagation();
-                      handleMessageLongPressEnd(e);
-                    }}
-                    onContextMenu={(e) => { 
-                      e.preventDefault(); e.stopPropagation();
+                      const touch = e.touches[0];
+                      if (!touch) return;
                       const target = e.currentTarget as HTMLElement;
-                      const rect = target.getBoundingClientRect();
-                      const x = rect.left + rect.width / 2;
-                      const y = rect.bottom + 5;
-                      setPreviousSelection(new Set(selectedMessages));
-                      setSelectedMessages(new Set([group.lastMessageId]));
-                      longPressTriggeredRef.current = true;
-                      setMessageContextMenu({ messageId: group.lastMessageId, x, y });
+                      target.dataset.swipeStart = String(touch.clientX);
+                      target.dataset.swiping = '1';
+                      target.style.transition = 'none';
+                    }}
+                    onTouchMove={(e) => {
+                      const touch = e.touches[0];
+                      const target = e.currentTarget as HTMLElement;
+                      const start = Number(target.dataset.swipeStart || touch?.clientX || 0);
+                      const dx = Math.max(0, (touch?.clientX || 0) - start);
+                      if (dx > 6) {
+                        e.preventDefault();
+                      }
+                      const clamped = Math.min(dx, 120);
+                      target.style.transform = `translateX(${clamped}px)`;
+                      target.style.boxShadow = clamped > 8 ? '0 10px 25px rgba(6,182,212,0.35)' : '';
+                      // Add visual feedback for selection
+                      if (clamped > 20) {
+                        target.style.backgroundColor = 'rgba(6,182,212,0.1)';
+                        target.style.borderColor = 'rgba(6,182,212,0.5)';
+                      } else {
+                        target.style.backgroundColor = '';
+                        target.style.borderColor = '';
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      const target = e.currentTarget as HTMLElement;
+                      const endX = e.changedTouches[0]?.clientX || 0;
+                      const start = Number(target.dataset.swipeStart || endX);
+                      const dx = Math.max(0, endX - start);
+                      const shouldToggle = dx > 40;
+                      target.style.transition = 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease';
+                      target.style.transform = '';
+                      target.style.boxShadow = '';
+                      target.style.backgroundColor = '';
+                      target.style.borderColor = '';
+                      delete target.dataset.swiping;
+                      delete target.dataset.swipeStart;
+                      if (shouldToggle) {
+                        setSelectedMessages(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(group.lastMessageId)) {
+                            newSet.delete(group.lastMessageId);
+                          } else {
+                            newSet.add(group.lastMessageId);
+                          }
+                          return newSet;
+                        });
+                      }
+                    }}
+                    onTouchCancel={(e) => {
+                      const target = e.currentTarget as HTMLElement;
+                      target.style.transition = 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease';
+                      target.style.transform = '';
+                      target.style.boxShadow = '';
+                      target.style.backgroundColor = '';
+                      target.style.borderColor = '';
+                      delete target.dataset.swiping;
+                      delete target.dataset.swipeStart;
                     }}
                     onClick={(e) => {
                       if (selectedMessages.size > 0 && !longPressTriggeredRef.current) {
@@ -5304,97 +5213,6 @@ export const ChatPage: React.FC = () => {
             >
               <span>📁</span>
               <span>Hozzárendelés mappához</span>
-            </button>
-          </div>
-        </div>
-      </>
-    )}
-    {/* Message Context Menu */}
-    {messageContextMenu && (
-      <>
-        <div className="fixed inset-0 z-40" onClick={() => setMessageContextMenu(null)} />
-        <div
-          className="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden min-w-[200px]"
-          style={{
-            top: `${Math.min(messageContextMenu.y, window.innerHeight - 200)}px`,
-            left: `${Math.min(messageContextMenu.x, window.innerWidth - 220)}px`,
-            transform: 'translateX(-50%)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-3 border-b border-gray-700 bg-gray-900">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white">Üzenet</p>
-            </div>
-          </div>
-          <div className="py-1">
-            <button
-              onClick={() => {
-                if (messageContextMenu) {
-                  const id = messageContextMenu.messageId;
-                  const message = messages.find(m => m.id === id);
-                  if (message) {
-                    setEditingMessageId(id);
-                    setEditingContent(message.content || '');
-                    setSelectedMessages(new Set());
-                    setMessageContextMenu(null);
-                  }
-                }
-              }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-white flex items-center gap-2"
-            >
-              ✏️ Szerkesztés
-            </button>
-            <button
-              onClick={() => {
-                if (messageContextMenu) {
-                  const id = messageContextMenu.messageId;
-                  setSelectedMessages(new Set([id]));
-                  setShowFolderDialog(true);
-                  setMessageContextMenu(null);
-                }
-              }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-cyan-300 flex items-center gap-2"
-            >
-              📁 Mappába
-            </button>
-            <button
-              onClick={() => {
-                if (messageContextMenu) {
-                  const id = messageContextMenu.messageId;
-                  if (window.confirm('Biztosan törölni szeretnéd az üzenetet?')) {
-                    apiDeleteMessages([id])
-                      .then(() => {
-                        setMessages(prev => prev.filter(m => m.id !== id));
-                        setFilteredMessages(prev => prev.filter(m => m.id !== id));
-                        setMessageContextMenu(null);
-                      })
-                      .catch(err => {
-                        console.error('Failed to delete message:', err);
-                        alert('Hiba történt az üzenet törlése közben');
-                      });
-                  }
-                }
-              }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-red-400 flex items-center gap-2"
-            >
-              🗑️ Törlés
-            </button>
-            <button
-              onClick={() => {
-                if (messageContextMenu) {
-                  const id = messageContextMenu.messageId;
-                  setSelectedMessages(prev => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
-                    return newSet;
-                  });
-                  setMessageContextMenu(null);
-                }
-              }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-700 transition-colors text-gray-100 flex items-center gap-2"
-            >
-              ☑️ Kiválasztás
             </button>
           </div>
         </div>
