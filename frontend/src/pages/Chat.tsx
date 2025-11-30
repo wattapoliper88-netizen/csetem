@@ -1232,7 +1232,13 @@ export const ChatPage: React.FC = () => {
       try {
         await deleteUser(userId);
         setUserContextMenu(null);
-        await refetchConversations();
+        const res = await refetchConversations();
+        const newConvs = res?.data || [];
+        // If the deleted user belongs to the current active conversation, update the active conversation selection
+        if (activeConversationId && !newConvs.some((c: any) => c.id === activeConversationId)) {
+          setActiveConversationId(newConvs.length > 0 ? newConvs[0].id : null);
+          setMessages([]);
+        }
       } catch (error) {
         alert('Hiba történt a felhasználó törlésekor');
       }
