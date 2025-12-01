@@ -186,11 +186,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Create folder-message relationships
       if (data.folder.messageIds && data.folder.messageIds.length > 0) {
+        // Ensure unique message IDs to avoid constraint violations
+        const uniqueMessageIds = [...new Set(data.folder.messageIds as string[])];
+        
         await this.prisma.folderMessage.createMany({
-          data: data.folder.messageIds.map((messageId: string) => ({
+          data: uniqueMessageIds.map((messageId: string) => ({
             folderId: folder.id,
             messageId: messageId,
           })),
+          skipDuplicates: true, // Skip if relationship already exists (though it shouldn't for new folder)
         });
       }
 

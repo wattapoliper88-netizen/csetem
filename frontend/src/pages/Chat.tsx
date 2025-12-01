@@ -1988,6 +1988,11 @@ export const ChatPage: React.FC = () => {
       ));
     });
 
+    socketState?.on('folder:error', (error: { message: string }) => {
+      console.error('❌ folder:error event received', error);
+      alert('Hiba történt a mappa létrehozása közben: ' + error.message);
+    });
+
     socketState?.on('audio-position:received', (data: { messageId: string; position: number; senderId: string; username?: string }) => {
       console.log('🎵 Audio position received:', data);
       console.log('🎵 Available audio players:', Array.from((window as any).audioRefsMap?.keys() || []));
@@ -3255,11 +3260,14 @@ export const ChatPage: React.FC = () => {
                             }
                           });
                           
+                          // Ensure unique message IDs
+                          const uniqueMessageIds = [...new Set(allSelectedMessageIds)];
+                          
                           const newFolder = {
                             id: Date.now().toString(),
                             name: folderName,
                             icon: folderIcon,
-                            messageIds: allSelectedMessageIds,
+                            messageIds: uniqueMessageIds,
                             visibility: folderVisibility,
                             closedBy: [],
                             createdBy: me?.id || ''
@@ -3276,6 +3284,7 @@ export const ChatPage: React.FC = () => {
                             // Folder will be added via folder:new event from backend
                           } else {
                             console.log('⚠️ Cannot create folder: No socket or conversation');
+                            alert('Nem sikerült létrehozni a mappát: Nincs kapcsolat a szerverrel.');
                           }
                           
                           setFolderName('');
