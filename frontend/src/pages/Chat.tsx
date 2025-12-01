@@ -1296,7 +1296,18 @@ export const ChatPage: React.FC = () => {
   const [rotatingFileNameIndex, setRotatingFileNameIndex] = useState<Record<string, number>>({});
   const [userContextMenu, setUserContextMenu] = useState<{ userId: string; x: number; y: number; user: any } | null>(null);
   const [showUserFolderModal, setShowUserFolderModal] = useState(false);
-  const [folderList, setFolderList] = useState<any[]>([]);
+  const [adminFolders, setAdminFolders] = useState<any[]>([]);
+  const [expandedAdminFolders, setExpandedAdminFolders] = useState<Set<string>>(new Set());
+
+  // Fetch admin folders on mount if admin
+  useEffect(() => {
+    if (me?.isAdmin) {
+      import('../api/adminFolders').then(api => {
+        api.listUserFolders().then(setAdminFolders).catch(console.error);
+      });
+    }
+  }, [me?.isAdmin]);
+
   const [modalUserId, setModalUserId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderParentId, setNewFolderParentId] = useState<string | undefined | null>(null);
@@ -1566,7 +1577,7 @@ export const ChatPage: React.FC = () => {
     try {
       const res = await import('../api/adminFolders');
       const data = await res.listUserFolders();
-      setFolderList(data || []);
+      setAdminFolders(data || []);
       setModalUserId(userId);
       setShowUserFolderModal(true);
       setUserContextMenu(null);
@@ -1587,7 +1598,7 @@ export const ChatPage: React.FC = () => {
       await res.assignUserToFolder(folderId, modalUserId);
       // Refresh folder list to show membership
       const data = await res.listUserFolders();
-      setFolderList(data || []);
+      setAdminFolders(data || []);
       alert('Felhasználó hozzárendelve a mappához');
     } catch (error: any) {
       const status = Number(error?.response?.status || 0);
@@ -1605,7 +1616,7 @@ export const ChatPage: React.FC = () => {
       const res = await import('../api/adminFolders');
       await res.unassignUserFromFolder(folderId, modalUserId);
       const data = await res.listUserFolders();
-      setFolderList(data || []);
+      setAdminFolders(data || []);
       alert('Felhasználó eltávolítva a mappából');
     } catch (error: any) {
       const status = Number(error?.response?.status || 0);
@@ -1623,7 +1634,7 @@ export const ChatPage: React.FC = () => {
       const res = await import('../api/adminFolders');
       await res.createUserFolder({ name: newFolderName.trim(), parentId: newFolderParentId || undefined, thumbnail: newFolderThumbnail || undefined });
       const data = await res.listUserFolders();
-      setFolderList(data || []);
+      setAdminFolders(data || []);
       setNewFolderName('');
       setNewFolderParentId(null);
       setNewFolderThumbnail(null);
@@ -1809,6 +1820,42 @@ export const ChatPage: React.FC = () => {
       refetchOnWindowFocus: true,
     },
   );
+
+  const sidebarTree = useMemo(() => {
+    if (!convData || !Array.isArray(convData)) return { rootFolders: [], rootConversations: [], userConvMap: new Map() };
+    
+    const userConvMap = new Map();
+    convData.forEach((c: any) => userConvMap.set(c.user.id, c));
+
+    // Build folder tree from flat list
+    const folderMap = new Map();
+    const roots: any[] = [];
+    
+    // Initialize map
+    adminFolders.forEach(f => {
+      folderMap.set(f.id, { ...f, children: [], members: f.members || [] });
+    });
+
+    // Build hierarchy
+    adminFolders.forEach(f => {
+      const node = folderMap.get(f.id);
+      if (f.parentId && folderMap.has(f.parentId)) {
+        folderMap.get(f.parentId).children.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    // Collect users in folders
+    const usersInFolders = new Set();
+    adminFolders.forEach(f => {
+      f.members?.forEach((m: any) => usersInFolders.add(m.userId));
+    });
+
+    const rootConversations = convData.filter((c: any) => !usersInFolders.has(c.user.id));
+
+    return { rootFolders: roots, rootConversations, userConvMap };
+  }, [convData, adminFolders]);
       
   // For non-admin users, set their single conversation ID
   useEffect(() => {
@@ -2714,6 +2761,103 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  const renderSidebarConversation = (conv: any) => (
+    <div
+      key={conv.id}
+      className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
+        activeConversationId === conv.id ? 'bg-gray-800 border-l-4 border-cyan-500' : ''
+      }`}
+      onClick={() => setActiveConversationId(conv.id)}
+    >
+      <div className="flex items-center gap-3">
+        {conv.user.avatarImage ? (
+          <Avatar
+            avatar={conv.user.avatarImage}
+            size={'w-10 h-10'}
+            className={'shadow-lg'}
+            onClick={(e, url) => { e.stopPropagation(); if (url) window.open(url, '_blank'); }}
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
+            {conv.user.username[0].toUpperCase()}
+          </div>
+        )}
+        <div 
+          className="flex-1 select-none"
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            handleUserLongPressStart(e, conv.user);
+          }}
+          onTouchEnd={(e) => {
+            e.stopPropagation();
+            handleUserLongPressEnd(e);
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            handleUserLongPressStart(e, conv.user);
+          }}
+          onMouseMove={(e) => handleUserLongPressMove(e)}
+          onTouchMove={(e) => handleUserLongPressMove(e)}
+          onMouseUp={(e) => {
+            e.stopPropagation();
+            handleUserLongPressEnd(e);
+          }}
+          onMouseLeave={(e) => {
+            e.stopPropagation();
+            handleUserLongPressEnd(e);
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            handleUserLongPressStart(e, conv.user);
+            setTimeout(() => setLongPressTimer(null), 0);
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-gray-100">{conv.user.username}</p>
+            {conv.user.isAdmin && <span className="text-xs bg-yellow-600 px-1.5 py-0.5 rounded">👑 Admin</span>}
+            {!conv.user.verified && <span className="text-xs bg-red-600 px-1.5 py-0.5 rounded">🚫 Tiltva</span>}
+          </div>
+          <p className="text-xs text-gray-400">{conv.user.email}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSidebarFolder = (folder: any) => {
+    const isExpanded = expandedAdminFolders.has(folder.id);
+    
+    return (
+      <div key={folder.id} className="border-b border-gray-800">
+        <div 
+          className={`p-3 flex items-center gap-2 cursor-pointer hover:bg-gray-800 transition-colors ${isExpanded ? 'bg-gray-800/50' : ''}`}
+          onClick={() => {
+            const newSet = new Set(expandedAdminFolders);
+            if (newSet.has(folder.id)) newSet.delete(folder.id);
+            else newSet.add(folder.id);
+            setExpandedAdminFolders(newSet);
+          }}
+        >
+          <span className="text-xl">{isExpanded ? '📂' : '📁'}</span>
+          <span className="font-semibold text-gray-200 flex-1">{folder.name}</span>
+          <span className="text-xs text-gray-500">
+            {folder.members?.length || 0}
+          </span>
+        </div>
+        
+        {isExpanded && (
+          <div className="pl-4 bg-gray-900/50 border-l border-gray-700 ml-2">
+            {folder.children?.map((child: any) => renderSidebarFolder(child))}
+            {folder.members?.map((member: any) => {
+              const conv = sidebarTree.userConvMap.get(member.userId);
+              if (!conv) return null;
+              return renderSidebarConversation(conv);
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (meLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-900">
@@ -2807,70 +2951,12 @@ export const ChatPage: React.FC = () => {
                 <p>Még nincsenek beszélgetések</p>
               </div>
             )}
-            {Array.isArray(convData) &&
-                convData.map((conv: any) => (
-                  // Debug: log user avatar path for troubleshooting
-                  console.log('conv item loaded', { convId: conv.id, userId: conv.user?.id, avatarImage: conv.user?.avatarImage }),
-                <div
-                  key={conv.id}
-                  className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
-                    activeConversationId === conv.id ? 'bg-gray-800 border-l-4 border-cyan-500' : ''
-                  }`}
-                  onClick={() => setActiveConversationId(conv.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    {conv.user.avatarImage ? (
-                      <Avatar
-                        avatar={conv.user.avatarImage}
-                        size={'w-10 h-10'}
-                        className={'shadow-lg'}
-                        onClick={(e, url) => { e.stopPropagation(); if (url) window.open(url, '_blank'); }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg">
-                        {conv.user.username[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div 
-                      className="flex-1 select-none"
-                      onTouchStart={(e) => {
-                        e.stopPropagation();
-                        handleUserLongPressStart(e, conv.user);
-                      }}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        handleUserLongPressEnd(e);
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        handleUserLongPressStart(e, conv.user);
-                      }}
-                      onMouseMove={(e) => handleUserLongPressMove(e)}
-                      onTouchMove={(e) => handleUserLongPressMove(e)}
-                      onMouseUp={(e) => {
-                        e.stopPropagation();
-                        handleUserLongPressEnd(e);
-                      }}
-                      onMouseLeave={(e) => {
-                        e.stopPropagation();
-                        handleUserLongPressEnd(e);
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        handleUserLongPressStart(e, conv.user);
-                        setTimeout(() => setLongPressTimer(null), 0);
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-100">{conv.user.username}</p>
-                        {conv.user.isAdmin && <span className="text-xs bg-yellow-600 px-1.5 py-0.5 rounded">👑 Admin</span>}
-                        {!conv.user.verified && <span className="text-xs bg-red-600 px-1.5 py-0.5 rounded">🚫 Tiltva</span>}
-                      </div>
-                      <p className="text-xs text-gray-400">{conv.user.email}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {Array.isArray(convData) && (
+              <>
+                {sidebarTree.rootFolders.map(renderSidebarFolder)}
+                {sidebarTree.rootConversations.map(renderSidebarConversation)}
+              </>
+            )}
           </div>
           <div className="p-4 border-t border-gray-800">
             <button
@@ -5350,7 +5436,7 @@ export const ChatPage: React.FC = () => {
               <input value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="Mappa neve" className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white" />
               <select value={newFolderParentId || ''} onChange={(e) => setNewFolderParentId(e.target.value || null)} className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white">
                 <option value=''>Gyökér mappa</option>
-                {folderList.map(f => (
+                {adminFolders.map(f => (
                   <option key={f.id} value={f.id}>{f.name}</option>
                 ))}
               </select>
@@ -5362,8 +5448,8 @@ export const ChatPage: React.FC = () => {
             </div>
           </div>
           <div className="max-h-64 overflow-y-auto space-y-2">
-            {folderList.length === 0 && <p className="text-xs text-gray-400">Nincsenek mappák</p>}
-            {folderList.map((f:any) => {
+            {adminFolders.length === 0 && <p className="text-xs text-gray-400">Nincsenek mappák</p>}
+            {adminFolders.map((f:any) => {
               const isMember = f.members?.some((m:any) => m.userId === modalUserId);
               return (
                 <div key={f.id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-800">
