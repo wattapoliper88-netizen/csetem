@@ -1504,6 +1504,7 @@ export const ChatPage: React.FC = () => {
     if (messageContextMenu) {
       e.preventDefault();
       e.stopPropagation();
+      setMessageContextMenu(null);
     }
     setMessageLongPressStartPos(null);
   };
