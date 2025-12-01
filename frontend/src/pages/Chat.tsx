@@ -1979,6 +1979,15 @@ export const ChatPage: React.FC = () => {
       });
     });
 
+    socketState?.on('folder:updated', (data: { folderId: string; addedMessageIds: string[] }) => {
+      console.log('📁 folder:updated event received', data);
+      setFolders(prev => prev.map(f => 
+        f.id === data.folderId
+          ? { ...f, messageIds: [...new Set([...f.messageIds, ...data.addedMessageIds])] }
+          : f
+      ));
+    });
+
     socketState?.on('audio-position:received', (data: { messageId: string; position: number; senderId: string; username?: string }) => {
       console.log('🎵 Audio position received:', data);
       console.log('🎵 Available audio players:', Array.from((window as any).audioRefsMap?.keys() || []));
@@ -2051,6 +2060,7 @@ export const ChatPage: React.FC = () => {
       socketState?.off('user:offline');
       socketState?.off('audio-position:received');
       getSocketInst()?.off('folder:new');
+      getSocketInst()?.off('folder:updated');
       if (socketState?.off && typeof socketState.off === 'function') {
         try { socketState.off('reconnect', joinConversation); } catch (e) {}
         try { socketState.off('connect', () => {}); } catch (e) {}
@@ -3025,6 +3035,16 @@ export const ChatPage: React.FC = () => {
                                     ? { ...f, messageIds: [...new Set([...f.messageIds, ...allSelectedMessageIds])] }
                                     : f
                                 ));
+                                
+                                // Send update to backend
+                                const sock = getSocketInst();
+                                if (sock && activeConversationId) {
+                                  sock.emit('folder:add-messages', {
+                                    conversationId: activeConversationId,
+                                    folderId: folder.id,
+                                    messageIds: allSelectedMessageIds
+                                  });
+                                }
                                 
                                 setShowFolderDialog(false);
                                 setSelectedMessages(new Set());

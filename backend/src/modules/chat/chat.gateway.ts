@@ -242,4 +242,55 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       username: userData?.username || 'Ismeretlen'
     });
   }
+
+  @SubscribeMessage('folder:add-messages')
+  async handleFolderAddMessages(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: string; folderId: string; messageIds: string[] },
+  ) {
+    const user = (client as any).user;
+    if (!user) return;
+
+    this.logger.log('📁 folder:add-messages received: ' + JSON.stringify({
+      userId: user.userId,
+      folderId: data.folderId,
+      messageCount: data.messageIds.length
+    }));
+
+    try {
+      // Check which messages are already in the folder to avoid unique constraint violations
+      const existing = await this.prisma.folderMessage.findMany({
+        where: {
+          folderId: data.folderId,
+          messageId: { in: data.messageIds }
+        },
+        select: { messageId: true }
+      });
+      
+      const existingIds = new Set(existing.map(e => e.messageId));
+      const newIds = data.messageIds.filter(id => !existingIds.has(id));
+      
+      if (newIds.length > 0) {
+        await this.prisma.folderMessage.createMany({
+          data: newIds.map(id => ({
+            folderId: data.folderId,
+            messageId: id
+          }))
+        });
+        
+        // Broadcast update to all users in the conversation
+        this.server.to(data.conversationId).emit('folder:updated', {
+          folderId: data.folderId,
+          addedMessageIds: newIds
+        });
+        
+        this.logger.log(`✅ Added ${newIds.length} messages to folder ${data.folderId}`);
+      } else {
+        this.logger.log(`ℹ️ No new messages to add to folder ${data.folderId}`);
+      }
+      
+    } catch (error) {
+      this.logger.error('❌ Error adding messages to folder: ' + (error instanceof Error ? error.message : JSON.stringify(error)));
+    }
+  }
 }
