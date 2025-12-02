@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'react-query';
 import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 // Using createSocket dynamically in effect instead of getSocket
-import { getReadUrl } from '../api/client';
+import { getReadUrl, getReadUrls } from '../api/client';
 import { getSocket } from '../socket';
 import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
@@ -1298,12 +1298,50 @@ export const ChatPage: React.FC = () => {
   const [showUserFolderModal, setShowUserFolderModal] = useState(false);
   const [adminFolders, setAdminFolders] = useState<any[]>([]);
   const [expandedAdminFolders, setExpandedAdminFolders] = useState<Set<string>>(new Set());
+  const [folderContextMenu, setFolderContextMenu] = useState<{ folderId: string; x: number; y: number; folder: any } | null>(null);
+  const [folderLongPressTimer, setFolderLongPressTimer] = useState<number | null>(null);
+  const [folderLongPressStartPos, setFolderLongPressStartPos] = useState<{x: number; y: number} | null>(null);
+  
+  const [showFolderEditModal, setShowFolderEditModal] = useState(false);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState('');
+  const [editingFolderThumbnail, setEditingFolderThumbnail] = useState<string | null>(null);
 
   // Fetch admin folders on mount if admin
   useEffect(() => {
     if (me?.isAdmin) {
-      import('../api/adminFolders').then(api => {
-        api.listUserFolders().then(setAdminFolders).catch(console.error);
+      import('../api/adminFolders').then(async api => {
+        try {
+          const data = await api.listUserFolders();
+          
+          // Batch fetch thumbnails before rendering
+          const thumbnails = (data || [])
+            .map((f: any) => f.thumbnail)
+            .filter((t: any) => t && typeof t === 'string');
+            
+          if (thumbnails.length > 0) {
+            try {
+              const results = await getReadUrls(thumbnails);
+              if (results) {
+                Object.entries(results).forEach(([path, url]) => {
+                  if (url) {
+                    // Store in cache using the normalized URL as key, matching ResolvableMedia's logic
+                    const normalized = getFullUrl(path);
+                    if (normalized) {
+                      readUrlCache.set(normalized, url as string);
+                    }
+                  }
+                });
+              }
+            } catch (e) {
+              console.error('Failed to batch load thumbnails', e);
+            }
+          }
+          
+          setAdminFolders(data || []);
+        } catch (e) {
+          console.error('Failed to list user folders', e);
+        }
       });
     }
   }, [me?.isAdmin]);
@@ -1700,10 +1738,13 @@ export const ChatPage: React.FC = () => {
       if (userContextMenu) {
         setUserContextMenu(null);
       }
+      if (folderContextMenu) {
+        setFolderContextMenu(null);
+      }
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [userContextMenu]);
+  }, [userContextMenu, folderContextMenu]);
 
   // Save last message panel state to localStorage
   useEffect(() => {
@@ -2145,8 +2186,30 @@ export const ChatPage: React.FC = () => {
 
     console.log('🔄 Loading folders for conversation:', activeConversationId);
     getFolders(activeConversationId)
-      .then((data) => {
+      .then(async (data) => {
         console.log('✅ Folders loaded from database:', data);
+        
+        // Batch fetch thumbnails for conversation folders
+        const thumbnails = (data || [])
+          .map((f: any) => f.icon)
+          .filter((t: any) => t && typeof t === 'string' && !t.startsWith('data:') && (t.includes('/') || t.includes('.')));
+          
+        if (thumbnails.length > 0) {
+          try {
+            const results = await getReadUrls(thumbnails);
+            if (results) {
+              Object.entries(results).forEach(([path, url]) => {
+                if (url) {
+                  const normalized = getFullUrl(path);
+                  if (normalized) readUrlCache.set(normalized, url as string);
+                }
+              });
+            }
+          } catch (e) {
+            console.error('Failed to batch load folder icons', e);
+          }
+        }
+
         setFolders(data);
       })
       .catch((err) => {
@@ -2842,6 +2905,95 @@ export const ChatPage: React.FC = () => {
     </div>
   );
 
+  const handleFolderLongPressStart = (e: React.TouchEvent | React.MouseEvent, folder: any) => {
+    setIsUserScrolling(false);
+    scrollStartRef.current = window.scrollY;
+    if ('touches' in e && (e as React.TouchEvent).touches[0]) {
+      setFolderLongPressStartPos({ x: (e as React.TouchEvent).touches[0].clientX, y: (e as React.TouchEvent).touches[0].clientY });
+    } else if ('clientX' in e) {
+      setFolderLongPressStartPos({ x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY });
+    }
+    
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.bottom + 5;
+    
+    const timer = window.setTimeout(() => {
+      if (!isUserScrolling) {
+        setFolderContextMenu({
+          folderId: folder.id,
+          x,
+          y,
+          folder,
+        });
+      }
+    }, 500);
+    setFolderLongPressTimer(timer);
+  };
+
+  const handleFolderLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
+    if (folderLongPressTimer) {
+      clearTimeout(folderLongPressTimer);
+      setFolderLongPressTimer(null);
+    }
+    if (folderContextMenu) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setFolderLongPressStartPos(null);
+  };
+
+  const handleFolderLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!folderLongPressTimer || !folderLongPressStartPos) return;
+    let cx: number, cy: number;
+    if ('touches' in e && (e as React.TouchEvent).touches[0]) {
+      cx = (e as React.TouchEvent).touches[0].clientX; cy = (e as React.TouchEvent).touches[0].clientY;
+    } else if ('clientX' in e) {
+      cx = (e as React.MouseEvent).clientX; cy = (e as React.MouseEvent).clientY;
+    } else return;
+    const dx = Math.abs(cx - folderLongPressStartPos.x);
+    const dy = Math.abs(cy - folderLongPressStartPos.y);
+    if (dx > 8 || dy > 8) {
+      clearTimeout(folderLongPressTimer);
+      setFolderLongPressTimer(null);
+    }
+  };
+
+  const handleUpdateFolder = async () => {
+    if (!editingFolderId || !editingFolderName.trim()) return;
+    try {
+      const api = await import('../api/adminFolders');
+      await api.updateUserFolder(editingFolderId, {
+        name: editingFolderName,
+        thumbnail: editingFolderThumbnail
+      });
+      const data = await api.listUserFolders();
+      setAdminFolders(data || []);
+      setShowFolderEditModal(false);
+      setEditingFolderId(null);
+      setEditingFolderName('');
+      setEditingFolderThumbnail(null);
+    } catch (error) {
+      console.error('Failed to update folder:', error);
+      alert('Hiba a mappa frissítésekor');
+    }
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!confirm('Biztosan törölni szeretnéd ezt a mappát?')) return;
+    try {
+      const api = await import('../api/adminFolders');
+      await api.deleteUserFolder(folderId);
+      const data = await api.listUserFolders();
+      setAdminFolders(data || []);
+      setFolderContextMenu(null);
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      alert('Hiba a mappa törlésekor');
+    }
+  };
+
   const renderSidebarFolder = (folder: any) => {
     const isExpanded = expandedAdminFolders.has(folder.id);
     
@@ -2854,6 +3006,21 @@ export const ChatPage: React.FC = () => {
             if (newSet.has(folder.id)) newSet.delete(folder.id);
             else newSet.add(folder.id);
             setExpandedAdminFolders(newSet);
+          }}
+          onTouchStart={(e) => handleFolderLongPressStart(e, folder)}
+          onTouchEnd={handleFolderLongPressEnd}
+          onTouchMove={handleFolderLongPressMove}
+          onMouseDown={(e) => handleFolderLongPressStart(e, folder)}
+          onMouseUp={handleFolderLongPressEnd}
+          onMouseLeave={handleFolderLongPressEnd}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setFolderContextMenu({
+              folderId: folder.id,
+              x: e.clientX,
+              y: e.clientY,
+              folder,
+            });
           }}
         >
           {folder.thumbnail ? (
@@ -5450,6 +5617,112 @@ export const ChatPage: React.FC = () => {
           </div>
         </div>
       </>
+    )}
+
+    {/* Folder Context Menu */}
+    {folderContextMenu && (
+      <>
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setFolderContextMenu(null)}
+        />
+        <div 
+          className="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px]"
+          style={{ top: folderContextMenu.y, left: folderContextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              setEditingFolderId(folderContextMenu.folder.id);
+              setEditingFolderName(folderContextMenu.folder.name);
+              setEditingFolderThumbnail(folderContextMenu.folder.thumbnail);
+              setShowFolderEditModal(true);
+              setFolderContextMenu(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700 flex items-center gap-2"
+          >
+            ✏️ Szerkesztés
+          </button>
+          <button
+            onClick={() => handleDeleteFolder(folderContextMenu.folder.id)}
+            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 flex items-center gap-2"
+          >
+            🗑️ Törlés
+          </button>
+        </div>
+      </>
+    )}
+
+    {/* Folder Edit Modal */}
+    {showFolderEditModal && (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-800 rounded-lg shadow-2xl border border-cyan-500/30 p-6 w-full max-w-md">
+          <h3 className="text-xl font-bold text-gray-100 mb-4">Mappa szerkesztése</h3>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Mappa neve</label>
+            <input
+              type="text"
+              value={editingFolderName}
+              onChange={(e) => setEditingFolderName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Bélyegkép</label>
+            <div className="flex items-center gap-4">
+              {editingFolderThumbnail ? (
+                <ResolvableMedia
+                  fileUrl={editingFolderThumbnail}
+                  fileType="image/jpeg"
+                  className="w-16 h-16 rounded object-cover border border-gray-600"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded bg-gray-700 flex items-center justify-center text-2xl">
+                  📁
+                </div>
+              )}
+              <label className="cursor-pointer px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white transition-colors">
+                Kép cseréje
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const { uploadFileToFirebase } = await import('../firebase');
+                      const path = `folder-thumbnails/${me?.id || 'admin'}/${Date.now()}_${file.name}`;
+                      const { path: filePath } = await uploadFileToFirebase(file, path);
+                      setEditingFolderThumbnail(filePath);
+                    } catch (error) {
+                      console.error('Failed to upload thumbnail:', error);
+                      alert('Bélyegkép feltöltése sikertelen.');
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleUpdateFolder}
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg hover:from-cyan-700 hover:to-teal-700 transition-all"
+            >
+              Mentés
+            </button>
+            <button
+              onClick={() => setShowFolderEditModal(false)}
+              className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-all"
+            >
+              Mégse
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     {showUserFolderModal && modalUserId && (
       <>

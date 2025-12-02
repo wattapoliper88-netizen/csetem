@@ -34,6 +34,16 @@ export async function getReadUrl(pathOrUrl: string) {
   }
 }
 
+export async function getReadUrls(paths: string[]) {
+  try {
+    const res = await api.post('/uploads/read-urls', { paths });
+    return res.data; // Returns Record<string, string | null>
+  } catch (e) {
+    console.error('Failed to fetch read URLs batch', e);
+    return {};
+  }
+}
+
 // Refresh flow: on 401 try to refresh once and retry the request
 let isRefreshing = false;
 let subscribers: Array<(token: string | null) => void> = [];
