@@ -8,13 +8,25 @@ export class EmailService {
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE !== 'false', // Default to true (SSL) for 465
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false // Help with some self-signed cert issues in dev
+      }
+    });
+
+    // Verify connection configuration
+    this.transporter.verify((error, success) => {
+      if (error) {
+        this.logger.error('SMTP Connection Error:', error);
+      } else {
+        this.logger.log('SMTP Server is ready to take our messages');
+      }
     });
   }
 
