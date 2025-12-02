@@ -15,13 +15,17 @@ export class EmailService {
 
     if (host === 'smtp.gmail.com') {
       // Use the built-in 'gmail' service preset which handles port/secure automatically
-      this.logger.log('Using Gmail service preset');
+      this.logger.log('Using Gmail service preset with IPv4 enforcement');
       this.transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: user,
           pass: pass,
         },
+        // Force IPv4 to avoid IPv6 timeout issues in some cloud environments
+        family: 4,
+        logger: true, // Enable internal nodemailer logging
+        debug: true   // Enable debug output
       });
     } else {
       // Custom SMTP configuration
