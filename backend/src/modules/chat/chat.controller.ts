@@ -77,6 +77,9 @@ export class ChatController {
     // Broadcast to the conversation room via WebSocket so other connected clients receive it in real-time
     try {
       this.chatGateway.server.to(body.conversationId).emit('message:new', created);
+      
+      // Check if recipient is offline and send email
+      this.chatGateway.checkAndSendOfflineNotification(body.conversationId, req.user.userId, body.content || (body.fileUrl ? 'Fájl melléklet' : 'Üzenet'));
     } catch (err) {
       // Ignore broadcast errors; message is already created in DB
     }

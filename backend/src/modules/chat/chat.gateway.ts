@@ -122,7 +122,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.checkAndSendOfflineNotification(payload.conversationId, user.userId, payload.content);
   }
 
-  private async checkAndSendOfflineNotification(conversationId: string, senderId: string, content: string) {
+  public async checkAndSendOfflineNotification(conversationId: string, senderId: string, content: string) {
     this.logger.log(`Checking offline notification for conversation ${conversationId}, sender ${senderId}`);
     try {
       const conversation = await this.prisma.conversation.findUnique({
