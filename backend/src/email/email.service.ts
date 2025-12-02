@@ -1,50 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: nodemailer.Transporter;
+  private resend: Resend;
 
   constructor() {
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const apiKey = process.env.RESEND_API_KEY;
+    
+    if (!apiKey) {
+      this.logger.warn('RESEND_API_KEY is not defined. Email sending will be disabled.');
+      return;
+    }
 
-    console.log(`[EmailService] Initializing with Host=${host}, User=${user ? '***' : 'MISSING'}, Pass=${pass ? '***' : 'MISSING'}`);
-
-    this.logger.log(`Configuring SMTP: Host=${host}, User=${user ? '***' : 'MISSING'}`);
-
-    // Force Port 587 (STARTTLS) and IPv4 which is often more reliable in cloud envs than 465
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // false for 587 (STARTTLS)
-      auth: {
-        user: user,
-        pass: pass,
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      // Force IPv4
-      // @ts-ignore
-      family: 4,
-      logger: true,
-      debug: true,
-      connectionTimeout: 10000
-    } as nodemailer.TransportOptions);
-
-    // Verify connection configuration
-    this.transporter.verify((error, success) => {
-      if (error) {
-        console.error('[EmailService] SMTP Connection Error (Verify):', error);
-        this.logger.error('SMTP Connection Error:', error);
-      } else {
-        console.log('[EmailService] SMTP Server is ready to take our messages');
-        this.logger.log('SMTP Server is ready to take our messages');
-      }
-    });
+    this.resend = new Resend(apiKey);
+    this.logger.log('Resend client initialized');
   }
 
   async sendVerificationCode(email: string, code: string): Promise<void> {
@@ -55,15 +26,21 @@ export class EmailService {
 
   async sendOfflineNotification(toEmail: string, senderName: string, messageContent: string): Promise<void> {
     this.logger.log(`Attempting to send offline notification to ${toEmail}`);
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
-      this.logger.warn('SMTP not configured, skipping offline email notification');
+    
+    if (!this.resend) {
+      this.logger.warn('Resend client not initialized, skipping offline email notification');
       return;
     }
 
     try {
-      const info = await this.transporter.sendMail({
-        from: `"Csetem Értesítő" <${process.env.SMTP_USER}>`,
-        to: toEmail,
+      // Use onboarding@resend.dev for testing if no custom domain is verified
+      // The 'to' address must be the verified email address (usually the one used to sign up)
+      // when using the onboarding domain.
+      const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+      
+      const data = await this.resend.emails.send({
+        from: `Csetem Értesítő <${fromEmail}>`,
+        to: [toEmail],
         subject: `Új üzeneted érkezett tőle: ${senderName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -78,7 +55,13 @@ export class EmailService {
           </div>
         `,
       });
-      this.logger.log(`Offline notification sent to ${toEmail}: ${info.messageId}`);
+
+      if (data.error) {
+        this.logger.error('Resend API returned error:', data.error);
+        throw new Error(data.error.message);
+      }
+
+      this.logger.log(`Offline notification sent to ${toEmail}: ${data.data?.id}`);
     } catch (error) {
       this.logger.error('Failed to send offline notification email', error);
     }
