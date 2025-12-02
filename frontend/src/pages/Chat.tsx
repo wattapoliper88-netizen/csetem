@@ -2856,7 +2856,16 @@ export const ChatPage: React.FC = () => {
             setExpandedAdminFolders(newSet);
           }}
         >
-          <span className="text-xl">{isExpanded ? '📂' : '📁'}</span>
+          {folder.thumbnail ? (
+            <ResolvableMedia 
+              fileUrl={folder.thumbnail} 
+              fileType="image/jpeg" 
+              className="w-6 h-6 rounded object-cover flex-shrink-0" 
+              alt="icon" 
+            />
+          ) : (
+            <span className="text-xl">{isExpanded ? '📂' : '📁'}</span>
+          )}
           <span className="font-semibold text-gray-200 flex-1">{folder.name}</span>
           <span className="text-xs text-gray-500">
             {folder.members?.length || 0}
