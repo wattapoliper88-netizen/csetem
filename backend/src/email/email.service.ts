@@ -7,36 +7,49 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    const port = Number(process.env.SMTP_PORT) || 465;
-    // If port is 465, default to secure: true. If 587, default to secure: false.
-    // Allow overriding via SMTP_SECURE env var.
-    const secure = process.env.SMTP_SECURE 
-      ? process.env.SMTP_SECURE === 'true' 
-      : port === 465;
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
 
-    this.logger.log(`Configuring SMTP: Host=${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port=${port}, Secure=${secure}, User=${process.env.SMTP_USER}`);
+    console.log(`[EmailService] Initializing with Host=${host}, User=${user ? '***' : 'MISSING'}, Pass=${pass ? '***' : 'MISSING'}`);
 
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: port,
-      secure: secure,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false 
-      },
-      connectionTimeout: 10000, // 10 seconds timeout
-      greetingTimeout: 10000,
-      socketTimeout: 10000
-    });
+    if (host === 'smtp.gmail.com') {
+      // Use the built-in 'gmail' service preset which handles port/secure automatically
+      this.logger.log('Using Gmail service preset');
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: user,
+          pass: pass,
+        },
+      });
+    } else {
+      // Custom SMTP configuration
+      const port = Number(process.env.SMTP_PORT) || 587;
+      const secure = process.env.SMTP_SECURE === 'true';
+      
+      this.logger.log(`Using custom SMTP config: Port=${port}, Secure=${secure}`);
+      this.transporter = nodemailer.createTransport({
+        host: host,
+        port: port,
+        secure: secure,
+        auth: {
+          user: user,
+          pass: pass,
+        },
+        tls: {
+          rejectUnauthorized: false 
+        },
+      });
+    }
 
     // Verify connection configuration
     this.transporter.verify((error, success) => {
       if (error) {
+        console.error('[EmailService] SMTP Connection Error (Verify):', error);
         this.logger.error('SMTP Connection Error:', error);
       } else {
+        console.log('[EmailService] SMTP Server is ready to take our messages');
         this.logger.log('SMTP Server is ready to take our messages');
       }
     });
