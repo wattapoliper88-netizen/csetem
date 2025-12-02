@@ -1312,6 +1312,7 @@ export const ChatPage: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderParentId, setNewFolderParentId] = useState<string | undefined | null>(null);
   const [newFolderThumbnail, setNewFolderThumbnail] = useState<string | null>(null);
+  const [isUploadingFolderThumbnail, setIsUploadingFolderThumbnail] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<number | null>(null);
   const [longPressStartPos, setLongPressStartPos] = useState<{x: number; y: number} | null>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -1625,6 +1626,24 @@ export const ChatPage: React.FC = () => {
       } else {
         alert('Hiba történt a felhasználó eltávolításakor');
       }
+    }
+  };
+
+  const handleFolderThumbnailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingFolderThumbnail(true);
+      const { uploadFileToFirebase } = await import('../firebase');
+      const path = `folder-thumbnails/${me?.id || 'admin'}/${Date.now()}_${file.name}`;
+      const { path: filePath } = await uploadFileToFirebase(file, path);
+      setNewFolderThumbnail(filePath);
+    } catch (error) {
+      console.error('Failed to upload thumbnail:', error);
+      alert('Bélyegkép feltöltése sikertelen.');
+    } finally {
+      setIsUploadingFolderThumbnail(false);
     }
   };
 
@@ -5425,47 +5444,111 @@ export const ChatPage: React.FC = () => {
     )}
     {showUserFolderModal && modalUserId && (
       <>
-        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => { setShowUserFolderModal(false); setModalUserId(null); }} />
-        <div className="fixed z-50 left-1/2 top-1/3 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-gray-700 rounded-lg p-4 w-[420px] shadow-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white">Mappakezelő</h3>
-            <button className="text-xs text-gray-400" onClick={() => { setShowUserFolderModal(false); setModalUserId(null); }}>Bezár</button>
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => { setShowUserFolderModal(false); setModalUserId(null); }} />
+        <div className="fixed z-50 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900/90 backdrop-blur-xl border border-gray-700/50 rounded-xl p-4 w-[90%] max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Mappakezelő</h3>
+            <button className="text-gray-400 hover:text-white transition-colors" onClick={() => { setShowUserFolderModal(false); setModalUserId(null); }}>✕</button>
           </div>
-          <div className="mb-3 border border-gray-700 rounded p-2">
-            <div className="flex flex-col gap-2">
-              <input value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="Mappa neve" className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white" />
-              <select value={newFolderParentId || ''} onChange={(e) => setNewFolderParentId(e.target.value || null)} className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white">
-                <option value=''>Gyökér mappa</option>
+          
+          <div className="mb-4 bg-gray-800/50 border border-gray-700/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-gray-300 mb-3">Új mappa létrehozása</h4>
+            <div className="flex flex-col gap-3">
+              <input 
+                value={newFolderName} 
+                onChange={(e) => setNewFolderName(e.target.value)} 
+                placeholder="Mappa neve" 
+                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" 
+              />
+              
+              <select 
+                value={newFolderParentId || ''} 
+                onChange={(e) => setNewFolderParentId(e.target.value || null)} 
+                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value=''>Gyökér mappa (nincs szülő)</option>
                 {adminFolders.map(f => (
                   <option key={f.id} value={f.id}>{f.name}</option>
                 ))}
               </select>
-              <input value={newFolderThumbnail || ''} onChange={(e) => setNewFolderThumbnail(e.target.value || null)} placeholder="Bélyegkép URL" className="bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white" />
-              <div className="flex gap-2">
-                <button onClick={handleCreateFolder} className="px-3 py-1 bg-cyan-600 rounded text-xs text-white">Létrehoz</button>
-                <button onClick={() => { setNewFolderName(''); setNewFolderParentId(null); setNewFolderThumbnail(null); }} className="px-3 py-1 bg-gray-700 rounded text-xs text-white">Mégse</button>
+              
+              <div className="flex items-center gap-3">
+                 <div className="relative w-12 h-12 bg-gray-900/50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-700 flex items-center justify-center">
+                    {newFolderThumbnail ? (
+                       <img src={newFolderThumbnail} className="w-full h-full object-cover" alt="Thumbnail" />
+                    ) : (
+                       <span className="text-xl">📁</span>
+                    )}
+                 </div>
+                 <label className={`flex-1 cursor-pointer bg-gray-900/50 border border-gray-700 border-dashed rounded-lg p-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-all text-center ${isUploadingFolderThumbnail ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {isUploadingFolderThumbnail ? 'Feltöltés...' : 'Bélyegkép feltöltése'}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleFolderThumbnailChange} disabled={isUploadingFolderThumbnail} />
+                 </label>
+                 {newFolderThumbnail && (
+                    <button 
+                      onClick={() => setNewFolderThumbnail(null)} 
+                      className="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-lg transition-colors"
+                      title="Bélyegkép törlése"
+                    >
+                      ✕
+                    </button>
+                 )}
+              </div>
+              
+              <div className="flex gap-2 mt-1">
+                <button 
+                  onClick={handleCreateFolder} 
+                  disabled={isUploadingFolderThumbnail || !newFolderName.trim()}
+                  className="flex-1 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg hover:from-cyan-700 hover:to-teal-700 transition-all shadow-lg font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Létrehoz
+                </button>
+                <button 
+                  onClick={() => { setNewFolderName(''); setNewFolderParentId(null); setNewFolderThumbnail(null); }} 
+                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-all text-sm"
+                >
+                  Mégse
+                </button>
               </div>
             </div>
           </div>
-          <div className="max-h-64 overflow-y-auto space-y-2">
-            {adminFolders.length === 0 && <p className="text-xs text-gray-400">Nincsenek mappák</p>}
-            {adminFolders.map((f:any) => {
-              const isMember = f.members?.some((m:any) => m.userId === modalUserId);
-              return (
-                <div key={f.id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-800">
-                  {f.thumbnail ? <img src={f.thumbnail} width={32} height={32} className="rounded" alt="thumb" /> : <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">📁</div>}
-                  <div className="flex-1">
-                    <p className="text-sm text-white">{f.name}</p>
-                    <p className="text-xs text-gray-400">{f.parentId ? 'Almappa': 'Mappa'}</p>
+          
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Mappák listája</h4>
+            <div className="max-h-60 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+              {adminFolders.length === 0 && <p className="text-sm text-gray-500 text-center py-4">Nincsenek még mappák létrehozva</p>}
+              {adminFolders.map((f:any) => {
+                const isMember = f.members?.some((m:any) => m.userId === modalUserId);
+                return (
+                  <div key={f.id} className="flex items-center gap-3 p-3 bg-gray-800/30 border border-gray-700/30 rounded-lg hover:bg-gray-800/50 transition-colors">
+                    {f.thumbnail ? (
+                      <img src={f.thumbnail} width={32} height={32} className="rounded object-cover" alt="thumb" />
+                    ) : (
+                      <div className="w-8 h-8 bg-gray-700/50 rounded flex items-center justify-center text-lg">📁</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{f.name}</p>
+                      <p className="text-xs text-gray-500">{f.parentId ? 'Almappa': 'Gyökér mappa'}</p>
+                    </div>
+                    {isMember ? (
+                      <button 
+                        onClick={() => handleUnassignUserFromFolder(f.id)} 
+                        className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                      >
+                        Eltávolít
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handleAssignUserToFolder(f.id)} 
+                        className="text-xs bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                      >
+                        Hozzárendel
+                      </button>
+                    )}
                   </div>
-                  {isMember ? (
-                    <button onClick={() => handleUnassignUserFromFolder(f.id)} className="text-xs bg-red-600 px-2 py-1 rounded text-white">Eltávolít</button>
-                  ) : (
-                    <button onClick={() => handleAssignUserToFolder(f.id)} className="text-xs bg-cyan-500 px-2 py-1 rounded text-white">Hozzárendel</button>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </>
