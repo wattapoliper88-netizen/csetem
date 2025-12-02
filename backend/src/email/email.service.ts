@@ -7,17 +7,29 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
+    const port = Number(process.env.SMTP_PORT) || 465;
+    // If port is 465, default to secure: true. If 587, default to secure: false.
+    // Allow overriding via SMTP_SECURE env var.
+    const secure = process.env.SMTP_SECURE 
+      ? process.env.SMTP_SECURE === 'true' 
+      : port === 465;
+
+    this.logger.log(`Configuring SMTP: Host=${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port=${port}, Secure=${secure}, User=${process.env.SMTP_USER}`);
+
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE !== 'false', // Default to true (SSL) for 465
+      port: port,
+      secure: secure,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
       tls: {
-        rejectUnauthorized: false // Help with some self-signed cert issues in dev
-      }
+        rejectUnauthorized: false 
+      },
+      connectionTimeout: 10000, // 10 seconds timeout
+      greetingTimeout: 10000,
+      socketTimeout: 10000
     });
 
     // Verify connection configuration
