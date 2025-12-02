@@ -5475,7 +5475,7 @@ export const ChatPage: React.FC = () => {
               <div className="flex items-center gap-3">
                  <div className="relative w-12 h-12 bg-gray-900/50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-700 flex items-center justify-center">
                     {newFolderThumbnail ? (
-                       <img src={newFolderThumbnail} className="w-full h-full object-cover" alt="Thumbnail" />
+                       <ResolvableMedia fileUrl={newFolderThumbnail} fileType="image/jpeg" className="w-full h-full object-cover" alt="Thumbnail" />
                     ) : (
                        <span className="text-xl">📁</span>
                     )}
@@ -5522,7 +5522,7 @@ export const ChatPage: React.FC = () => {
                 return (
                   <div key={f.id} className="flex items-center gap-3 p-3 bg-gray-800/30 border border-gray-700/30 rounded-lg hover:bg-gray-800/50 transition-colors">
                     {f.thumbnail ? (
-                      <img src={f.thumbnail} width={32} height={32} className="rounded object-cover" alt="thumb" />
+                      <ResolvableMedia fileUrl={f.thumbnail} fileType="image/jpeg" className="w-8 h-8 rounded object-cover" alt="thumb" />
                     ) : (
                       <div className="w-8 h-8 bg-gray-700/50 rounded flex items-center justify-center text-lg">📁</div>
                     )}
