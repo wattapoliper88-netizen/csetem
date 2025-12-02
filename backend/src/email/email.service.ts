@@ -13,40 +13,27 @@ export class EmailService {
 
     console.log(`[EmailService] Initializing with Host=${host}, User=${user ? '***' : 'MISSING'}, Pass=${pass ? '***' : 'MISSING'}`);
 
-    if (host === 'smtp.gmail.com') {
-      // Use the built-in 'gmail' service preset which handles port/secure automatically
-      this.logger.log('Using Gmail service preset with IPv4 enforcement');
-      this.transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: user,
-          pass: pass,
-        },
-        // Force IPv4 to avoid IPv6 timeout issues in some cloud environments
-        // @ts-ignore: 'family' is a valid option for the underlying socket but missing in some type definitions
-        family: 4,
-        logger: true, // Enable internal nodemailer logging
-        debug: true   // Enable debug output
-      } as nodemailer.TransportOptions);
-    } else {
-      // Custom SMTP configuration
-      const port = Number(process.env.SMTP_PORT) || 587;
-      const secure = process.env.SMTP_SECURE === 'true';
-      
-      this.logger.log(`Using custom SMTP config: Port=${port}, Secure=${secure}`);
-      this.transporter = nodemailer.createTransport({
-        host: host,
-        port: port,
-        secure: secure,
-        auth: {
-          user: user,
-          pass: pass,
-        },
-        tls: {
-          rejectUnauthorized: false 
-        },
-      });
-    }
+    this.logger.log(`Configuring SMTP: Host=${host}, User=${user ? '***' : 'MISSING'}`);
+
+    // Force Port 587 (STARTTLS) and IPv4 which is often more reliable in cloud envs than 465
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // false for 587 (STARTTLS)
+      auth: {
+        user: user,
+        pass: pass,
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      // Force IPv4
+      // @ts-ignore
+      family: 4,
+      logger: true,
+      debug: true,
+      connectionTimeout: 10000
+    } as nodemailer.TransportOptions);
 
     // Verify connection configuration
     this.transporter.verify((error, success) => {
