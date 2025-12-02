@@ -23,10 +23,11 @@ export class EmailService {
           pass: pass,
         },
         // Force IPv4 to avoid IPv6 timeout issues in some cloud environments
+        // @ts-ignore: 'family' is a valid option for the underlying socket but missing in some type definitions
         family: 4,
         logger: true, // Enable internal nodemailer logging
         debug: true   // Enable debug output
-      });
+      } as nodemailer.TransportOptions);
     } else {
       // Custom SMTP configuration
       const port = Number(process.env.SMTP_PORT) || 587;
