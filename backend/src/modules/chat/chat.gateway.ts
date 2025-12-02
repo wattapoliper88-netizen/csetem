@@ -15,6 +15,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
+import { EmailService } from '../../email/email.service';
+
 @WebSocketGateway({
   cors: {
     origin: [
@@ -43,6 +45,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private jwtService: JwtService,
     private config: ConfigService,
     private prisma: PrismaService,
+    private emailService: EmailService,
   ) {}
 
   afterInit() {
@@ -114,6 +117,53 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     
     // Stop typing indicator when message is sent
     client.to(payload.conversationId).emit('typing', { userId: user.userId, isTyping: false });
+
+    // Check if recipient is offline and send email
+    this.checkAndSendOfflineNotification(payload.conversationId, user.userId, payload.content);
+  }
+
+  private async checkAndSendOfflineNotification(conversationId: string, senderId: string, content: string) {
+    this.logger.log(`Checking offline notification for conversation ${conversationId}, sender ${senderId}`);
+    try {
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+      });
+      
+      if (!conversation) {
+        this.logger.warn(`Conversation ${conversationId} not found for offline notification`);
+        return;
+      }
+
+      const recipientId = conversation.userId === senderId ? conversation.adminId : conversation.userId;
+      this.logger.log(`Recipient ID determined: ${recipientId}`);
+      
+      // Check if recipient is online
+      const connectedSockets = Array.from(this.server.sockets.sockets.values());
+      const isOnline = connectedSockets.some(
+        (s: any) => s.user?.userId === recipientId
+      );
+      
+      this.logger.log(`Recipient ${recipientId} online status: ${isOnline} (connected sockets: ${connectedSockets.length})`);
+
+      if (!isOnline) {
+        // Fetch recipient email
+        const recipient = await this.prisma.user.findUnique({ where: { id: recipientId } });
+        const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
+        
+        if (recipient && recipient.email && sender) {
+           this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
+           // Truncate content for privacy/brevity
+           const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview);
+        } else {
+           this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!recipient?.email}, Sender found: ${!!sender}`);
+        }
+      } else {
+        this.logger.log('Recipient is online, skipping email.');
+      }
+    } catch (e) {
+      this.logger.error('Failed to handle offline notification', e);
+    }
   }
 
   @SubscribeMessage('conversation:join')
