@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
       </div>
 
       <form
-        className="bg-gray-900/5 backdrop-blur-md border border-white/10 shadow-2xl rounded-2xl px-8 pt-8 pb-8 w-full max-w-md relative z-10"
+        className="bg-transparent backdrop-blur-sm border border-white/10 shadow-2xl rounded-2xl px-8 pt-8 pb-8 w-full max-w-md relative z-10"
         onSubmit={handleSubmit}
       >
         <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400 tracking-wide drop-shadow-lg">Bejelentkezés</h1>
