@@ -41,7 +41,7 @@ export const LoginPage: React.FC = () => {
         className="bg-transparent backdrop-blur-sm border border-white/10 shadow-2xl rounded-2xl px-8 pt-8 pb-8 w-full max-w-md relative z-10"
         onSubmit={handleSubmit}
       >
-        <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400 tracking-wide drop-shadow-lg">Bejelentkezés</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400 tracking-wide drop-shadow-lg">Bejelentkezés Richihez</h1>
         
         {error && (
           <div className="mb-6 p-3 bg-red-900/30 border border-red-500/50 text-red-200 rounded-lg text-sm backdrop-blur-sm">
