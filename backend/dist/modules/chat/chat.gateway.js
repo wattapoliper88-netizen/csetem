@@ -21,12 +21,14 @@ const chat_service_1 = require("./chat.service");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../../prisma/prisma.service");
+const email_service_1 = require("../../email/email.service");
 let ChatGateway = ChatGateway_1 = class ChatGateway {
-    constructor(chatService, jwtService, config, prisma) {
+    constructor(chatService, jwtService, config, prisma, emailService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.config = config;
         this.prisma = prisma;
+        this.emailService = emailService;
         this.logger = new common_1.Logger(ChatGateway_1.name);
     }
     afterInit() {
@@ -75,6 +77,42 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
         this.logger.log('Broadcasting message to conversation: ' + JSON.stringify({ conversationId: payload.conversationId, messageId: msg.id }));
         this.server.to(payload.conversationId).emit('message:new', msg);
         client.to(payload.conversationId).emit('typing', { userId: user.userId, isTyping: false });
+        this.checkAndSendOfflineNotification(payload.conversationId, user.userId, payload.content);
+    }
+    async checkAndSendOfflineNotification(conversationId, senderId, content) {
+        this.logger.log(`Checking offline notification for conversation ${conversationId}, sender ${senderId}`);
+        try {
+            const conversation = await this.prisma.conversation.findUnique({
+                where: { id: conversationId },
+            });
+            if (!conversation) {
+                this.logger.warn(`Conversation ${conversationId} not found for offline notification`);
+                return;
+            }
+            const recipientId = conversation.userId === senderId ? conversation.adminId : conversation.userId;
+            this.logger.log(`Recipient ID determined: ${recipientId}`);
+            const connectedSockets = Array.from(this.server.sockets.sockets.values());
+            const isOnline = connectedSockets.some((s) => { var _a; return ((_a = s.user) === null || _a === void 0 ? void 0 : _a.userId) === recipientId; });
+            this.logger.log(`Recipient ${recipientId} online status: ${isOnline} (connected sockets: ${connectedSockets.length})`);
+            if (!isOnline) {
+                const recipient = await this.prisma.user.findUnique({ where: { id: recipientId } });
+                const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
+                if (recipient && recipient.email && sender) {
+                    this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
+                    const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview);
+                }
+                else {
+                    this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!(recipient === null || recipient === void 0 ? void 0 : recipient.email)}, Sender found: ${!!sender}`);
+                }
+            }
+            else {
+                this.logger.log('Recipient is online, skipping email.');
+            }
+        }
+        catch (e) {
+            this.logger.error('Failed to handle offline notification', e);
+        }
     }
     async handleJoin(client, data) {
         const user = client.user;
@@ -126,11 +164,13 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                 },
             });
             if (data.folder.messageIds && data.folder.messageIds.length > 0) {
+                const uniqueMessageIds = [...new Set(data.folder.messageIds)];
                 await this.prisma.folderMessage.createMany({
-                    data: data.folder.messageIds.map((messageId) => ({
+                    data: uniqueMessageIds.map((messageId) => ({
                         folderId: folder.id,
                         messageId: messageId,
                     })),
+                    skipDuplicates: true,
                 });
             }
             this.server.to(data.conversationId).emit('folder:new', {
@@ -168,6 +208,46 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
             senderId: user.userId,
             username: (userData === null || userData === void 0 ? void 0 : userData.username) || 'Ismeretlen'
         });
+    }
+    async handleFolderAddMessages(client, data) {
+        const user = client.user;
+        if (!user)
+            return;
+        this.logger.log('📁 folder:add-messages received: ' + JSON.stringify({
+            userId: user.userId,
+            folderId: data.folderId,
+            messageCount: data.messageIds.length
+        }));
+        try {
+            const existing = await this.prisma.folderMessage.findMany({
+                where: {
+                    folderId: data.folderId,
+                    messageId: { in: data.messageIds }
+                },
+                select: { messageId: true }
+            });
+            const existingIds = new Set(existing.map(e => e.messageId));
+            const newIds = data.messageIds.filter(id => !existingIds.has(id));
+            if (newIds.length > 0) {
+                await this.prisma.folderMessage.createMany({
+                    data: newIds.map(id => ({
+                        folderId: data.folderId,
+                        messageId: id
+                    }))
+                });
+                this.server.to(data.conversationId).emit('folder:updated', {
+                    folderId: data.folderId,
+                    addedMessageIds: newIds
+                });
+                this.logger.log(`✅ Added ${newIds.length} messages to folder ${data.folderId}`);
+            }
+            else {
+                this.logger.log(`ℹ️ No new messages to add to folder ${data.folderId}`);
+            }
+        }
+        catch (error) {
+            this.logger.error('❌ Error adding messages to folder: ' + (error instanceof Error ? error.message : JSON.stringify(error)));
+        }
     }
 };
 exports.ChatGateway = ChatGateway;
@@ -222,6 +302,14 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleAudioPosition", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('folder:add-messages'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleFolderAddMessages", null);
 exports.ChatGateway = ChatGateway = ChatGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
@@ -241,6 +329,7 @@ exports.ChatGateway = ChatGateway = ChatGateway_1 = __decorate([
     __metadata("design:paramtypes", [chat_service_1.ChatService,
         jwt_1.JwtService,
         config_1.ConfigService,
-        prisma_service_1.PrismaService])
+        prisma_service_1.PrismaService,
+        email_service_1.EmailService])
 ], ChatGateway);
 //# sourceMappingURL=chat.gateway.js.map

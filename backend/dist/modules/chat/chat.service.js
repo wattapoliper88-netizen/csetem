@@ -66,6 +66,16 @@ let ChatService = ChatService_1 = class ChatService {
                         lastSeen: true,
                         avatarImage: true
                     }
+                },
+                _count: {
+                    select: {
+                        messages: {
+                            where: {
+                                senderId: { not: adminId },
+                                readAt: null
+                            }
+                        }
+                    }
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -75,6 +85,7 @@ let ChatService = ChatService_1 = class ChatService {
             userId: c.userId,
             adminId: c.adminId,
             createdAt: c.createdAt,
+            unreadCount: c._count.messages,
             user: {
                 id: c.user.id,
                 email: c.user.email,
@@ -85,7 +96,11 @@ let ChatService = ChatService_1 = class ChatService {
                 avatarImageLength: (c.user.avatarImage ? c.user.avatarImage.length : 0)
             }
         }))));
-        return conversations;
+        return conversations.map(c => ({
+            ...c,
+            unreadCount: c._count.messages,
+            _count: undefined
+        }));
     }
     async getMessages(conversationId, userId, isAdmin, limit = 50, cursor) {
         const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
@@ -97,6 +112,16 @@ let ChatService = ChatService_1 = class ChatService {
         if (isAdmin && conv.adminId !== userId) {
             throw new common_1.ForbiddenException();
         }
+        await this.prisma.message.updateMany({
+            where: {
+                conversationId,
+                senderId: { not: userId },
+                readAt: null
+            },
+            data: {
+                readAt: new Date()
+            }
+        });
         return this.prisma.message.findMany({
             where: {
                 conversationId

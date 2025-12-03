@@ -1,5 +1,7 @@
+import { UploadsService } from './uploads.service';
 export declare class UploadsController {
-    constructor();
+    private readonly uploadsService;
+    constructor(uploadsService: UploadsService);
     getDebugInfo(): {
         firebaseInitialized: boolean;
         appCount: any;
@@ -46,4 +48,7 @@ export declare class UploadsController {
     }): Promise<{
         readUrl: string;
     }>;
+    getReadUrls(body: {
+        paths: string[];
+    }): Promise<Record<string, string>>;
 }

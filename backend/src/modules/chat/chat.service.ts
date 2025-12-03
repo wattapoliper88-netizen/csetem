@@ -64,7 +64,17 @@ export class ChatService {
             // Include avatarImage so the frontend can display avatars consistently.
             avatarImage: true
           } 
-        } 
+        },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                senderId: { not: adminId },
+                readAt: null
+              }
+            }
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -74,6 +84,7 @@ export class ChatService {
       userId: c.userId,
       adminId: c.adminId,
       createdAt: c.createdAt,
+      unreadCount: c._count.messages,
       user: {
         id: c.user.id,
         email: c.user.email,
@@ -85,7 +96,12 @@ export class ChatService {
         avatarImageLength: ((c.user as any).avatarImage ? (c.user as any).avatarImage.length : 0)
       }
     }))));
-    return conversations;
+    
+    return conversations.map(c => ({
+      ...c,
+      unreadCount: c._count.messages,
+      _count: undefined
+    }));
   }
 
   async getMessages(conversationId: string, userId: string, isAdmin: boolean, limit = 50, cursor?: string) {
@@ -98,6 +114,18 @@ export class ChatService {
     if (isAdmin && conv.adminId !== userId) {
       throw new ForbiddenException();
     }
+
+    // Mark unread messages as read
+    await this.prisma.message.updateMany({
+      where: {
+        conversationId,
+        senderId: { not: userId },
+        readAt: null
+      },
+      data: {
+        readAt: new Date()
+      }
+    });
 
     // Avoid returning full avatar blobs with each message to prevent high memory usage.
     return this.prisma.message.findMany({

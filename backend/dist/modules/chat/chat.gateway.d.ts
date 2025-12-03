@@ -4,14 +4,16 @@ import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../../email/email.service';
 export declare class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private chatService;
     private jwtService;
     private config;
     private prisma;
+    private emailService;
     server: Server;
     private readonly logger;
-    constructor(chatService: ChatService, jwtService: JwtService, config: ConfigService, prisma: PrismaService);
+    constructor(chatService: ChatService, jwtService: JwtService, config: ConfigService, prisma: PrismaService, emailService: EmailService);
     afterInit(): void;
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): Promise<void>;
@@ -19,6 +21,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         conversationId: string;
         content: string;
     }): Promise<void>;
+    checkAndSendOfflineNotification(conversationId: string, senderId: string, content: string): Promise<void>;
     handleJoin(client: Socket, data: {
         conversationId: string;
     }): Promise<void>;
@@ -36,5 +39,10 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         conversationId: string;
         messageId: string;
         position: number;
+    }): Promise<void>;
+    handleFolderAddMessages(client: Socket, data: {
+        conversationId: string;
+        folderId: string;
+        messageIds: string[];
     }): Promise<void>;
 }

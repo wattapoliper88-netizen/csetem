@@ -40,6 +40,7 @@ let ChatController = class ChatController {
         const created = await this.chatService.createMessage(body.conversationId, req.user.userId, body.content || '', req.user.isAdmin, file, body.audioThumbnail, body.fileUrl, body.fileName, body.fileType);
         try {
             this.chatGateway.server.to(body.conversationId).emit('message:new', created);
+            this.chatGateway.checkAndSendOfflineNotification(body.conversationId, req.user.userId, body.content || (body.fileUrl ? 'Fájl melléklet' : 'Üzenet'));
         }
         catch (err) {
         }

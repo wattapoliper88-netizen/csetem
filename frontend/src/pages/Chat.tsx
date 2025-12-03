@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useQuery, useMutation } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 // Using createSocket dynamically in effect instead of getSocket
@@ -1137,6 +1137,7 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
 };
 
 export const ChatPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const accessToken = localStorage.getItem('accessToken');
   
@@ -1994,6 +1995,23 @@ export const ChatPage: React.FC = () => {
     const handleMessageNew = (msg: any) => {
       console.log('🔵 message:new event received', msg);
       console.log('💬 activeConversationId vs incoming message conversationId', typeof activeConversationId, activeConversationId, typeof msg.conversationId, msg.conversationId);
+
+      // Update conversation list unread count for admins
+      if (me?.isAdmin) {
+        queryClient.setQueryData(['conversation', true], (oldData: any) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.map((conv: any) => {
+            if (conv.id === msg.conversationId) {
+              // If this is NOT the active conversation, increment unread count
+              if (String(conv.id) !== String(activeConversationId) && msg.senderId !== me.id) {
+                 return { ...conv, unreadCount: (conv.unreadCount || 0) + 1 };
+              }
+            }
+            return conv;
+          });
+        });
+      }
+
         if (String(msg.conversationId) === String(activeConversationId)) {
         console.log('✅ Message is for active conversation');
         const filledMsg = ensureSenderAvatar(msg);
@@ -2179,6 +2197,21 @@ export const ChatPage: React.FC = () => {
       }
     };
   }, [socketState, activeConversationId, me?.id]);
+
+  // Reset unread count when opening a conversation
+  useEffect(() => {
+    if (activeConversationId && me?.isAdmin) {
+        queryClient.setQueryData(['conversation', true], (oldData: any) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.map((conv: any) => {
+            if (conv.id === activeConversationId) {
+               return { ...conv, unreadCount: 0 };
+            }
+            return conv;
+          });
+        });
+    }
+  }, [activeConversationId, me?.isAdmin, queryClient]);
 
   // Load folders from database when conversation changes
   useEffect(() => {
@@ -2896,6 +2929,11 @@ export const ChatPage: React.FC = () => {
         >
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-100">{conv.user.username}</p>
+            {conv.unreadCount > 0 && (
+              <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                {conv.unreadCount}
+              </span>
+            )}
             {conv.user.isAdmin && <span className="text-xs bg-yellow-600 px-1.5 py-0.5 rounded">👑 Admin</span>}
             {!conv.user.verified && <span className="text-xs bg-red-600 px-1.5 py-0.5 rounded">🚫 Tiltva</span>}
           </div>
