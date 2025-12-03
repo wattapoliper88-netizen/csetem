@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', username: '', password: '' });
+  const [form, setForm] = useState({ email: '', username: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
 
   const mutation = useMutation(register, {
@@ -28,7 +28,14 @@ export const RegisterPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    mutation.mutate(form);
+
+    if (form.password !== form.confirmPassword) {
+      setError('A jelszavak nem egyeznek');
+      return;
+    }
+
+    const { confirmPassword, ...registerData } = form;
+    mutation.mutate(registerData);
   };
 
   return (
@@ -82,7 +89,7 @@ export const RegisterPage: React.FC = () => {
           />
         </div>
 
-        <div className="mb-8">
+        <div className="mb-6">
           <label className="block text-cyan-300 text-sm font-semibold mb-2 ml-1">Jelszó</label>
           <input
             type="password"
@@ -91,6 +98,19 @@ export const RegisterPage: React.FC = () => {
             className="shadow-inner appearance-none border border-gray-700 rounded-xl w-full py-3 px-4 bg-gray-950/50 text-cyan-100 leading-tight focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all duration-300 placeholder-gray-600"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="••••••••"
+          />
+        </div>
+
+        <div className="mb-8">
+          <label className="block text-cyan-300 text-sm font-semibold mb-2 ml-1">Jelszó megerősítése</label>
+          <input
+            type="password"
+            required
+            minLength={8}
+            className="shadow-inner appearance-none border border-gray-700 rounded-xl w-full py-3 px-4 bg-gray-950/50 text-cyan-100 leading-tight focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all duration-300 placeholder-gray-600"
+            value={form.confirmPassword}
+            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
             placeholder="••••••••"
           />
         </div>
