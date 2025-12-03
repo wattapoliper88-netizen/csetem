@@ -4993,45 +4993,6 @@ export const ChatPage: React.FC = () => {
                 </React.Fragment>
               );
               })}
-              {isTyping && (() => {
-                // Find the other user's avatar from messages
-                const otherUserMessage = messages.find((m: any) => m.sender?.id !== me?.id);
-                const otherUserAvatar = otherUserMessage?.sender?.avatarImage;
-                const otherUserLastSeen = otherUserMessage?.sender?.lastSeen;
-                const isOnline = otherUserLastSeen && 
-                  new Date().getTime() - new Date(otherUserLastSeen).getTime() < 60 * 1000;
-                
-                return (
-                  <div className="mb-3 flex justify-start items-end gap-2 message-slide-in w-full">
-                    {otherUserAvatar ? (
-                          <Avatar
-                          avatar={otherUserAvatar}
-                          size={'w-10 h-10'}
-                        className={`shadow-lg ring-2 ${isOnline ? 'ring-green-500 avatar-online' : 'ring-gray-500'}`}
-                        onClick={(e, url) => { e.stopPropagation(); if (url) window.open(url, '_blank'); }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                        U
-                      </div>
-                    )}
-                    <div className="px-4 py-3 rounded-2xl rounded-bl-none bg-gray-700 shadow-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="flex gap-1">
-                          <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></span>
-                          <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                          <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                        </div>
-                        {typingTextLength > 0 && (
-                          <span className="text-xs text-cyan-300 font-mono">
-                            {typingTextLength} karakter
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
               <div ref={bottomRef} className="h-0" />
               {/* Sticky overlay for last highlighted message (to keep it visible while scrolling) */}
               {(() => {
@@ -5102,6 +5063,42 @@ export const ChatPage: React.FC = () => {
             </div>
 
             <div className="sticky bottom-0 z-20 border-t border-gray-700 bg-gray-800 shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0 relative">
+              {/* Typing indicator - fixed position above input */}
+              {isTyping && (() => {
+                const otherUserMessage = messages.find((m: any) => m.sender?.id !== me?.id);
+                const otherUserAvatar = otherUserMessage?.sender?.avatarImage;
+                
+                return (
+                  <div className="absolute -top-14 left-4 z-30 flex items-end gap-2 animate-fade-in-up pointer-events-none">
+                    {otherUserAvatar ? (
+                      <Avatar
+                        avatar={otherUserAvatar}
+                        size={'w-8 h-8'}
+                        className="shadow-lg ring-2 ring-gray-500 mb-1"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg mb-1">
+                        U
+                      </div>
+                    )}
+                    <div className="px-3 py-2 rounded-2xl rounded-bl-none bg-gray-800/90 backdrop-blur-md border border-gray-600/50 shadow-xl">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce"></span>
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                        </div>
+                        {typingTextLength > 0 && (
+                          <span className="text-[10px] text-cyan-300 font-mono">
+                            {typingTextLength} kar.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Selection toolbar moved here so it appears under messages and above filters */}
               {selectedMessages.size > 0 && (
                 <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 w-[calc(100%-2rem)] md:w-auto z-50 bg-gray-800/30 backdrop-blur-md border border-gray-700/30 rounded-xl p-2 md:p-4 shadow-none">
