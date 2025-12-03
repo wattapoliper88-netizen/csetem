@@ -45,7 +45,7 @@ export const RegisterPage: React.FC = () => {
       </div>
 
       <form
-        className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl px-8 pt-8 pb-8 w-full max-w-md relative z-10"
+        className="bg-gray-900/20 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl px-8 pt-8 pb-8 w-full max-w-md relative z-10"
         onSubmit={handleSubmit}
       >
         <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400 tracking-wide drop-shadow-lg">Regisztráció</h1>
