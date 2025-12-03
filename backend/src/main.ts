@@ -26,6 +26,8 @@ async function bootstrap() {
   // Alap engedélyezett origin lista (prod + fejlesztés)
   const defaultOrigins = [
     'https://csetem.vercel.app',
+    'https://richat.de',
+    'https://www.richat.de',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
