@@ -79,7 +79,7 @@ export const LoginPage: React.FC = () => {
         <button
           type="submit"
           disabled={mutation.isLoading}
-          className="w-full bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-cyan-900/50 focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02]"
+          className="w-full bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-cyan-900/50 focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] animate-pulse"
         >
           {mutation.isLoading ? 'Folyamatban...' : 'Bejelentkezés'}
         </button>
