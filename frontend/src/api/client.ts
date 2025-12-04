@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -62,11 +62,7 @@ export async function refreshAccessToken(): Promise<string | null> {
     const r = await axios.post((import.meta.env.VITE_API_URL || 'https://csetem.onrender.com') + '/auth/refresh', {}, { withCredentials: true });
     const t = r.data?.accessToken;
     if (t) {
-      if (localStorage.getItem('accessToken')) {
-        localStorage.setItem('accessToken', t);
-      } else {
-        sessionStorage.setItem('accessToken', t);
-      }
+      localStorage.setItem('accessToken', t);
       api.defaults.headers.common['Authorization'] = `Bearer ${t}`;
     }
     return t || null;

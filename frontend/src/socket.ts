@@ -4,7 +4,7 @@ import { refreshAccessToken } from './api/client';
 let socket: Socket | null = null;
 
 async function ensureToken() {
-  let token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+  let token = localStorage.getItem('accessToken');
   if (!token) {
     token = await refreshAccessToken();
   }

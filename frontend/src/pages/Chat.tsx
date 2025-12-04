@@ -1139,7 +1139,7 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
 export const ChatPage: React.FC = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const accessToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+  const accessToken = localStorage.getItem('accessToken');
   
   useEffect(() => {
     if (!accessToken) {
@@ -1151,7 +1151,6 @@ export const ChatPage: React.FC = () => {
     enabled: !!accessToken,
     onError: () => {
       localStorage.removeItem('accessToken');
-      sessionStorage.removeItem('accessToken');
       navigate('/login');
     },
   });
@@ -2843,7 +2842,6 @@ export const ChatPage: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
-    sessionStorage.removeItem('accessToken');
     navigate('/login');
   };
 
