@@ -25,7 +25,7 @@ let AuthController = class AuthController {
     }
     async register(dto, res) {
         const { refreshToken, ...rest } = await this.authService.register(dto);
-        const isProd = process.env.NODE_ENV === 'production';
+        const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: isProd,
@@ -36,7 +36,7 @@ let AuthController = class AuthController {
     }
     async verify(dto, res) {
         const { refreshToken, ...rest } = await this.authService.verifyCode(dto);
-        const isProd = process.env.NODE_ENV === 'production';
+        const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: isProd,
@@ -48,7 +48,7 @@ let AuthController = class AuthController {
     async login(dto, res) {
         console.log('AuthController.login called, pid=', process.pid, 'uptime=', process.uptime());
         const { refreshToken, ...rest } = await this.authService.login(dto);
-        const isProd = process.env.NODE_ENV === 'production';
+        const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: isProd,
@@ -63,10 +63,11 @@ let AuthController = class AuthController {
             throw new common_1.UnauthorizedException('Missing refresh token');
         const tokens = await this.authService.refreshTokens(refreshToken);
         if (tokens.refreshToken) {
+            const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
             res.cookie('refreshToken', tokens.refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                secure: isProd,
+                sameSite: isProd ? 'none' : 'lax',
                 maxAge: 7 * 24 * 60 * 60 * 1000,
             });
         }

@@ -15,7 +15,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
     const { refreshToken, ...rest } = await this.authService.register(dto);
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProd,
@@ -29,7 +29,7 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async verify(@Body() dto: VerifyCodeDto, @Res({ passthrough: true }) res: Response) {
     const { refreshToken, ...rest } = await this.authService.verifyCode(dto);
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProd,
@@ -44,7 +44,7 @@ export class AuthController {
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     console.log('AuthController.login called, pid=', process.pid, 'uptime=', process.uptime());
     const { refreshToken, ...rest } = await this.authService.login(dto);
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProd,
@@ -61,10 +61,11 @@ export class AuthController {
     const tokens = await this.authService.refreshTokens(refreshToken);
     // Set refresh token cookie again if rotation occurred
     if (tokens.refreshToken) {
+      const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
