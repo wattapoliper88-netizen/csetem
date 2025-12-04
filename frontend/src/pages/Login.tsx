@@ -6,11 +6,18 @@ import { useNavigate } from 'react-router-dom';
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: '', password: '' });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
 
   const mutation = useMutation(login, {
     onSuccess: (data) => {
-      localStorage.setItem('accessToken', data.accessToken);
+      if (rememberMe) {
+        localStorage.setItem('accessToken', data.accessToken);
+        sessionStorage.removeItem('accessToken');
+      } else {
+        sessionStorage.setItem('accessToken', data.accessToken);
+        localStorage.removeItem('accessToken');
+      }
       navigate('/chat');
     },
     onError: (err: any) => {
@@ -72,6 +79,19 @@ export const LoginPage: React.FC = () => {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             placeholder="••••••••"
           />
+        </div>
+
+        <div className="mb-6 flex items-center">
+          <input
+            id="remember-me"
+            type="checkbox"
+            className="w-4 h-4 text-cyan-600 bg-gray-950 border-gray-700 rounded focus:ring-cyan-500 focus:ring-2"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          <label htmlFor="remember-me" className="ml-2 text-sm font-medium text-gray-300">
+            Maradj bejelentkezve
+          </label>
         </div>
 
         <button
