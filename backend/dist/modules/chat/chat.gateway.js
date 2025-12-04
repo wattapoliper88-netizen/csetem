@@ -22,13 +22,15 @@ const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const email_service_1 = require("../../email/email.service");
+const uploads_service_1 = require("../uploads/uploads.service");
 let ChatGateway = ChatGateway_1 = class ChatGateway {
-    constructor(chatService, jwtService, config, prisma, emailService) {
+    constructor(chatService, jwtService, config, prisma, emailService, uploadsService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.config = config;
         this.prisma = prisma;
         this.emailService = emailService;
+        this.uploadsService = uploadsService;
         this.logger = new common_1.Logger(ChatGateway_1.name);
     }
     afterInit() {
@@ -100,7 +102,13 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                 if (recipient && recipient.email && sender) {
                     this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
                     const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
-                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, sender.avatarImage);
+                    let avatarUrl = sender.avatarImage;
+                    if (avatarUrl) {
+                        const resolved = await this.uploadsService.getSignedUrlForPath(avatarUrl);
+                        if (resolved)
+                            avatarUrl = resolved;
+                    }
+                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl);
                 }
                 else {
                     this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!(recipient === null || recipient === void 0 ? void 0 : recipient.email)}, Sender found: ${!!sender}`);
@@ -330,6 +338,7 @@ exports.ChatGateway = ChatGateway = ChatGateway_1 = __decorate([
         jwt_1.JwtService,
         config_1.ConfigService,
         prisma_service_1.PrismaService,
-        email_service_1.EmailService])
+        email_service_1.EmailService,
+        uploads_service_1.UploadsService])
 ], ChatGateway);
 //# sourceMappingURL=chat.gateway.js.map

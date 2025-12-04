@@ -14,12 +14,13 @@ const chat_gateway_1 = require("./chat.gateway");
 const prisma_module_1 = require("../../prisma/prisma.module");
 const jwt_1 = require("@nestjs/jwt");
 const email_module_1 = require("../../email/email.module");
+const uploads_module_1 = require("../uploads/uploads.module");
 let ChatModule = class ChatModule {
 };
 exports.ChatModule = ChatModule;
 exports.ChatModule = ChatModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, jwt_1.JwtModule.register({}), email_module_1.EmailModule],
+        imports: [prisma_module_1.PrismaModule, jwt_1.JwtModule.register({}), email_module_1.EmailModule, uploads_module_1.UploadsModule],
         controllers: [chat_controller_1.ChatController],
         providers: [chat_service_1.ChatService, chat_gateway_1.ChatGateway],
     })

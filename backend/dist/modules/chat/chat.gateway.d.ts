@@ -5,15 +5,17 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../email/email.service';
+import { UploadsService } from '../uploads/uploads.service';
 export declare class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private chatService;
     private jwtService;
     private config;
     private prisma;
     private emailService;
+    private uploadsService;
     server: Server;
     private readonly logger;
-    constructor(chatService: ChatService, jwtService: JwtService, config: ConfigService, prisma: PrismaService, emailService: EmailService);
+    constructor(chatService: ChatService, jwtService: JwtService, config: ConfigService, prisma: PrismaService, emailService: EmailService, uploadsService: UploadsService);
     afterInit(): void;
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): Promise<void>;

@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
 import { EmailService } from '../../email/email.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 @WebSocketGateway({
   cors: {
@@ -46,6 +47,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private config: ConfigService,
     private prisma: PrismaService,
     private emailService: EmailService,
+    private uploadsService: UploadsService,
   ) {}
 
   afterInit() {
@@ -154,7 +156,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
            this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
            // Truncate content for privacy/brevity
            const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
-           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, sender.avatarImage);
+           
+           let avatarUrl = sender.avatarImage;
+           if (avatarUrl) {
+             // Try to resolve signed URL if it's a storage path
+             const resolved = await this.uploadsService.getSignedUrlForPath(avatarUrl);
+             if (resolved) avatarUrl = resolved;
+           }
+           
+           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl);
         } else {
            this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!recipient?.email}, Sender found: ${!!sender}`);
         }
