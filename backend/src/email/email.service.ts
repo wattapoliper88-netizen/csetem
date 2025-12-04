@@ -78,9 +78,10 @@ export class EmailService {
       // when using the onboarding domain.
       const fromEmail = process.env.EMAIL_FROM || 'ertesito@richat.de';
       
-      const avatarHtml = senderAvatarUrl 
-        ? `<img src="${senderAvatarUrl}" alt="${senderName}" style="width: 50px; height: 50px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">`
-        : '';
+      // Use sender's avatar or generate a default one with initials
+      const avatarUrl = senderAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=0891b2&color=fff`;
+      
+      const avatarHtml = `<img src="${avatarUrl}" alt="${senderName}" style="width: 50px; height: 50px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">`;
 
       const data = await this.resend.emails.send({
         from: `Richi <${fromEmail}>`,

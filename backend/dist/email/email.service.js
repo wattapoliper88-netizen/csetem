@@ -71,9 +71,8 @@ let EmailService = EmailService_1 = class EmailService {
         }
         try {
             const fromEmail = process.env.EMAIL_FROM || 'ertesito@richat.de';
-            const avatarHtml = senderAvatarUrl
-                ? `<img src="${senderAvatarUrl}" alt="${senderName}" style="width: 50px; height: 50px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">`
-                : '';
+            const avatarUrl = senderAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=0891b2&color=fff`;
+            const avatarHtml = `<img src="${avatarUrl}" alt="${senderName}" style="width: 50px; height: 50px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">`;
             const data = await this.resend.emails.send({
                 from: `Richi <${fromEmail}>`,
                 to: [toEmail],
