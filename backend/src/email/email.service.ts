@@ -81,23 +81,28 @@ export class EmailService {
       // Use sender's avatar or generate a default one with initials
       const avatarUrl = senderAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=0891b2&color=fff`;
       
-      const avatarHtml = `<img src="${avatarUrl}" alt="${senderName}" style="width: 50px; height: 50px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">`;
+      const avatarHtml = `<img src="${avatarUrl}" alt="${senderName}" style="width: 60px; height: 60px; border-radius: 50%; display: block; margin: 0 auto 10px auto;">`;
 
       const data = await this.resend.emails.send({
         from: `Richi <${fromEmail}>`,
         to: [toEmail],
         subject: `Új üzeneted érkezett tőle: ${senderName}`,
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
             <h2 style="color: #0891b2;">Új üzeneted érkezett!</h2>
-            <p>Szia!</p>
-            <p>
+            <p style="text-align: left;">Szia!</p>
+            
+            <div style="margin: 20px 0;">
               ${avatarHtml}
-              <strong>${senderName}</strong> üzenetet küldött neked, miközben nem voltál elérhető.
-            </p>
-            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 16px;">
+                <strong>${senderName}</strong> üzenetet küldött neked, miközben nem voltál elérhető.
+              </p>
+            </div>
+
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left;">
               <p style="margin: 0; color: #374151; font-style: italic;">"${messageContent}"</p>
             </div>
+            
             <p>Jelentkezz be a válaszadáshoz!</p>
             <a href="${process.env.APP_URL || 'https://richat.de'}" style="display: inline-block; background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">Megnyitás</a>
           </div>
