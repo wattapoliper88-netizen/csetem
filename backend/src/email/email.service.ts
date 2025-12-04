@@ -90,14 +90,16 @@ export class EmailService {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center;">
             <h2 style="color: #0891b2;">Új üzeneted érkezett!</h2>
-            <p style="text-align: left;">Szia!</p>
             
             <div style="margin: 20px 0;">
               ${avatarHtml}
-              <p style="margin: 0; font-size: 16px;">
-                <strong>${senderName}</strong> üzenetet küldött neked, miközben nem voltál elérhető.
-              </p>
             </div>
+
+            <p style="text-align: left;">Szia!</p>
+            
+            <p style="margin: 0; font-size: 16px;">
+              <strong>${senderName}</strong> üzenetet küldött neked, miközben nem voltál elérhető.
+            </p>
 
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left;">
               <p style="margin: 0; color: #374151; font-style: italic;">"${messageContent}"</p>
