@@ -33,9 +33,12 @@ async function bootstrap() {
     'http://127.0.0.1:5173',
   ];
 
-  const corsOrigins = corsOriginValue
+  // Merge env CORS_ORIGIN with defaultOrigins
+  const envOrigins = corsOriginValue
     ? corsOriginValue.split(',').map((o) => o.trim())
-    : defaultOrigins;
+    : [];
+    
+  const corsOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
   console.log('✅ Final CORS origins:', corsOrigins);
 
