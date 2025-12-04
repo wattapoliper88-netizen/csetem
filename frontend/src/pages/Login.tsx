@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useMutation } from 'react-query';
 import { login } from '../api/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
 
   const mutation = useMutation(login, {
     onSuccess: (data) => {
       localStorage.setItem('accessToken', data.accessToken);
-      navigate('/chat');
+      navigate(returnUrl ? decodeURIComponent(returnUrl) : '/chat');
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'Login failed');

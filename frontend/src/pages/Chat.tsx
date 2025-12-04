@@ -5,7 +5,7 @@ import { getMessages, sendMessage, getMyConversation, listConversations, getFold
 // Using createSocket dynamically in effect instead of getSocket
 import { getReadUrl, getReadUrls } from '../api/client';
 import { getSocket } from '../socket';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { updateAvatar } from '../api/client';
 
@@ -1139,21 +1139,24 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
 export const ChatPage: React.FC = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const urlConversationId = searchParams.get('conversationId');
   const accessToken = localStorage.getItem('accessToken');
   
   useEffect(() => {
     if (!accessToken) {
-      navigate('/login');
+      const returnUrl = encodeURIComponent(location.pathname + location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
     }
-  }, [accessToken, navigate]);
+  }, [accessToken, navigate, location]);
   
   const { data: me, isLoading: meLoading, refetch: refetchMe } = useQuery('me', getMe, {
     enabled: !!accessToken,
     onError: () => {
       localStorage.removeItem('accessToken');
-      navigate('/login');
+      const returnUrl = encodeURIComponent(location.pathname + location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
     },
   });
   // Helper to ensure our own avatar is present on messages returned from server
