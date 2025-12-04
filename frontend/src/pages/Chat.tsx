@@ -1173,6 +1173,14 @@ export const ChatPage: React.FC = () => {
   };
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(urlConversationId || null);
+
+  // Update active conversation if URL parameter changes
+  useEffect(() => {
+    if (urlConversationId) {
+      setActiveConversationId(urlConversationId);
+    }
+  }, [urlConversationId]);
+
   const [messages, setMessages] = useState<any[]>([]);
   const [filteredMessages, setFilteredMessages] = useState<any[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -1933,10 +1941,10 @@ export const ChatPage: React.FC = () => {
 
   // For admin users, auto-select first conversation if none selected yet
   useEffect(() => {
-    if (me?.isAdmin && Array.isArray(convData) && convData.length > 0 && !activeConversationId) {
+    if (me?.isAdmin && Array.isArray(convData) && convData.length > 0 && !activeConversationId && !urlConversationId) {
       setActiveConversationId(convData[0].id);
     }
-  }, [me?.isAdmin, convData, activeConversationId]);
+  }, [me?.isAdmin, convData, activeConversationId, urlConversationId]);
 
   const { refetch: refetchMessages } = useQuery(
     ['messages', activeConversationId],
