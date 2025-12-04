@@ -5,7 +5,7 @@ import { getMessages, sendMessage, getMyConversation, listConversations, getFold
 // Using createSocket dynamically in effect instead of getSocket
 import { getReadUrl, getReadUrls } from '../api/client';
 import { getSocket } from '../socket';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { updateAvatar } from '../api/client';
 
@@ -1139,6 +1139,8 @@ const CustomVideoPlayer: React.FC<VideoPlayerProps> = ({ src, type = 'video/mp4'
 export const ChatPage: React.FC = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlConversationId = searchParams.get('conversationId');
   const accessToken = localStorage.getItem('accessToken');
   
   useEffect(() => {
@@ -1167,7 +1169,7 @@ export const ChatPage: React.FC = () => {
     return msg;
   };
 
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(urlConversationId || null);
   const [messages, setMessages] = useState<any[]>([]);
   const [filteredMessages, setFilteredMessages] = useState<any[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
