@@ -96,7 +96,7 @@ let EmailService = EmailService_1 = class EmailService {
             </div>
             
             <p>Jelentkezz be a válaszadáshoz!</p>
-            <a href="${process.env.APP_URL || 'https://richat.de'}" style="display: inline-block; background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">Megnyitás</a>
+            <a href="https://richat.de" style="display: inline-block; background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">Megnyitás</a>
           </div>
         `,
             });
