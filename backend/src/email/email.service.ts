@@ -50,7 +50,10 @@ export class EmailService {
 
       if (data.error) {
         this.logger.error('Resend API returned error:', data.error);
-        throw new Error(data.error.message);
+        // Don't throw error to prevent 500 response to client
+        // throw new Error(data.error.message);
+        this.logger.log(`[FALLBACK] Verification code for ${email}: ${code}`);
+        return;
       }
 
       this.logger.log(`Verification email sent to ${email}: ${data.data?.id}`);
