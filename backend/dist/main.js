@@ -20,13 +20,16 @@ async function bootstrap() {
     const corsOriginValue = configService.get('CORS_ORIGIN') || process.env.CORS_ORIGIN;
     const defaultOrigins = [
         'https://csetem.vercel.app',
+        'https://richat.de',
+        'https://www.richat.de',
         'http://localhost:3000',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ];
-    const corsOrigins = corsOriginValue
+    const envOrigins = corsOriginValue
         ? corsOriginValue.split(',').map((o) => o.trim())
-        : defaultOrigins;
+        : [];
+    const corsOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
     console.log('✅ Final CORS origins:', corsOrigins);
     app.use((req, res, next) => {
         const origin = req.headers.origin;

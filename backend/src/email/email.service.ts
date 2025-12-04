@@ -64,7 +64,7 @@ export class EmailService {
     }
   }
 
-  async sendOfflineNotification(toEmail: string, senderName: string, messageContent: string): Promise<void> {
+  async sendOfflineNotification(toEmail: string, senderName: string, messageContent: string, senderAvatarUrl?: string | null): Promise<void> {
     this.logger.log(`Attempting to send offline notification to ${toEmail}`);
     
     if (!this.resend) {
@@ -78,6 +78,10 @@ export class EmailService {
       // when using the onboarding domain.
       const fromEmail = process.env.EMAIL_FROM || 'ertesito@richat.de';
       
+      const avatarHtml = senderAvatarUrl 
+        ? `<img src="${senderAvatarUrl}" alt="${senderName}" style="width: 50px; height: 50px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">`
+        : '';
+
       const data = await this.resend.emails.send({
         from: `Richi <${fromEmail}>`,
         to: [toEmail],
@@ -86,7 +90,10 @@ export class EmailService {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #0891b2;">Új üzeneted érkezett!</h2>
             <p>Szia!</p>
-            <p><strong>${senderName}</strong> üzenetet küldött neked, miközben nem voltál elérhető.</p>
+            <p>
+              ${avatarHtml}
+              <strong>${senderName}</strong> üzenetet küldött neked, miközben nem voltál elérhető.
+            </p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
               <p style="margin: 0; color: #374151; font-style: italic;">"${messageContent}"</p>
             </div>

@@ -154,7 +154,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
            this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
            // Truncate content for privacy/brevity
            const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
-           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview);
+           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, sender.avatarImage);
         } else {
            this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!recipient?.email}, Sender found: ${!!sender}`);
         }

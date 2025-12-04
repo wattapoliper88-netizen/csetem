@@ -100,7 +100,7 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                 if (recipient && recipient.email && sender) {
                     this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
                     const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
-                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview);
+                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, sender.avatarImage);
                 }
                 else {
                     this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!(recipient === null || recipient === void 0 ? void 0 : recipient.email)}, Sender found: ${!!sender}`);
