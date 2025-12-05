@@ -3203,7 +3203,7 @@ export const ChatPage: React.FC = () => {
           ${isMobile ? 'fixed inset-y-0 left-0 z-40 transform transition-transform duration-300' : 'relative'}
           ${isMobile && !showSidebar ? '-translate-x-full' : 'translate-x-0'}
           ${isMobile ? 'w-80' : isTablet ? 'w-64' : 'w-80'}
-          border-r border-gray-800 bg-gray-950 shadow-2xl flex flex-col
+          border-r border-gray-800 bg-gray-950/50 backdrop-blur-md shadow-2xl flex flex-col
         `}>
           <div className="p-4 border-b border-gray-800 bg-gradient-to-r from-cyan-600 to-teal-600 text-white">
             <div className="flex items-center justify-between">
