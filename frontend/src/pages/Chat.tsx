@@ -1907,7 +1907,7 @@ export const ChatPage: React.FC = () => {
     
     // Initialize map
     adminFolders.forEach(f => {
-      folderMap.set(f.id, { ...f, children: [], members: f.members || [] });
+      folderMap.set(f.id, { ...f, children: [], members: f.members || [], unreadCount: 0 });
     });
 
     // Build hierarchy
@@ -1919,6 +1919,26 @@ export const ChatPage: React.FC = () => {
         roots.push(node);
       }
     });
+
+    // Calculate unread counts recursively
+    const calculateUnread = (node: any) => {
+      let count = 0;
+      // Sum from members
+      node.members?.forEach((m: any) => {
+        const conv = userConvMap.get(m.userId);
+        if (conv && conv.unreadCount) {
+          count += conv.unreadCount;
+        }
+      });
+      // Sum from children
+      node.children?.forEach((child: any) => {
+        count += calculateUnread(child);
+      });
+      node.unreadCount = count;
+      return count;
+    };
+
+    roots.forEach(root => calculateUnread(root));
 
     // Collect users in folders
     const usersInFolders = new Set();
@@ -3085,6 +3105,11 @@ export const ChatPage: React.FC = () => {
             <span className="text-xl">{isExpanded ? '📂' : '📁'}</span>
           )}
           <span className="font-semibold text-gray-200 flex-1">{folder.name}</span>
+          {folder.unreadCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full mr-2">
+              {folder.unreadCount}
+            </span>
+          )}
           <span className="text-xs text-gray-500">
             {folder.members?.length || 0}
           </span>
