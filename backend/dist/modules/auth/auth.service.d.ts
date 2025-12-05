@@ -17,27 +17,30 @@ export declare class AuthService {
         accessToken: string;
         refreshToken: string;
         user: {
-            id: any;
-            email: any;
-            username: any;
+            id: string;
+            email: string;
+            username: string;
         };
+    }>;
+    forgotPassword(email: string): Promise<{
+        message: string;
     }>;
     verifyCode(dto: VerifyCodeDto): Promise<{
         accessToken: string;
         refreshToken: string;
         user: {
-            id: any;
-            email: any;
-            username: any;
+            id: string;
+            email: string;
+            username: string;
         };
     }>;
     login(dto: LoginDto): Promise<{
         accessToken: string;
         refreshToken: string;
         user: {
-            id: any;
-            email: any;
-            username: any;
+            id: string;
+            email: string;
+            username: string;
         };
     }>;
     refreshTokens(refreshToken: string): Promise<{

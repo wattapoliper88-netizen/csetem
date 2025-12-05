@@ -57,6 +57,9 @@ let AuthController = class AuthController {
         });
         return rest;
     }
+    async forgotPassword(email) {
+        return this.authService.forgotPassword(email);
+    }
     async refresh(req, res) {
         const refreshToken = req.cookies && req.cookies.refreshToken;
         if (!refreshToken)
@@ -102,6 +105,14 @@ __decorate([
     __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('forgot-password'),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
+    __param(0, (0, common_1.Body)('email')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forgotPassword", null);
 __decorate([
     (0, common_1.Post)('refresh'),
     __param(0, (0, common_1.Req)()),

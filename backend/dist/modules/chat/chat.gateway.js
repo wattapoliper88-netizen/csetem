@@ -100,6 +100,12 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                 const recipient = await this.prisma.user.findUnique({ where: { id: recipientId } });
                 const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
                 if (recipient && recipient.email && sender) {
+                    const now = new Date();
+                    const lastSent = recipient.lastNotificationSentAt;
+                    if (lastSent && (now.getTime() - lastSent.getTime() < 5 * 60 * 1000)) {
+                        this.logger.log(`Skipping email to ${recipient.email}: cooldown active (last sent: ${lastSent})`);
+                        return;
+                    }
                     this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
                     const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
                     let avatarUrl = sender.avatarImage;
@@ -109,6 +115,10 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                             avatarUrl = resolved;
                     }
                     await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl, conversationId);
+                    await this.prisma.user.update({
+                        where: { id: recipientId },
+                        data: { lastNotificationSentAt: now }
+                    });
                 }
                 else {
                     this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!(recipient === null || recipient === void 0 ? void 0 : recipient.email)}, Sender found: ${!!sender}`);

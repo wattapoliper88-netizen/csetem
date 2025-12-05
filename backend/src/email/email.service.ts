@@ -123,4 +123,46 @@ export class EmailService {
       this.logger.error('Failed to send offline notification email', error);
     }
   }
+
+  async sendPasswordReset(email: string, tempPassword: string): Promise<void> {
+    this.logger.log(`Sending password reset to ${email}`);
+
+    if (!this.resend) {
+      this.logger.warn('Resend client not initialized, skipping password reset email');
+      this.logger.log(`[DEV] Temporary password for ${email}: ${tempPassword}`);
+      return;
+    }
+
+    try {
+      const fromEmail = process.env.EMAIL_FROM || 'ertesito@richat.de';
+
+      const data = await this.resend.emails.send({
+        from: `Richi <${fromEmail}>`,
+        to: [email],
+        subject: 'Új ideiglenes jelszavad',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #0891b2;">Új ideiglenes jelszó</h2>
+            <p>Az új jelszavad:</p>
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #374151;">${tempPassword}</span>
+            </div>
+            <p>Javasolt azonnal bejelentkezés után megváltoztatni.</p>
+            <p>Ha nem te kérted, kérjük, jelezd az adminnak.</p>
+          </div>
+        `,
+      });
+
+      if (data.error) {
+        this.logger.error('Resend API returned error:', data.error);
+        this.logger.log(`[FALLBACK] Temporary password for ${email}: ${tempPassword}`);
+        return;
+      }
+
+      this.logger.log(`Password reset email sent to ${email}: ${data.data?.id}`);
+    } catch (error) {
+      this.logger.error('Failed to send password reset email', error);
+      this.logger.log(`[FALLBACK] Temporary password for ${email}: ${tempPassword}`);
+    }
+  }
 }

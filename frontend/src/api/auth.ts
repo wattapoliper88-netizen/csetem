@@ -23,6 +23,11 @@ export async function login(payload: { username: string; password: string }) {
   return res.data;
 }
 
+export async function forgotPassword(email: string) {
+  const res = await api.post('/auth/forgot-password', toFormBody({ email }), { headers: formHeaders });
+  return res.data;
+}
+
 export async function getMe() {
   const res = await api.get('/me');
   return res.data;

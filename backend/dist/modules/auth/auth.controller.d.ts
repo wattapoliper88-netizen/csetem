@@ -9,26 +9,29 @@ export declare class AuthController {
     register(dto: RegisterDto, res: Response): Promise<{
         accessToken: string;
         user: {
-            id: any;
-            email: any;
-            username: any;
+            id: string;
+            email: string;
+            username: string;
         };
     }>;
     verify(dto: VerifyCodeDto, res: Response): Promise<{
         accessToken: string;
         user: {
-            id: any;
-            email: any;
-            username: any;
+            id: string;
+            email: string;
+            username: string;
         };
     }>;
     login(dto: LoginDto, res: Response): Promise<{
         accessToken: string;
         user: {
-            id: any;
-            email: any;
-            username: any;
+            id: string;
+            email: string;
+            username: string;
         };
+    }>;
+    forgotPassword(email: string): Promise<{
+        message: string;
     }>;
     refresh(req: Request, res: Response): Promise<{
         accessToken: string;

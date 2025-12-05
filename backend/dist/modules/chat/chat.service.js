@@ -122,6 +122,10 @@ let ChatService = ChatService_1 = class ChatService {
                 readAt: new Date()
             }
         });
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { lastNotificationSentAt: null }
+        });
         return this.prisma.message.findMany({
             where: {
                 conversationId

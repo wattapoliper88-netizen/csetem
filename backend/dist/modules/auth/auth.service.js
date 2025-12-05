@@ -62,6 +62,20 @@ let AuthService = class AuthService {
         const tokens = this.issueTokens(user.id, user.isAdmin);
         return { user: { id: user.id, email: user.email, username: user.username }, ...tokens };
     }
+    async forgotPassword(email) {
+        const user = await this.prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            throw new common_1.BadRequestException('Nincs ilyen email cím');
+        }
+        const tempPassword = crypto.randomBytes(8).toString('base64url').slice(0, 10);
+        const passwordHash = await bcrypt.hash(tempPassword, 10);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { passwordHash },
+        });
+        await this.emailService.sendPasswordReset(email, tempPassword);
+        return { message: 'Új jelszó elküldve' };
+    }
     async verifyCode(dto) {
         const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
         if (!user)

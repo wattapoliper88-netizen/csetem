@@ -90,6 +90,12 @@ export const LoginPage: React.FC = () => {
             Regisztráció
           </a>
         </p>
+
+        <p className="mt-2 text-center text-sm text-gray-400">
+          <a href="/forgot-password" className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors duration-200">
+            Elfelejtetted a jelszavad?
+          </a>
+        </p>
       </form>
     </div>
   );
