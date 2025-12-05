@@ -33,6 +33,16 @@ export async function getMe() {
   return res.data;
 }
 
+export async function updateUsername(username: string) {
+  const res = await api.put('/me/username', { username });
+  return res.data;
+}
+
+export async function updatePassword(currentPassword: string, newPassword: string) {
+  const res = await api.put('/me/password', { currentPassword, newPassword });
+  return res.data;
+}
+
 export async function deleteUser(userId: string) {
   const res = await api.delete(`/me/admin/user/${userId}`);
   return res.data;

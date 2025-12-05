@@ -23,6 +23,22 @@ export declare class UserController {
         verified: boolean;
         isAdmin: boolean;
     }>;
+    updateUsername(req: any, body: {
+        username: string;
+    }): Promise<{
+        id: string;
+        email: string;
+        username: string;
+        avatarImage: string;
+        verified: boolean;
+        isAdmin: boolean;
+    }>;
+    updatePassword(req: any, body: {
+        currentPassword: string;
+        newPassword: string;
+    }): Promise<{
+        success: boolean;
+    }>;
     deleteUser(req: any, userId: string): Promise<{
         success: boolean;
     }>;

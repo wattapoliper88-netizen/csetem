@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Req, UseGuards, Body, Delete, Param, ForbiddenException, Logger } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 @Controller('me')
 @UseGuards(JwtAuthGuard)
@@ -34,6 +35,35 @@ export class UserController {
       select: { id: true, email: true, username: true, isAdmin: true, verified: true, avatarImage: true },
     });
     return user;
+  }
+
+  @Put('username')
+  async updateUsername(@Req() req: any, @Body() body: { username: string }) {
+    const exists = await this.prisma.user.findFirst({ where: { username: body.username } });
+    if (exists && exists.id !== req.user.userId) {
+      throw new ForbiddenException('A felhasználónév már foglalt');
+    }
+    const user = await this.prisma.user.update({
+      where: { id: req.user.userId },
+      data: { username: body.username },
+      select: { id: true, email: true, username: true, isAdmin: true, verified: true, avatarImage: true },
+    });
+    return user;
+  }
+
+  @Put('password')
+  async updatePassword(@Req() req: any, @Body() body: { currentPassword: string; newPassword: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
+    if (!user) throw new ForbiddenException('Nincs ilyen felhasználó');
+
+    const match = await bcrypt.compare(body.currentPassword, user.passwordHash);
+    if (!match) {
+      throw new ForbiddenException('A jelenlegi jelszó nem egyezik');
+    }
+
+    const passwordHash = await bcrypt.hash(body.newPassword, 10);
+    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    return { success: true };
   }
 
   @Delete('admin/user/:userId')

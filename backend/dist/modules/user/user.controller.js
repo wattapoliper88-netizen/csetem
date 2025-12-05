@@ -17,6 +17,7 @@ exports.UserController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const prisma_service_1 = require("../../prisma/prisma.service");
+const bcrypt = require("bcrypt");
 let UserController = UserController_1 = class UserController {
     constructor(prisma) {
         this.prisma = prisma;
@@ -43,6 +44,30 @@ let UserController = UserController_1 = class UserController {
             select: { id: true, email: true, username: true, isAdmin: true, verified: true, avatarImage: true },
         });
         return user;
+    }
+    async updateUsername(req, body) {
+        const exists = await this.prisma.user.findFirst({ where: { username: body.username } });
+        if (exists && exists.id !== req.user.userId) {
+            throw new common_1.ForbiddenException('A felhasználónév már foglalt');
+        }
+        const user = await this.prisma.user.update({
+            where: { id: req.user.userId },
+            data: { username: body.username },
+            select: { id: true, email: true, username: true, isAdmin: true, verified: true, avatarImage: true },
+        });
+        return user;
+    }
+    async updatePassword(req, body) {
+        const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
+        if (!user)
+            throw new common_1.ForbiddenException('Nincs ilyen felhasználó');
+        const match = await bcrypt.compare(body.currentPassword, user.passwordHash);
+        if (!match) {
+            throw new common_1.ForbiddenException('A jelenlegi jelszó nem egyezik');
+        }
+        const passwordHash = await bcrypt.hash(body.newPassword, 10);
+        await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+        return { success: true };
     }
     async deleteUser(req, userId) {
         await this.checkAdmin(req.user.userId);
@@ -104,6 +129,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "updateAvatar", null);
+__decorate([
+    (0, common_1.Put)('username'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "updateUsername", null);
+__decorate([
+    (0, common_1.Put)('password'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "updatePassword", null);
 __decorate([
     (0, common_1.Delete)('admin/user/:userId'),
     __param(0, (0, common_1.Req)()),

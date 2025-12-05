@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { getMe, deleteUser, toggleBanUser, toggleAdmin } from '../api/auth';
+import { getMe, deleteUser, toggleBanUser, toggleAdmin, updateUsername, updatePassword } from '../api/auth';
 import { getMessages, sendMessage, getMyConversation, listConversations, getFolders, closeFolder as apiFolderClose, deleteMessages as apiDeleteMessages } from '../api/chat';
 // Using createSocket dynamically in effect instead of getSocket
 import { getReadUrl, getReadUrls } from '../api/client';
@@ -1313,6 +1313,13 @@ export const ChatPage: React.FC = () => {
   const [adminFolders, setAdminFolders] = useState<any[]>([]);
   const [expandedAdminFolders, setExpandedAdminFolders] = useState<Set<string>>(new Set());
   const [folderContextMenu, setFolderContextMenu] = useState<{ folderId: string; x: number; y: number; folder: any } | null>(null);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [folderLongPressTimer, setFolderLongPressTimer] = useState<number | null>(null);
   const [folderLongPressStartPos, setFolderLongPressStartPos] = useState<{x: number; y: number} | null>(null);
   
@@ -2913,6 +2920,57 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  const usernameMutation = useMutation(updateUsername, {
+    onSuccess: async () => {
+      setSettingsMessage('Felhasználónév frissítve');
+      setSettingsError(null);
+      await refetchMe();
+      setShowUsernameModal(false);
+    },
+    onError: (err: any) => {
+      setSettingsMessage(null);
+      setSettingsError(err?.response?.data?.message || 'Hiba a felhasználónév frissítésekor');
+    }
+  });
+
+  const passwordMutation = useMutation(
+    ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => updatePassword(currentPassword, newPassword),
+    {
+      onSuccess: () => {
+        setSettingsMessage('Jelszó frissítve');
+        setSettingsError(null);
+        setShowPasswordModal(false);
+        setCurrentPassword('');
+        setNewPassword('');
+      },
+      onError: (err: any) => {
+        setSettingsMessage(null);
+        setSettingsError(err?.response?.data?.message || 'Hiba a jelszó frissítésekor');
+      }
+    }
+  );
+
+  const handleUsernameSave = () => {
+    const uname = newUsername.trim();
+    if (!uname) {
+      setSettingsError('Adj meg egy új felhasználónevet');
+      return;
+    }
+    usernameMutation.mutate(uname);
+  };
+
+  const handlePasswordSave = () => {
+    if (!currentPassword || !newPassword) {
+      setSettingsError('Töltsd ki mindkét mezőt');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setSettingsError('A jelszó legyen legalább 8 karakter');
+      return;
+    }
+    passwordMutation.mutate({ currentPassword, newPassword });
+  };
+
   const renderSidebarConversation = (conv: any) => (
     <div
       key={conv.id}
@@ -3308,6 +3366,31 @@ export const ChatPage: React.FC = () => {
                           className="w-full px-4 py-2 text-left text-sm text-gray-100 hover:bg-gray-700 transition-colors flex items-center gap-2 rounded-t-lg"
                         >
                           🖼️ Kép feltöltése
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAvatarMenu(false);
+                            setSettingsError(null);
+                            setSettingsMessage(null);
+                            setNewUsername(me?.username || '');
+                            setShowUsernameModal(true);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-100 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        >
+                          ✏️ Felhasználónév módosítása
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAvatarMenu(false);
+                            setSettingsError(null);
+                            setSettingsMessage(null);
+                            setCurrentPassword('');
+                            setNewPassword('');
+                            setShowPasswordModal(true);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-100 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        >
+                          🔒 Jelszó módosítása
                         </button>
                         {avatarImage && (
                           <button
@@ -5640,6 +5723,81 @@ export const ChatPage: React.FC = () => {
         )}
       </main>
     </div>
+
+    {/* Username change modal */}
+    {showUsernameModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { setShowUsernameModal(false); setSettingsError(null); setSettingsMessage(null); }}>
+        <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-white mb-4">Felhasználónév módosítása</h3>
+          {settingsError && <div className="mb-3 p-3 rounded-lg bg-red-900/40 text-red-200 text-sm">{settingsError}</div>}
+          {settingsMessage && <div className="mb-3 p-3 rounded-lg bg-green-900/30 text-green-200 text-sm">{settingsMessage}</div>}
+          <label className="block text-sm text-gray-300 mb-2">Új felhasználónév</label>
+          <input
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value)}
+            className="w-full mb-4 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            placeholder="Új felhasználónév"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={handleUsernameSave}
+              disabled={usernameMutation.isLoading}
+              className="flex-1 bg-gradient-to-r from-cyan-600 to-teal-600 text-white py-2 rounded-lg hover:from-cyan-700 hover:to-teal-700 transition disabled:opacity-50"
+            >
+              {usernameMutation.isLoading ? 'Mentés...' : 'Mentés'}
+            </button>
+            <button
+              onClick={() => { setShowUsernameModal(false); setSettingsError(null); setSettingsMessage(null); }}
+              className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600 transition"
+            >
+              Mégse
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Password change modal */}
+    {showPasswordModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { setShowPasswordModal(false); setSettingsError(null); setSettingsMessage(null); }}>
+        <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-white mb-4">Jelszó módosítása</h3>
+          {settingsError && <div className="mb-3 p-3 rounded-lg bg-red-900/40 text-red-200 text-sm">{settingsError}</div>}
+          {settingsMessage && <div className="mb-3 p-3 rounded-lg bg-green-900/30 text-green-200 text-sm">{settingsMessage}</div>}
+          <label className="block text-sm text-gray-300 mb-2">Jelenlegi jelszó</label>
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="w-full mb-3 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            placeholder="••••••••"
+          />
+          <label className="block text-sm text-gray-300 mb-2">Új jelszó</label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full mb-4 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            placeholder="Legalább 8 karakter"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={handlePasswordSave}
+              disabled={passwordMutation.isLoading}
+              className="flex-1 bg-gradient-to-r from-cyan-600 to-teal-600 text-white py-2 rounded-lg hover:from-cyan-700 hover:to-teal-700 transition disabled:opacity-50"
+            >
+              {passwordMutation.isLoading ? 'Mentés...' : 'Mentés'}
+            </button>
+            <button
+              onClick={() => { setShowPasswordModal(false); setSettingsError(null); setSettingsMessage(null); }}
+              className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600 transition"
+            >
+              Mégse
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* User Context Menu */}
     {userContextMenu && (
