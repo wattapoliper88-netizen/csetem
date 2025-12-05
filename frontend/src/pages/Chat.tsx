@@ -2915,7 +2915,10 @@ export const ChatPage: React.FC = () => {
       className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors ${
         activeConversationId === conv.id ? 'bg-gray-800 border-l-4 border-cyan-500' : ''
       }`}
-      onClick={() => setActiveConversationId(conv.id)}
+      onClick={() => {
+        setActiveConversationId(conv.id);
+        if (isMobile) setShowSidebar(false);
+      }}
     >
       <div className="flex items-center gap-3">
         {conv.user.avatarImage ? (
