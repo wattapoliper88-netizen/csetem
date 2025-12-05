@@ -5764,7 +5764,8 @@ export const ChatPage: React.FC = () => {
           <h3 className="text-xl font-bold text-white mb-4">Jelszó módosítása</h3>
           {settingsError && <div className="mb-3 p-3 rounded-lg bg-red-900/40 text-red-200 text-sm">{settingsError}</div>}
           {settingsMessage && <div className="mb-3 p-3 rounded-lg bg-green-900/30 text-green-200 text-sm">{settingsMessage}</div>}
-          <label className="block text-sm text-gray-300 mb-2">Jelenlegi jelszó</label>
+          <label className="block text-sm text-gray-300 mb-1">Jelenlegi jelszó</label>
+          <p className="text-xs text-gray-500 mb-2">Ha most kaptál ideiglenes jelszót emailben, azt írd be ide.</p>
           <input
             type="password"
             value={currentPassword}

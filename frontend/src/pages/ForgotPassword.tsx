@@ -10,7 +10,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
   const mutation = useMutation((email: string) => forgotPassword(email), {
     onSuccess: () => {
-      setMessage('Az új jelszót elküldtük az email címedre!');
+      setMessage('Az új jelszót elküldtük az email címedre! Lépj be vele, majd cseréld le a profil menüben.');
       setError('');
     },
     onError: (err: any) => {
