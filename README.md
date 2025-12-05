@@ -1,6 +1,6 @@
 # Biztonságos Chat Alkalmazás (Admin–User 1:1)
 
-Full-stack real-time chat app, ahol a felhasználók regisztrálnak email + username + verification kóddal, majd 1:1-ben tudnak beszélgetni az adminnal WebSocket-en keresztül.
+Full-stack real-time RiChat app, ahol a felhasználók regisztrálnak email + username + verification kóddal, majd 1:1-ben tudnak beszélgetni az adminnal WebSocket-en keresztül.
 
 ## Tech Stack
 
