@@ -153,6 +153,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
         
         if (recipient && recipient.email && sender) {
+           // Check cooldown (5 minutes)
+           const now = new Date();
+           const lastSent = recipient.lastNotificationSentAt;
+           if (lastSent && (now.getTime() - lastSent.getTime() < 5 * 60 * 1000)) {
+             this.logger.log(`Skipping email to ${recipient.email}: cooldown active (last sent: ${lastSent})`);
+             return;
+           }
+
            this.logger.log(`Sending offline email to ${recipient.email} from ${sender.username}`);
            // Truncate content for privacy/brevity
            const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
@@ -165,6 +173,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
            }
            
            await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl, conversationId);
+
+           // Update lastNotificationSentAt
+           await this.prisma.user.update({
+             where: { id: recipientId },
+             data: { lastNotificationSentAt: now }
+           });
         } else {
            this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!recipient?.email}, Sender found: ${!!sender}`);
         }

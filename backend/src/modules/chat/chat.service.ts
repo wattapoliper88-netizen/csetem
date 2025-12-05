@@ -127,6 +127,13 @@ export class ChatService {
       }
     });
 
+    // Reset notification timer for the user reading the messages
+    // This ensures that if they go offline immediately, they will receive a notification for the next message
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastNotificationSentAt: null }
+    });
+
     // Avoid returning full avatar blobs with each message to prevent high memory usage.
     return this.prisma.message.findMany({
       where: { 

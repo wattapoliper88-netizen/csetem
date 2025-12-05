@@ -16,6 +16,7 @@ model User {
   verified     Boolean  @default(false)
   isAdmin      Boolean  @default(false)
   lastSeen     DateTime @updatedAt
+  lastNotificationSentAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
