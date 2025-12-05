@@ -3724,342 +3724,345 @@ export const ChatPage: React.FC = () => {
             {/* Last message panel - below header */}
             {otherPersonLastMessage && (
               <div className="sticky top-0 md:top-14 z-30 bg-gray-900/30 border-b border-gray-700/50 relative backdrop-blur-md flex-shrink-0">
-                {!isLastMessagePanelCollapsed ? (
-                  <div className="px-2 md:px-4 py-1.5 md:py-2 flex flex-col items-center justify-center gap-1 md:gap-2">
-                    {/* Partner info */}
-                    <div className="flex items-center gap-2 md:gap-3">
-                      {otherPersonLastMessage.sender?.avatarImage ? (
-                        <Avatar
-                          avatar={otherPersonLastMessage.sender.avatarImage}
-                          size={'w-8 h-8 md:w-10 md:h-10'}
-                          className={`shadow-lg ring-2 ${
-                            otherPersonLastMessage.sender.lastSeen && 
-                            new Date().getTime() - new Date(otherPersonLastMessage.sender.lastSeen).getTime() < 60 * 1000
-                              ? 'ring-green-500 avatar-online'
-                              : 'ring-gray-500'
-                          }`}
-                          onClick={(e, url) => {
-                            e.stopPropagation();
-                            const openUrl = url || (otherPersonLastMessage.overallLastMessage?.lastMessage?.fileUrl ? getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl) : undefined);
-                            if (openUrl) window.open(openUrl, '_blank');
-                          }}
-                        />
-                      ) : (
-                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs md:text-sm font-bold shadow-lg">
-                          {getInitials(otherPersonLastMessage.sender?.username || 'User')}
-                        </div>
-                      )}
-                      <span className="text-sm md:text-lg font-bold bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-300 bg-clip-text text-transparent animate-gradient-x truncate max-w-[150px] md:max-w-none">
-                        {otherPersonLastMessage.sender?.username || 'User'}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setIsLastMessagePanelCollapsed(true)}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
-                      title="Összecsukás"
-                    >
-                      <span>{visibleDate && otherPersonLastMessage.overallLastMessage ? `${visibleDate} utolsó üzenete:` : 'Utolsó üzenet:'}</span>
-                      <span>▲</span>
-                    </button>
-                    <div className="flex justify-center items-center w-full px-2 gap-2 md:gap-4">
-                      {/* Show overall last message on the left if we're viewing a specific date */}
-                      {visibleDate && otherPersonLastMessage.overallLastMessage && (
-                        <div className="flex-1 flex flex-col items-center gap-1 p-2 border border-green-500/30 rounded-lg bg-green-900/10 animate-fade-in-left">
-                          <span className="text-xs text-green-400 font-semibold">Legfrissebb üzenet</span>
-                          {otherPersonLastMessage.overallLastMessage.lastMessage?.fileUrl ? (
-                            <div className="w-full max-w-xs">
-                              {otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('audio/') ? (
-                                <CustomAudioPlayer 
-                                  src={getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl)}
-                                  type={otherPersonLastMessage.overallLastMessage.lastMessage.fileType}
-                                  thumbnail={otherPersonLastMessage.overallLastMessage.lastMessage.audioThumbnail}
-                                  messageId={otherPersonLastMessage.overallLastMessage.lastMessage.id}
-                                  conversationId={activeConversationId || undefined}
-                                  otherUserPlaying={audioPositions[otherPersonLastMessage.overallLastMessage.lastMessage.id] || null}
-                                  isCollapsedFirstAudio={false}
-                                  showMobileControls={showMobileControls}
-                                  setShowMobileControls={setShowMobileControls}
-                                  registerMobileActions={registerMobileAudioActions}
-                                  fileName={otherPersonLastMessage.overallLastMessage.lastMessage.content || otherPersonLastMessage.overallLastMessage.lastMessage.fileName}
-                                />
-                              ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('image/') ? (
-                                <ResolvableMedia
-                                  fileUrl={otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl}
-                                  fileType={otherPersonLastMessage.overallLastMessage.lastMessage.fileType}
-                                  alt={otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Kép'}
-                                  className="max-w-full max-h-32 rounded-lg shadow-lg cursor-pointer border border-purple-500/30"
-                                  onClick={(url) => url && window.open(url, '_blank')}
-                                />
-                              ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('video/') ? (
-                                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
-                                  <div className="w-12 h-12 rounded bg-gray-900 flex items-center justify-center border border-red-500/30">
-                                    <span className="text-2xl">🎬</span>
-                                  </div>
-                                  <div className="flex flex-col items-start">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-red-400 text-sm">📹</span>
-                                      <span className="text-red-300 text-xs font-medium truncate max-w-[150px]">
-                                        {'Video'}
-                                      </span>
+                <div className="px-2 md:px-4 py-1.5 md:py-2 flex flex-col items-center justify-center gap-1 md:gap-2">
+                  {/* Partner info - ALWAYS VISIBLE */}
+                  <div className="flex items-center gap-2 md:gap-3">
+                    {otherPersonLastMessage.sender?.avatarImage ? (
+                      <Avatar
+                        avatar={otherPersonLastMessage.sender.avatarImage}
+                        size={'w-8 h-8 md:w-10 md:h-10'}
+                        className={`shadow-lg ring-2 ${
+                          otherPersonLastMessage.sender.lastSeen && 
+                          new Date().getTime() - new Date(otherPersonLastMessage.sender.lastSeen).getTime() < 60 * 1000
+                            ? 'ring-green-500 avatar-online'
+                            : 'ring-gray-500'
+                        }`}
+                        onClick={(e, url) => {
+                          e.stopPropagation();
+                          const openUrl = url || (otherPersonLastMessage.overallLastMessage?.lastMessage?.fileUrl ? getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl) : undefined);
+                          if (openUrl) window.open(openUrl, '_blank');
+                        }}
+                      />
+                    ) : (
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs md:text-sm font-bold shadow-lg">
+                        {getInitials(otherPersonLastMessage.sender?.username || 'User')}
+                      </div>
+                    )}
+                    <span className="text-sm md:text-lg font-bold bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-300 bg-clip-text text-transparent animate-gradient-x truncate max-w-[150px] md:max-w-none">
+                      {otherPersonLastMessage.sender?.username || 'User'}
+                    </span>
+                  </div>
+
+                  {!isLastMessagePanelCollapsed ? (
+                    <>
+                      <button
+                        onClick={() => setIsLastMessagePanelCollapsed(true)}
+                        className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+                        title="Összecsukás"
+                      >
+                        <span>{visibleDate && otherPersonLastMessage.overallLastMessage ? `${visibleDate} utolsó üzenete:` : 'Utolsó üzenet:'}</span>
+                        <span>▲</span>
+                      </button>
+                      <div className="flex justify-center items-center w-full px-2 gap-2 md:gap-4">
+                        {/* Show overall last message on the left if we're viewing a specific date */}
+                        {visibleDate && otherPersonLastMessage.overallLastMessage && (
+                          <div className="flex-1 flex flex-col items-center gap-1 p-2 border border-green-500/30 rounded-lg bg-green-900/10 animate-fade-in-left">
+                            <span className="text-xs text-green-400 font-semibold">Legfrissebb üzenet</span>
+                            {otherPersonLastMessage.overallLastMessage.lastMessage?.fileUrl ? (
+                              <div className="w-full max-w-xs">
+                                {otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('audio/') ? (
+                                  <CustomAudioPlayer 
+                                    src={getFullUrl(otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl)}
+                                    type={otherPersonLastMessage.overallLastMessage.lastMessage.fileType}
+                                    thumbnail={otherPersonLastMessage.overallLastMessage.lastMessage.audioThumbnail}
+                                    messageId={otherPersonLastMessage.overallLastMessage.lastMessage.id}
+                                    conversationId={activeConversationId || undefined}
+                                    otherUserPlaying={audioPositions[otherPersonLastMessage.overallLastMessage.lastMessage.id] || null}
+                                    isCollapsedFirstAudio={false}
+                                    showMobileControls={showMobileControls}
+                                    setShowMobileControls={setShowMobileControls}
+                                    registerMobileActions={registerMobileAudioActions}
+                                    fileName={otherPersonLastMessage.overallLastMessage.lastMessage.content || otherPersonLastMessage.overallLastMessage.lastMessage.fileName}
+                                  />
+                                ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('image/') ? (
+                                  <ResolvableMedia
+                                    fileUrl={otherPersonLastMessage.overallLastMessage.lastMessage.fileUrl}
+                                    fileType={otherPersonLastMessage.overallLastMessage.lastMessage.fileType}
+                                    alt={otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Kép'}
+                                    className="max-w-full max-h-32 rounded-lg shadow-lg cursor-pointer border border-purple-500/30"
+                                    onClick={(url) => url && window.open(url, '_blank')}
+                                  />
+                                ) : otherPersonLastMessage.overallLastMessage.lastMessage.fileType?.startsWith('video/') ? (
+                                  <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
+                                    <div className="w-12 h-12 rounded bg-gray-900 flex items-center justify-center border border-red-500/30">
+                                      <span className="text-2xl">🎬</span>
                                     </div>
-                                    <span className="text-gray-400 text-xs">Video fájl</span>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
-                                  <div className="w-10 h-10 rounded bg-gray-900 flex items-center justify-center border border-gray-500/30">
-                                    <span className="text-xl">📄</span>
-                                  </div>
-                                  <div className="flex flex-col items-start">
-                                    <span className="text-gray-300 text-xs font-medium truncate max-w-[150px]">
-                                      {otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Fájl'}
-                                    </span>
-                                    <span className="text-gray-400 text-xs">{otherPersonLastMessage.overallLastMessage.lastMessage.fileType || 'Fájl'}</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ) : (() => {
-                            /* Check for links in content */
-                            const urlRegex = /(https?:\/\/[^\s]+)/g;
-                            const links = otherPersonLastMessage.overallLastMessage.content?.match(urlRegex);
-                            const firstLink = links?.[0];
-                            
-                            if (firstLink) {
-                              const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
-                              const key = canonicalizeLink(firstLink);
-                              const preview = linkPreviews[key];
-                              const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
-                              const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
-                              
-                              if (preview && !preview.error) {
-                                return isYouTube && (preview && !preview.error || ytId) ? (
-                                  /* YouTube link card */
-                                  <a
-                                    href={firstLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-xs hover:border-red-500/60 hover:scale-105 transition-all"
-                                  >
-                                    {thumbUrl && (
-                                      <img 
-                                        src={thumbUrl}
-                                        alt="YouTube thumbnail"
-                                        className="w-12 h-9 rounded object-cover border border-red-500/30"
-                                      />
-                                    )}
-                                    <div className="flex flex-col items-start flex-1 min-w-0">
-                                      <div className="flex items-start gap-1">
-                                        <span className="text-red-400 text-xs flex-shrink-0">🎥</span>
-                                        <span className="text-red-300 text-xs font-medium break-words line-clamp-2">
-                                          {(preview && (preview.title || preview.siteName)) || 'YouTube videó'}
+                                    <div className="flex flex-col items-start">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-red-400 text-sm">📹</span>
+                                        <span className="text-red-300 text-xs font-medium truncate max-w-[150px]">
+                                          {'Video'}
                                         </span>
                                       </div>
-                                      <span className="text-gray-400 text-xs">YouTube videó</span>
+                                      <span className="text-gray-400 text-xs">Video fájl</span>
                                     </div>
-                                  </a>
+                                  </div>
                                 ) : (
-                                  /* Regular link card */
-                                  <a
-                                    href={firstLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-xs hover:border-cyan-500/60 hover:scale-105 transition-all"
-                                  >
-                                    {preview.image && (
-                                      <img 
-                                        src={preview.image}
-                                        alt="Link preview"
-                                        className="w-10 h-10 rounded object-cover border border-cyan-500/30"
-                                      />
-                                    )}
-                                    <div className="flex flex-col items-start flex-1 min-w-0">
-                                      <span className="text-cyan-300 text-xs font-medium break-words line-clamp-2">
+                                  <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
+                                    <div className="w-10 h-10 rounded bg-gray-900 flex items-center justify-center border border-gray-500/30">
+                                      <span className="text-xl">📄</span>
+                                    </div>
+                                    <div className="flex flex-col items-start">
+                                      <span className="text-gray-300 text-xs font-medium truncate max-w-[150px]">
+                                        {otherPersonLastMessage.overallLastMessage.lastMessage.fileName || 'Fájl'}
+                                      </span>
+                                      <span className="text-gray-400 text-xs">{otherPersonLastMessage.overallLastMessage.lastMessage.fileType || 'Fájl'}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (() => {
+                              /* Check for links in content */
+                              const urlRegex = /(https?:\/\/[^\s]+)/g;
+                              const links = otherPersonLastMessage.overallLastMessage.content?.match(urlRegex);
+                              const firstLink = links?.[0];
+                              
+                              if (firstLink) {
+                                const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
+                                const key = canonicalizeLink(firstLink);
+                                const preview = linkPreviews[key];
+                                const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
+                                const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
+                                
+                                if (preview && !preview.error) {
+                                  return isYouTube && (preview && !preview.error || ytId) ? (
+                                    /* YouTube link card */
+                                    <a
+                                      href={firstLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-xs hover:border-red-500/60 hover:scale-105 transition-all"
+                                    >
+                                      {thumbUrl && (
+                                        <img 
+                                          src={thumbUrl}
+                                          alt="YouTube thumbnail"
+                                          className="w-12 h-9 rounded object-cover border border-red-500/30"
+                                        />
+                                      )}
+                                      <div className="flex flex-col items-start flex-1 min-w-0">
+                                        <div className="flex items-start gap-1">
+                                          <span className="text-red-400 text-xs flex-shrink-0">🎥</span>
+                                          <span className="text-red-300 text-xs font-medium break-words line-clamp-2">
+                                            {(preview && (preview.title || preview.siteName)) || 'YouTube videó'}
+                                          </span>
+                                        </div>
+                                        <span className="text-gray-400 text-xs">YouTube videó</span>
+                                      </div>
+                                    </a>
+                                  ) : (
+                                    /* Regular link card */
+                                    <a
+                                      href={firstLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-xs hover:border-cyan-500/60 hover:scale-105 transition-all"
+                                    >
+                                      {preview.image && (
+                                        <img 
+                                          src={preview.image}
+                                          alt="Link preview"
+                                          className="w-10 h-10 rounded object-cover border border-cyan-500/30"
+                                        />
+                                      )}
+                                      <div className="flex flex-col items-start flex-1 min-w-0">
+                                        <span className="text-cyan-300 text-xs font-medium break-words line-clamp-2">
+                                          {preview.title || preview.siteName || 'Link'}
+                                        </span>
+                                        <span className="text-gray-400 text-xs break-words line-clamp-1">{preview.siteName || new URL(firstLink).hostname}</span>
+                                      </div>
+                                    </a>
+                                  );
+                                }
+                              }
+                              
+                              /* Regular text message */
+                              return (
+                                <p className="text-xs text-gray-300 line-clamp-2 text-center">{otherPersonLastMessage.overallLastMessage.content}</p>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        {/* Current visible date message */}
+                        <div key={otherPersonLastMessage.lastMessage?.id} className={`flex flex-col items-center ${visibleDate && otherPersonLastMessage.overallLastMessage ? 'flex-1' : 'w-full'} animate-fade-in-up`}>
+                        {otherPersonLastMessage.lastMessage?.fileUrl ? (
+                          /* Media cards */
+                          otherPersonLastMessage.lastMessage.fileType?.startsWith('audio/') ? (
+                            /* Audio player card - full player like on chat wall */
+                            <div className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
+                              <CustomAudioPlayer 
+                                src={getFullUrl(otherPersonLastMessage.lastMessage.fileUrl)}
+                                type={otherPersonLastMessage.lastMessage.fileType}
+                                thumbnail={otherPersonLastMessage.lastMessage.audioThumbnail}
+                                messageId={otherPersonLastMessage.lastMessage.id}
+                                conversationId={activeConversationId || undefined}
+                                otherUserPlaying={audioPositions[otherPersonLastMessage.lastMessage.id] || null}
+                                isCollapsedFirstAudio={false}
+                                showMobileControls={showMobileControls}
+                                setShowMobileControls={setShowMobileControls}
+                                registerMobileActions={registerMobileAudioActions}
+                                fileName={otherPersonLastMessage.lastMessage.content || otherPersonLastMessage.lastMessage.fileName}
+                                onDisconnectOtherUser={() => {
+                                  ignoredAudioPositionsRef.current.add(otherPersonLastMessage.lastMessage.id);
+                                  setAudioPositions(prev => {
+                                    const newPositions = { ...prev };
+                                    delete newPositions[otherPersonLastMessage.lastMessage.id];
+                                    return newPositions;
+                                  });
+                                  const otherUser = audioPositions[otherPersonLastMessage.lastMessage.id];
+                                  if (otherUser) {
+                                    const timerKey = `${otherPersonLastMessage.lastMessage.id}-${otherUser.userId}`;
+                                    if (audioPositionTimers.current[timerKey]) {
+                                      clearTimeout(audioPositionTimers.current[timerKey]);
+                                      delete audioPositionTimers.current[timerKey];
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('image/') ? (
+                            /* Image - just the image */
+                            <ResolvableMedia
+                              fileUrl={otherPersonLastMessage.lastMessage.fileUrl}
+                              fileType={otherPersonLastMessage.lastMessage.fileType}
+                              alt={otherPersonLastMessage.lastMessage.fileName || 'Kép'}
+                              className="max-w-full max-h-64 rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-opacity border border-purple-500/30"
+                              onClick={(url) => url && window.open(url, '_blank')}
+                            />
+                          ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('video/') ? (
+                            /* Video card */
+                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm mx-auto">
+                              <div className="w-12 h-12 rounded bg-gray-900 flex items-center justify-center border border-red-500/30">
+                                <span className="text-2xl">🎬</span>
+                              </div>
+                              <div className="flex flex-col items-start">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-red-400 text-sm">📹</span>
+                                  <span className="text-red-300 text-xs md:text-sm font-medium">Video</span>
+                                </div>
+                                <span className="text-gray-400 text-xs">Video fájl</span>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Other file card */
+                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm mx-auto">
+                              <div className="w-10 h-10 rounded bg-gray-900 flex items-center justify-center border border-gray-500/30">
+                                <span className="text-xl">📄</span>
+                              </div>
+                              <div className="flex flex-col items-start">
+                                <span className="text-gray-300 text-xs md:text-sm font-medium truncate max-w-[200px]">
+                                  {otherPersonLastMessage.lastMessage.fileName || 'Fájl'}
+                                </span>
+                                <span className="text-gray-400 text-xs">{otherPersonLastMessage.lastMessage.fileType || 'Fájl'}</span>
+                              </div>
+                            </div>
+                          )
+                        ) : (() => {
+                          /* Check for links in content */
+                          const urlRegex = /(https?:\/\/[^\s]+)/g;
+                          const links = otherPersonLastMessage.content?.match(urlRegex);
+                          const firstLink = links?.[0];
+                          
+                          if (firstLink) {
+                            const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
+                            const key = canonicalizeLink(firstLink);
+                            const preview = linkPreviews[key];
+                            const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
+                            const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
+                            
+                            if (preview && !preview.error) {
+                              return isYouTube && (preview && !preview.error || ytId) ? (
+                                /* YouTube link card - clickable */
+                                <a
+                                  href={firstLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-md hover:border-red-500/60 hover:scale-105 transition-all mx-auto"
+                                >
+                                  {thumbUrl && (
+                                    <img 
+                                      src={thumbUrl}
+                                      alt="YouTube thumbnail"
+                                      className="w-16 h-12 rounded object-cover border border-red-500/30"
+                                    />
+                                  )}
+                                  <div className="flex flex-col items-start flex-1 min-w-0">
+                                    <div className="flex items-start gap-1.5">
+                                      <span className="text-red-400 text-sm flex-shrink-0">🎥</span>
+                                      <span className="text-red-300 text-xs md:text-sm font-medium break-words line-clamp-2">
+                                        {(preview && preview.title) || 'YouTube videó'}
+                                      </span>
+                                    </div>
+                                    <span className="text-gray-400 text-xs">YouTube</span>
+                                  </div>
+                                </a>
+                              ) : (
+                                /* Regular link card - clickable */
+                                <a
+                                  href={firstLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-md hover:border-cyan-500/60 hover:scale-105 transition-all mx-auto"
+                                >
+                                  {preview.image && (
+                                    <img 
+                                      src={preview.image}
+                                      alt="Link preview"
+                                      className="w-12 h-12 rounded object-cover border border-cyan-500/30"
+                                    />
+                                  )}
+                                  <div className="flex flex-col items-start flex-1 min-w-0">
+                                    <div className="flex items-start gap-1.5">
+                                      <span className="text-cyan-400 text-sm flex-shrink-0">🔗</span>
+                                      <span className="text-cyan-300 text-xs md:text-sm font-medium break-words line-clamp-2">
                                         {preview.title || preview.siteName || 'Link'}
                                       </span>
-                                      <span className="text-gray-400 text-xs break-words line-clamp-1">{preview.siteName || new URL(firstLink).hostname}</span>
                                     </div>
-                                  </a>
-                                );
-                              }
+                                    <span className="text-gray-400 text-xs break-words line-clamp-1">{preview.siteName || new URL(firstLink).hostname}</span>
+                                  </div>
+                                </a>
+                              );
                             }
-                            
-                            /* Regular text message */
-                            return (
-                              <p className="text-xs text-gray-300 line-clamp-2 text-center">{otherPersonLastMessage.overallLastMessage.content}</p>
-                            );
-                          })()}
-                        </div>
-                      )}
-                      {/* Current visible date message */}
-                      <div key={otherPersonLastMessage.lastMessage?.id} className={`flex flex-col items-center ${visibleDate && otherPersonLastMessage.overallLastMessage ? 'flex-1' : 'w-full'} animate-fade-in-up`}>
-                      {otherPersonLastMessage.lastMessage?.fileUrl ? (
-                        /* Media cards */
-                        otherPersonLastMessage.lastMessage.fileType?.startsWith('audio/') ? (
-                          /* Audio player card - full player like on chat wall */
-                          <div className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
-                            <CustomAudioPlayer 
-                              src={getFullUrl(otherPersonLastMessage.lastMessage.fileUrl)}
-                              type={otherPersonLastMessage.lastMessage.fileType}
-                              thumbnail={otherPersonLastMessage.lastMessage.audioThumbnail}
-                              messageId={otherPersonLastMessage.lastMessage.id}
-                              conversationId={activeConversationId || undefined}
-                              otherUserPlaying={audioPositions[otherPersonLastMessage.lastMessage.id] || null}
-                              isCollapsedFirstAudio={false}
-                              showMobileControls={showMobileControls}
-                              setShowMobileControls={setShowMobileControls}
-                              registerMobileActions={registerMobileAudioActions}
-                              fileName={otherPersonLastMessage.lastMessage.content || otherPersonLastMessage.lastMessage.fileName}
-                              onDisconnectOtherUser={() => {
-                                ignoredAudioPositionsRef.current.add(otherPersonLastMessage.lastMessage.id);
-                                setAudioPositions(prev => {
-                                  const newPositions = { ...prev };
-                                  delete newPositions[otherPersonLastMessage.lastMessage.id];
-                                  return newPositions;
-                                });
-                                const otherUser = audioPositions[otherPersonLastMessage.lastMessage.id];
-                                if (otherUser) {
-                                  const timerKey = `${otherPersonLastMessage.lastMessage.id}-${otherUser.userId}`;
-                                  if (audioPositionTimers.current[timerKey]) {
-                                    clearTimeout(audioPositionTimers.current[timerKey]);
-                                    delete audioPositionTimers.current[timerKey];
-                                  }
-                                }
-                              }}
-                            />
-                          </div>
-                        ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('image/') ? (
-                          /* Image - just the image */
-                          <ResolvableMedia
-                            fileUrl={otherPersonLastMessage.lastMessage.fileUrl}
-                            fileType={otherPersonLastMessage.lastMessage.fileType}
-                            alt={otherPersonLastMessage.lastMessage.fileName || 'Kép'}
-                            className="max-w-full max-h-64 rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-opacity border border-purple-500/30"
-                            onClick={(url) => url && window.open(url, '_blank')}
-                          />
-                        ) : otherPersonLastMessage.lastMessage.fileType?.startsWith('video/') ? (
-                          /* Video card */
-                          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm mx-auto">
-                            <div className="w-12 h-12 rounded bg-gray-900 flex items-center justify-center border border-red-500/30">
-                              <span className="text-2xl">🎬</span>
-                            </div>
-                            <div className="flex flex-col items-start">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-red-400 text-sm">📹</span>
-                                <span className="text-red-300 text-xs md:text-sm font-medium">Video</span>
-                              </div>
-                              <span className="text-gray-400 text-xs">Video fájl</span>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Other file card */
-                          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm mx-auto">
-                            <div className="w-10 h-10 rounded bg-gray-900 flex items-center justify-center border border-gray-500/30">
-                              <span className="text-xl">📄</span>
-                            </div>
-                            <div className="flex flex-col items-start">
-                              <span className="text-gray-300 text-xs md:text-sm font-medium truncate max-w-[200px]">
-                                {otherPersonLastMessage.lastMessage.fileName || 'Fájl'}
-                              </span>
-                              <span className="text-gray-400 text-xs">{otherPersonLastMessage.lastMessage.fileType || 'Fájl'}</span>
-                            </div>
-                          </div>
-                        )
-                      ) : (() => {
-                        /* Check for links in content */
-                        const urlRegex = /(https?:\/\/[^\s]+)/g;
-                        const links = otherPersonLastMessage.content?.match(urlRegex);
-                        const firstLink = links?.[0];
-                        
-                        if (firstLink) {
-                          const isYouTube = firstLink.includes('youtube.com') || firstLink.includes('youtu.be') || firstLink.includes('shorts/');
-                          const key = canonicalizeLink(firstLink);
-                          const preview = linkPreviews[key];
-                          const ytId = isYouTube ? extractYouTubeVideoId(firstLink) : null;
-                          const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (preview && !preview.error ? preview.image : undefined);
-                          
-                          if (preview && !preview.error) {
-                            return isYouTube && (preview && !preview.error || ytId) ? (
-                              /* YouTube link card - clickable */
-                              <a
-                                href={firstLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-md hover:border-red-500/60 hover:scale-105 transition-all mx-auto"
-                              >
-                                {thumbUrl && (
-                                  <img 
-                                    src={thumbUrl}
-                                    alt="YouTube thumbnail"
-                                    className="w-16 h-12 rounded object-cover border border-red-500/30"
-                                  />
-                                )}
-                                <div className="flex flex-col items-start flex-1 min-w-0">
-                                  <div className="flex items-start gap-1.5">
-                                    <span className="text-red-400 text-sm flex-shrink-0">🎥</span>
-                                    <span className="text-red-300 text-xs md:text-sm font-medium break-words line-clamp-2">
-                                      {(preview && preview.title) || 'YouTube videó'}
-                                    </span>
-                                  </div>
-                                  <span className="text-gray-400 text-xs">YouTube</span>
-                                </div>
-                              </a>
-                            ) : (
-                              /* Regular link card - clickable */
-                              <a
-                                href={firstLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm max-w-md hover:border-cyan-500/60 hover:scale-105 transition-all mx-auto"
-                              >
-                                {preview.image && (
-                                  <img 
-                                    src={preview.image}
-                                    alt="Link preview"
-                                    className="w-12 h-12 rounded object-cover border border-cyan-500/30"
-                                  />
-                                )}
-                                <div className="flex flex-col items-start flex-1 min-w-0">
-                                  <div className="flex items-start gap-1.5">
-                                    <span className="text-cyan-400 text-sm flex-shrink-0">🔗</span>
-                                    <span className="text-cyan-300 text-xs md:text-sm font-medium break-words line-clamp-2">
-                                      {preview.title || preview.siteName || 'Link'}
-                                    </span>
-                                  </div>
-                                  <span className="text-gray-400 text-xs break-words line-clamp-1">{preview.siteName || new URL(firstLink).hostname}</span>
-                                </div>
-                              </a>
-                            );
                           }
-                        }
-                        
-                        /* Regular text message */
-                        return (
-                          <p className="text-cyan-300 text-xs md:text-sm font-light whitespace-pre-wrap break-words leading-tight line-clamp-2 md:line-clamp-none text-center typewriter-text">
-                            "{otherPersonLastMessage.content?.split('').map((char: string, charIndex: number) => (
-                              <span 
-                                key={charIndex} 
-                                style={{ animationDelay: `${charIndex * 0.05}s` }}
-                              >
-                                {char}
-                              </span>
-                            ))}"
-                          </p>
-                        );
-                      })()}
+                          
+                          /* Regular text message */
+                          return (
+                            <p className="text-cyan-300 text-xs md:text-sm font-light whitespace-pre-wrap break-words leading-tight line-clamp-2 md:line-clamp-none text-center typewriter-text">
+                              "{otherPersonLastMessage.content?.split('').map((char: string, charIndex: number) => (
+                                <span 
+                                  key={charIndex} 
+                                  style={{ animationDelay: `${charIndex * 0.05}s` }}
+                                >
+                                  {char}
+                                </span>
+                              ))}"
+                            </p>
+                          );
+                        })()}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setIsLastMessagePanelCollapsed(false)}
-                    className="w-full py-1 text-gray-500 hover:text-gray-300 transition-colors text-xs flex items-center justify-center gap-1"
-                    title="Kibontás"
-                  >
-                    <span>Utolsó üzenet:</span>
-                    <span>▼</span>
-                  </button>
-                )}
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setIsLastMessagePanelCollapsed(false)}
+                      className="w-full py-1 text-gray-500 hover:text-gray-300 transition-colors text-xs flex items-center justify-center gap-1"
+                      title="Kibontás"
+                    >
+                      <span>Utolsó üzenet:</span>
+                      <span>▼</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
