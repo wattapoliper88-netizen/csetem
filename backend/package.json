@@ -21,6 +21,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@google-cloud/storage": "^6.10.0",
     "@nestjs/common": "^11.1.9",
