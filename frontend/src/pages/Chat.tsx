@@ -2081,6 +2081,10 @@ export const ChatPage: React.FC = () => {
     };
 
     const handleTyping = (payload: any) => {
+      // Only show typing if it's for the current conversation
+      if (payload.conversationId && payload.conversationId !== activeConversationId) {
+        return;
+      }
       setIsTyping(payload.isTyping);
       setTypingTextLength(payload.textLength || 0);
     };

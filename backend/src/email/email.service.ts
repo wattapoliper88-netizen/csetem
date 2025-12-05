@@ -64,7 +64,7 @@ export class EmailService {
     }
   }
 
-  async sendOfflineNotification(toEmail: string, senderName: string, messageContent: string, senderAvatarUrl?: string | null): Promise<void> {
+  async sendOfflineNotification(toEmail: string, senderName: string, messageContent: string, senderAvatarUrl?: string | null, conversationId?: string): Promise<void> {
     this.logger.log(`Attempting to send offline notification to ${toEmail}`);
     
     if (!this.resend) {
@@ -82,6 +82,8 @@ export class EmailService {
       const avatarUrl = senderAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=0891b2&color=fff`;
       
       const avatarHtml = `<img src="${avatarUrl}" alt="${senderName}" style="width: 60px; height: 60px; border-radius: 50%; display: block; margin: 0 auto 10px auto;">`;
+
+      const link = conversationId ? `https://richat.de/chat?conversationId=${conversationId}` : 'https://richat.de';
 
       const data = await this.resend.emails.send({
         from: `Richi <${fromEmail}>`,
@@ -106,7 +108,7 @@ export class EmailService {
             </div>
             
             <p>Jelentkezz be a válaszadáshoz!</p>
-            <a href="https://richat.de" style="display: inline-block; background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">Megnyitás</a>
+            <a href="${link}" style="display: inline-block; background-color: #0891b2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">Megnyitás</a>
           </div>
         `,
       });

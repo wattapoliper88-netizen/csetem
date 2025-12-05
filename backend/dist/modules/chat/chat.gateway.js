@@ -108,7 +108,7 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                         if (resolved)
                             avatarUrl = resolved;
                     }
-                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl);
+                    await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl, conversationId);
                 }
                 else {
                     this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!(recipient === null || recipient === void 0 ? void 0 : recipient.email)}, Sender found: ${!!sender}`);
@@ -133,6 +133,7 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
             return;
         client.to(data.conversationId).emit('typing', {
             userId: user.userId,
+            conversationId: data.conversationId,
             isTyping: data.isTyping,
             textLength: data.textLength || 0
         });

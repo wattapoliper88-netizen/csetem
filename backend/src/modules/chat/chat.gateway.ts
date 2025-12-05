@@ -164,7 +164,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
              if (resolved) avatarUrl = resolved;
            }
            
-           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl);
+           await this.emailService.sendOfflineNotification(recipient.email, sender.username, preview, avatarUrl, conversationId);
         } else {
            this.logger.warn(`Cannot send email: Recipient found: ${!!recipient}, Has email: ${!!recipient?.email}, Sender found: ${!!sender}`);
         }
@@ -192,6 +192,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!user) return;
     client.to(data.conversationId).emit('typing', { 
       userId: user.userId, 
+      conversationId: data.conversationId,
       isTyping: data.isTyping,
       textLength: data.textLength || 0
     });
