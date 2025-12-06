@@ -130,7 +130,6 @@
 /* Particle background */
 .particles-bg {
   position: relative;
-  isolation: isolate;
 }
 
 .particles-bg::before {
@@ -141,10 +140,9 @@
   right: 0;
   bottom: 0;
   background-image: 
-    linear-gradient(135deg, rgba(7, 16, 26, 0.95) 0%, rgba(9, 32, 45, 0.92) 45%, rgba(10, 24, 34, 0.95) 100%),
-    radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 48%),
-    radial-gradient(circle at 80% 20%, rgba(20, 184, 166, 0.08) 0%, transparent 48%),
-    radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%);
+    radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(20, 184, 166, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
   animation: particle-float 20s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
