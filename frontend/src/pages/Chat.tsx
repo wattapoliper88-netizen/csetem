@@ -3262,7 +3262,7 @@ export const ChatPage: React.FC = () => {
       {/* Naptár esemény modal */}
       {showCalendarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur" onClick={() => setShowCalendarModal(false)}>
-          <div className="w-[90vw] max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="w-[90vw] max-w-lg max-h-[88vh] overflow-y-auto bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-cyan-200">📆 Esemény a naptárba</h3>
               <button onClick={() => setShowCalendarModal(false)} className="text-gray-400 hover:text-white">✕</button>
