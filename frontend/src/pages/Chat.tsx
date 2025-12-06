@@ -1244,16 +1244,7 @@ export const ChatPage: React.FC = () => {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [selectedCalendarEvents, setSelectedCalendarEvents] = useState<any[]>([]);
-  const [calendarEvents, setCalendarEvents] = useState<any[]>(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('calendarEvents_v1') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch {}
-    return [];
-  });
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [calendarForm, setCalendarForm] = useState({
     title: '',
     description: '',
@@ -1273,12 +1264,38 @@ export const ChatPage: React.FC = () => {
     scope: 'self' as 'self' | 'both'
   });
 
-  // Persist calendar events so they survive user switches / remounts
+  const calendarStorageKey = useMemo(() => (
+    activeConversationId ? `calendarEvents_v1_${activeConversationId}` : null
+  ), [activeConversationId]);
+
+  // Load conversation-specific calendar events when switching conversations
   useEffect(() => {
+    setSelectedCalendarDate(null);
+    setSelectedCalendarEvents([]);
+    if (!calendarStorageKey) {
+      setCalendarEvents([]);
+      return;
+    }
     try {
-      localStorage.setItem('calendarEvents_v1', JSON.stringify(calendarEvents));
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(calendarStorageKey) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setCalendarEvents(Array.isArray(parsed) ? parsed : []);
+      } else {
+        setCalendarEvents([]);
+      }
+    } catch {
+      setCalendarEvents([]);
+    }
+  }, [calendarStorageKey]);
+
+  // Persist calendar events per conversation
+  useEffect(() => {
+    if (!calendarStorageKey) return;
+    try {
+      localStorage.setItem(calendarStorageKey, JSON.stringify(calendarEvents));
     } catch {}
-  }, [calendarEvents]);
+  }, [calendarEvents, calendarStorageKey]);
 
   // Check if a recurring event occurs on a given date string (YYYY-MM-DD)
   const occursOnDate = useCallback((ev: any, dateStr: string) => {
@@ -3434,6 +3451,7 @@ export const ChatPage: React.FC = () => {
                     recurringType: calendarForm.recurringType,
                     recurringInterval: calendarForm.recurringInterval,
                     scope: calendarForm.scope,
+                    conversationId: activeConversationId,
                     messageIds,
                     messagePreview
                   };
