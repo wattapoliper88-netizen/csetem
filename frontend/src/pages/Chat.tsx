@@ -278,6 +278,13 @@ interface AudioPlayerProps {
   registerMobileActions?: (messageId: string, actions?: { shareLiveEnabled: boolean; toggleShareLive: () => void; sendPosition: () => void } | null) => void;
 }
 
+// Helper to normalize MIME types
+const normalizeMime = (mime: string | undefined): string => {
+  if (!mime) return 'audio/mpeg';
+  if (mime === 'audio/mp3') return 'audio/mpeg';
+  return mime;
+};
+
 // Reconstructed AudioPlayer component (was accidentally unwrapped during patch)
 const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   messageId,
@@ -296,20 +303,7 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
 }) => {
   // Provide a local handler to toggle mobile controls if parent passed the setter
   const toggleMobileControls = () => setShowMobileControls && setShowMobileControls(!showMobileControls);
-              <div>
-                <h2 className="font-bold text-xl">💬 Beszélgetések</h2>
-                <p className="text-sm opacity-90">Admin panel</p>
-              </div>
-              {isMobile && (
-                <button
-                  onClick={() => setShowSidebar(false)}
-                  className="p-1 hover:bg-white/20 rounded transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
+  
   const effectiveMime = normalizeMime(type);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -326,6 +320,18 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
   const toggleShareLive = useCallback(() => setShareLivePosition((prev) => !prev), []);
   const livePositionIntervalRef = useRef<number | null>(null);
   const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+  
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
+  
+  // Determine effective source based on playlist or single src
+  const effectiveSrc = useMemo(() => {
+    if (playlist && playlist.length > 0) {
+      return getFullUrl(playlist[currentPlaylistIndex].url);
+    }
+    return getFullUrl(src);
+  }, [playlist, currentPlaylistIndex, src]);
+
   // NOTE: The audio player previously had a separate local showMobileControls state which
   // shadowed the top-level one; we removed it to ensure the global mobile toggle controls
   // audio visibility consistently.
