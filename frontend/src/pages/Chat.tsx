@@ -1235,6 +1235,11 @@ export const ChatPage: React.FC = () => {
   const [showCustomFilter, setShowCustomFilter] = useState(false);
   const [customFilterDomain, setCustomFilterDomain] = useState<string>('');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showCalendarMenu, setShowCalendarMenu] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
   // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
@@ -5351,107 +5356,176 @@ export const ChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
-              {/* Filter dropdown */}
-              <div className="relative mb-1.5 sm:mb-2 md:mb-3">
-                <button
-                  onClick={() => setShowFilterMenu(!showFilterMenu)}
-                  className="px-3 py-1.5 bg-gray-800/70 hover:bg-gray-700 text-gray-100 rounded-lg border border-gray-700 shadow-lg flex items-center gap-2 text-sm"
-                >
-                  <span>🧹 Szűrők</span>
-                  {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
-                    <span className="text-xs bg-cyan-600 text-white px-2 py-0.5 rounded-full">
-                      Aktív
-                    </span>
-                  )}
-                </button>
-
-                {showFilterMenu && (
-                  <div className="absolute z-30 bottom-full mb-2 w-64 sm:w-72 bg-gray-900/60 backdrop-blur-xl border border-gray-700/60 rounded-lg shadow-2xl p-3 space-y-2 max-h-80 overflow-y-auto">
-                    <button
-                      onClick={() => {
-                        setFilterLinks(!filterLinks);
-                        setFilterYouTube(false);
-                        setFilterTikTok(false);
-                        setCustomFilterDomain('');
-                        setShowFilterMenu(false);
-                      }}
-                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterLinks ? 'bg-cyan-600 text-white shadow-cyan-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
-                      }`}
-                    >
-                      <span className="text-cyan-200">🔗 {filterLinks ? 'Csak linkek' : 'Linkek szűrése'}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setFilterVideos(!filterVideos);
-                        setFilterLinks(false);
-                        setFilterYouTube(false);
-                        setFilterTikTok(false);
-                        setCustomFilterDomain('');
-                        setShowFilterMenu(false);
-                      }}
-                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterVideos ? 'bg-yellow-600 text-white shadow-yellow-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
-                      }`}
-                    >
-                      <span className="text-cyan-200">🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setFilterYouTube(!filterYouTube);
-                        setFilterLinks(false);
-                        setFilterTikTok(false);
-                        setCustomFilterDomain('');
-                        setShowFilterMenu(false);
-                      }}
-                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterYouTube ? 'bg-red-600 text-white shadow-red-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
-                      }`}
-                    >
-                      <span className="text-cyan-200">🎥 {filterYouTube ? 'Csak YouTube' : 'YouTube szűrése'}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setFilterTikTok(!filterTikTok);
-                        setFilterLinks(false);
-                        setFilterYouTube(false);
-                        setCustomFilterDomain('');
-                        setShowFilterMenu(false);
-                      }}
-                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterTikTok ? 'bg-pink-600 text-white shadow-pink-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
-                      }`}
-                    >
-                      <span className="text-cyan-200">🎵 {filterTikTok ? 'Csak TikTok' : 'TikTok szűrése'}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowCustomFilter(!showCustomFilter);
-                        setShowFilterMenu(false);
-                      }}
-                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        showCustomFilter || customFilterDomain ? 'bg-purple-600 text-white shadow-purple-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
-                      }`}
-                    >
-                      <span className="text-cyan-200">🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}</span>
-                    </button>
+              {/* Filter + Calendar dropdowns */}
+              <div className="flex items-center gap-2 mb-1.5 sm:mb-2 md:mb-3">
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowFilterMenu(!showFilterMenu);
+                      setShowCalendarMenu(false);
+                    }}
+                    className="px-3 py-1.5 bg-gray-800/70 hover:bg-gray-700 text-gray-100 rounded-lg border border-gray-700 shadow-lg flex items-center gap-2 text-sm"
+                  >
+                    <span>🧹 Szűrők</span>
                     {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
+                      <span className="text-xs bg-cyan-600 text-white px-2 py-0.5 rounded-full">
+                        Aktív
+                      </span>
+                    )}
+                  </button>
+
+                  {showFilterMenu && (
+                    <div className="absolute z-30 bottom-full mb-2 w-64 sm:w-72 bg-gray-900/60 backdrop-blur-xl border border-gray-700/60 rounded-lg shadow-2xl p-3 space-y-2 max-h-80 overflow-y-auto">
                       <button
                         onClick={() => {
-                          setFilterLinks(false);
-                          setFilterVideos(false);
+                          setFilterLinks(!filterLinks);
                           setFilterYouTube(false);
                           setFilterTikTok(false);
                           setCustomFilterDomain('');
                           setShowFilterMenu(false);
                         }}
-                        className="w-full px-3 py-2 rounded-lg text-sm text-left bg-gray-700 text-cyan-200 hover:bg-gray-600 transition"
+                        className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                          filterLinks ? 'bg-cyan-600 text-white shadow-cyan-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
+                        }`}
                       >
-                        <span className="text-cyan-200">✕ Szűrő törlése</span>
+                        <span className="text-cyan-200">🔗 {filterLinks ? 'Csak linkek' : 'Linkek szűrése'}</span>
                       </button>
-                    )}
-                  </div>
-                )}
+                      <button
+                        onClick={() => {
+                          setFilterVideos(!filterVideos);
+                          setFilterLinks(false);
+                          setFilterYouTube(false);
+                          setFilterTikTok(false);
+                          setCustomFilterDomain('');
+                          setShowFilterMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                          filterVideos ? 'bg-yellow-600 text-white shadow-yellow-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="text-cyan-200">🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setFilterYouTube(!filterYouTube);
+                          setFilterLinks(false);
+                          setFilterTikTok(false);
+                          setCustomFilterDomain('');
+                          setShowFilterMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                          filterYouTube ? 'bg-red-600 text-white shadow-red-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="text-cyan-200">🎥 {filterYouTube ? 'Csak YouTube' : 'YouTube szűrése'}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setFilterTikTok(!filterTikTok);
+                          setFilterLinks(false);
+                          setFilterYouTube(false);
+                          setCustomFilterDomain('');
+                          setShowFilterMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                          filterTikTok ? 'bg-pink-600 text-white shadow-pink-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="text-cyan-200">🎵 {filterTikTok ? 'Csak TikTok' : 'TikTok szűrése'}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowCustomFilter(!showCustomFilter);
+                          setShowFilterMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                          showCustomFilter || customFilterDomain ? 'bg-purple-600 text-white shadow-purple-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="text-cyan-200">🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}</span>
+                      </button>
+                      {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
+                        <button
+                          onClick={() => {
+                            setFilterLinks(false);
+                            setFilterVideos(false);
+                            setFilterYouTube(false);
+                            setFilterTikTok(false);
+                            setCustomFilterDomain('');
+                            setShowFilterMenu(false);
+                          }}
+                          className="w-full px-3 py-2 rounded-lg text-sm text-left bg-gray-700 text-cyan-200 hover:bg-gray-600 transition"
+                        >
+                          <span className="text-cyan-200">✕ Szűrő törlése</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowCalendarMenu(!showCalendarMenu);
+                      setShowFilterMenu(false);
+                    }}
+                    className="px-3 py-1.5 bg-gray-800/70 hover:bg-gray-700 text-cyan-200 rounded-lg border border-gray-700 shadow-lg flex items-center gap-2 text-sm"
+                  >
+                    <span>📅 Naptár</span>
+                  </button>
+
+                  {showCalendarMenu && (() => {
+                    const monthName = calendarMonth.toLocaleString('hu-HU', { month: 'long', year: 'numeric' });
+                    const start = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+                    const startDay = start.getDay();
+                    const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+                    const leadingBlanks = startDay === 0 ? 6 : startDay - 1; // hétfő az első
+                    const cells = [] as Array<number | null>;
+                    for (let i = 0; i < leadingBlanks; i++) cells.push(null);
+                    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                    while (cells.length % 7 !== 0) cells.push(null);
+
+                    const goMonth = (delta: number) => {
+                      setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+                    };
+
+                    return (
+                      <div className="absolute z-30 bottom-full mb-2 w-72 bg-gray-900/70 backdrop-blur-xl border border-gray-700/60 rounded-lg shadow-2xl p-3 space-y-3">
+                        <div className="flex items-center justify-between text-cyan-200 text-sm font-semibold">
+                          <button
+                            onClick={() => goMonth(-1)}
+                            className="px-2 py-1 rounded hover:bg-gray-800 border border-gray-700 text-cyan-200"
+                          >
+                            ◀
+                          </button>
+                          <span className="capitalize">{monthName}</span>
+                          <button
+                            onClick={() => goMonth(1)}
+                            className="px-2 py-1 rounded hover:bg-gray-800 border border-gray-700 text-cyan-200"
+                          >
+                            ▶
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1 text-center text-xs text-cyan-200">
+                          {['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'].map(d => (
+                            <div key={d} className="font-semibold opacity-80">{d}</div>
+                          ))}
+                          {cells.map((day, idx) => (
+                            <div
+                              key={idx}
+                              className={`h-8 flex items-center justify-center rounded ${
+                                day ? 'bg-gray-800/70 hover:bg-cyan-700/60 text-cyan-100 cursor-pointer' : 'opacity-30'
+                              }`}
+                            >
+                              {day || ''}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
               
               {/* Custom filter editor */}
