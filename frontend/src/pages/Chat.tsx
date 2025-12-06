@@ -1194,6 +1194,7 @@ export const ChatPage: React.FC = () => {
   const [input, setInput] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({});
@@ -1999,6 +2000,19 @@ export const ChatPage: React.FC = () => {
   const sidebarTree = useMemo(() => {
     if (!convData || !Array.isArray(convData)) return { rootFolders: [], rootConversations: [], userConvMap: new Map() };
     
+    // Filter conversations if search query exists
+    if (adminSearchQuery.trim()) {
+      const query = adminSearchQuery.toLowerCase();
+      const filteredConvData = convData.filter((c: any) => 
+        (c.user.username && c.user.username.toLowerCase().includes(query)) || 
+        (c.user.email && c.user.email.toLowerCase().includes(query))
+      );
+      
+      const userConvMap = new Map();
+      filteredConvData.forEach((c: any) => userConvMap.set(c.user.id, c));
+      return { rootFolders: [], rootConversations: filteredConvData, userConvMap };
+    }
+
     const userConvMap = new Map();
     convData.forEach((c: any) => userConvMap.set(c.user.id, c));
 
@@ -2050,7 +2064,7 @@ export const ChatPage: React.FC = () => {
     const rootConversations = convData.filter((c: any) => !usersInFolders.has(c.user.id));
 
     return { rootFolders: roots, rootConversations, userConvMap };
-  }, [convData, adminFolders]);
+  }, [convData, adminFolders, adminSearchQuery]);
       
   // For non-admin users, set their single conversation ID
   useEffect(() => {
@@ -3511,7 +3525,7 @@ export const ChatPage: React.FC = () => {
           border-r border-gray-800 bg-gray-950/50 backdrop-blur-md shadow-2xl flex flex-col
         `}>
           <div className="p-4 border-b border-gray-800 bg-gradient-to-r from-cyan-600 to-teal-600 text-white">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-bold text-xl">💬 Beszélgetések</h2>
                 <p className="text-sm opacity-90">Admin panel</p>
@@ -3522,6 +3536,28 @@ export const ChatPage: React.FC = () => {
                   className="p-1 hover:bg-white/20 rounded transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Keresés név vagy email alapján..."
+                value={adminSearchQuery}
+                onChange={(e) => setAdminSearchQuery(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+              <svg className="w-4 h-4 text-white/60 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {adminSearchQuery && (
+                <button
+                  onClick={() => setAdminSearchQuery('')}
+                  className="absolute right-2 top-2 p-0.5 hover:bg-white/20 rounded-full text-white/80"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
