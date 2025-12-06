@@ -3616,7 +3616,7 @@ export const ChatPage: React.FC = () => {
                             setNewUsername(me?.username || '');
                             setShowUsernameModal(true);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-100 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                          className="w-full px-4 py-2 text-left text-sm text-gray-100 hover:bg-gray-700 transition-colors flex items-center gap-2 whitespace-nowrap"
                         >
                           ✏️ Felhasználónév módosítása
                         </button>
