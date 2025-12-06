@@ -3231,7 +3231,7 @@ export const ChatPage: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row bg-gray-900 overflow-hidden" style={{ height: 'calc(var(--app-vh) * 100)' }}>
+      <div className="flex flex-col md:flex-row bg-gray-900/50 backdrop-blur-md overflow-hidden" style={{ height: 'calc(var(--app-vh) * 100)' }}>
       {me?.isAdmin && (
         <>
           {/* Mobile hamburger button */}
@@ -3814,7 +3814,7 @@ export const ChatPage: React.FC = () => {
 
             {/* Last message panel - below header */}
             {otherPersonLastMessage && (
-              <div className="sticky top-0 md:top-14 z-30 bg-gray-900/30 border-b border-gray-700/50 relative backdrop-blur-md flex-shrink-0">
+              <div className="sticky top-0 md:top-14 z-30 bg-gray-900/50 border-b border-gray-700/50 relative backdrop-blur-md flex-shrink-0">
                 <div className="px-2 md:px-4 py-1.5 md:py-2 flex flex-col items-center justify-center gap-1 md:gap-2">
                   {/* Partner info - ALWAYS VISIBLE */}
                   <div className="flex items-center gap-2 md:gap-3">
@@ -4321,7 +4321,7 @@ export const ChatPage: React.FC = () => {
             )}
 
             <div 
-              className="flex-1 overflow-y-auto p-2 md:p-4 pb-4 md:pb-6 bg-gray-850 particles-bg relative"
+              className="flex-1 overflow-y-auto p-2 md:p-4 pb-4 md:pb-6 bg-gray-850/50 backdrop-blur-md particles-bg relative"
               ref={messagesContainerRef}
               onScroll={handleScroll}
             >
