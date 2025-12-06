@@ -5376,10 +5376,10 @@ export const ChatPage: React.FC = () => {
                         setShowFilterMenu(false);
                       }}
                       className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterLinks ? 'bg-cyan-600 text-white shadow-cyan-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                        filterLinks ? 'bg-cyan-600 text-white shadow-cyan-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
                       }`}
                     >
-                      🔗 {filterLinks ? 'Csak linkek' : 'Linkek szűrése'}
+                      <span className="text-cyan-200">🔗 {filterLinks ? 'Csak linkek' : 'Linkek szűrése'}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -5391,10 +5391,10 @@ export const ChatPage: React.FC = () => {
                         setShowFilterMenu(false);
                       }}
                       className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterVideos ? 'bg-yellow-600 text-white shadow-yellow-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                        filterVideos ? 'bg-yellow-600 text-white shadow-yellow-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
                       }`}
                     >
-                      🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}
+                      <span className="text-cyan-200">🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -5405,10 +5405,10 @@ export const ChatPage: React.FC = () => {
                         setShowFilterMenu(false);
                       }}
                       className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterYouTube ? 'bg-red-600 text-white shadow-red-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                        filterYouTube ? 'bg-red-600 text-white shadow-red-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
                       }`}
                     >
-                      🎥 {filterYouTube ? 'Csak YouTube' : 'YouTube szűrése'}
+                      <span className="text-cyan-200">🎥 {filterYouTube ? 'Csak YouTube' : 'YouTube szűrése'}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -5419,10 +5419,10 @@ export const ChatPage: React.FC = () => {
                         setShowFilterMenu(false);
                       }}
                       className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        filterTikTok ? 'bg-pink-600 text-white shadow-pink-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                        filterTikTok ? 'bg-pink-600 text-white shadow-pink-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
                       }`}
                     >
-                      🎵 {filterTikTok ? 'Csak TikTok' : 'TikTok szűrése'}
+                      <span className="text-cyan-200">🎵 {filterTikTok ? 'Csak TikTok' : 'TikTok szűrése'}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -5430,10 +5430,10 @@ export const ChatPage: React.FC = () => {
                         setShowFilterMenu(false);
                       }}
                       className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
-                        showCustomFilter || customFilterDomain ? 'bg-purple-600 text-white shadow-purple-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                        showCustomFilter || customFilterDomain ? 'bg-purple-600 text-white shadow-purple-500/30 shadow-lg' : 'bg-gray-800 text-cyan-200 hover:bg-gray-700'
                       }`}
                     >
-                      🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}
+                      <span className="text-cyan-200">🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}</span>
                     </button>
                     {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
                       <button
@@ -5445,9 +5445,9 @@ export const ChatPage: React.FC = () => {
                           setCustomFilterDomain('');
                           setShowFilterMenu(false);
                         }}
-                        className="w-full px-3 py-2 rounded-lg text-sm text-left bg-gray-700 text-white hover:bg-gray-600 transition"
+                        className="w-full px-3 py-2 rounded-lg text-sm text-left bg-gray-700 text-cyan-200 hover:bg-gray-600 transition"
                       >
-                        ✕ Szűrő törlése
+                        <span className="text-cyan-200">✕ Szűrő törlése</span>
                       </button>
                     )}
                   </div>
