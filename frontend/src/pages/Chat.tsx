@@ -4444,7 +4444,7 @@ export const ChatPage: React.FC = () => {
               !f.closedBy.includes(me?.id || '') && 
               (f.visibility === 'shared' || f.createdBy === me?.id)
             ).length > 0 && (
-              <div className="bg-gray-900/30 border-b border-gray-700/50 backdrop-blur-md px-2 md:px-4 py-1.5 md:py-2 flex-shrink-0">
+              <div className="bg-gray-900 border-b border-gray-700 px-2 md:px-4 py-1.5 md:py-2 flex-shrink-0 relative z-20">
                 <div className="flex flex-col gap-2">
                   {/* First row: inactive folders */}
                   <div className="flex gap-1 md:gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-1">
@@ -4457,9 +4457,9 @@ export const ChatPage: React.FC = () => {
                       .map(folder => (
                       <div
                         key={folder.id}
-                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg backdrop-blur-md cursor-pointer transition-all duration-300 ease-in-out flex-shrink-0 ${
+                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer transition-all duration-300 ease-in-out flex-shrink-0 ${
                           activeFolderId
-                            ? 'bg-gradient-to-r from-cyan-600/20 to-teal-600/20 border-cyan-500/20 opacity-40'
+                            ? 'bg-gradient-to-r from-cyan-600/20 to-teal-600/20 border-cyan-500/20 opacity-60 hover:opacity-100'
                             : 'bg-gradient-to-r from-cyan-600/40 to-teal-600/40 border-cyan-500/30 hover:from-cyan-600/60 hover:to-teal-600/60 hover:scale-105'
                         }`}
                         onClick={() => {
