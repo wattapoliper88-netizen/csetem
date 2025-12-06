@@ -1260,7 +1260,8 @@ export const ChatPage: React.FC = () => {
     })(),
     recurring: false,
     recurringType: 'daily',
-    recurringInterval: 1
+    recurringInterval: 1,
+    scope: 'self' as 'self' | 'both'
   });
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
@@ -3316,6 +3317,23 @@ export const ChatPage: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-1">
+                      <label className="text-xs text-gray-400">Láthatóság</label>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-200">
+                        <button
+                          onClick={() => setCalendarForm({ ...calendarForm, scope: 'self' })}
+                          className={`px-2 py-2 rounded-lg border ${calendarForm.scope === 'self' ? 'border-cyan-400 bg-cyan-600/30 text-white' : 'border-gray-700 bg-gray-800 hover:bg-gray-700'}`}
+                        >
+                          Csak nálam
+                        </button>
+                        <button
+                          onClick={() => setCalendarForm({ ...calendarForm, scope: 'both' })}
+                          className={`px-2 py-2 rounded-lg border ${calendarForm.scope === 'both' ? 'border-sky-400 bg-sky-600/30 text-white' : 'border-gray-700 bg-gray-800 hover:bg-gray-700'}`}
+                        >
+                          Mindkettőnknél
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
                       <label className="text-xs text-gray-400">Dátum</label>
                       <input
                         type="date"
@@ -3411,6 +3429,7 @@ export const ChatPage: React.FC = () => {
                           recurring: calendarForm.recurring,
                           recurringType: calendarForm.recurringType,
                           recurringInterval: calendarForm.recurringInterval,
+                          scope: calendarForm.scope,
                           messageIds,
                           messagePreview
                         };
@@ -5422,7 +5441,8 @@ export const ChatPage: React.FC = () => {
                           title: snippet.slice(0, 60),
                           description: '',
                           date: now.toISOString().slice(0, 10),
-                          time: `${hh}:${mm}`
+                          time: `${hh}:${mm}`,
+                          scope: 'self'
                         }));
                         setShowCalendarModal(true);
                         setShowCalendarMenu(false);
@@ -5718,6 +5738,7 @@ export const ChatPage: React.FC = () => {
                                 : null;
                               const dayEvents = dateStr ? calendarEvents.filter(ev => ev.date === dateStr) : [];
                               const hasEvents = dayEvents.length > 0;
+                              const hasShared = dayEvents.some(ev => ev.scope === 'both');
                               return (
                                 <div
                                   key={idx}
@@ -5729,14 +5750,23 @@ export const ChatPage: React.FC = () => {
                                   className={`h-10 flex items-center justify-center rounded transition-all ${
                                     day
                                       ? hasEvents
-                                        ? 'bg-cyan-700/50 text-white ring-2 ring-cyan-400/60 cursor-pointer hover:scale-105'
+                                        ? hasShared
+                                          ? 'bg-sky-700/50 text-white ring-2 ring-sky-400/60 cursor-pointer hover:scale-105'
+                                          : 'bg-cyan-700/50 text-white ring-2 ring-cyan-400/60 cursor-pointer hover:scale-105'
                                         : 'bg-gray-800/70 hover:bg-cyan-700/60 text-cyan-100 cursor-pointer hover:scale-105'
                                       : 'opacity-30'
                                   }`}
                                 >
                                   <div className="flex flex-col items-center gap-0.5 leading-none">
                                     <span>{day || ''}</span>
-                                    {hasEvents && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300"></span>}
+                                    <div className="flex gap-0.5">
+                                      {dayEvents.slice(0, 3).map(ev => (
+                                        <span
+                                          key={ev.id}
+                                          className={`w-1.5 h-1.5 rounded-full ${ev.scope === 'both' ? 'bg-sky-400' : 'bg-cyan-300'}`}
+                                        ></span>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -5763,7 +5793,10 @@ export const ChatPage: React.FC = () => {
                                 selectedCalendarEvents.map(ev => (
                                   <div key={ev.id} className="p-2 rounded-lg bg-gray-900/70 border border-gray-700/60 text-xs text-gray-100 space-y-1">
                                     <div className="flex items-center justify-between">
-                                      <span className="font-semibold text-cyan-200">{ev.title || 'Esemény'}</span>
+                                      <span className="font-semibold text-cyan-200 flex items-center gap-2">
+                                        <span className={`w-2.5 h-2.5 rounded-full ${ev.scope === 'both' ? 'bg-sky-400' : 'bg-cyan-300'}`}></span>
+                                        {ev.title || 'Esemény'}
+                                      </span>
                                       <span className="text-[11px] text-gray-400">{ev.time}</span>
                                     </div>
                                     {ev.description && <p className="text-[11px] text-gray-300 whitespace-pre-wrap">{ev.description}</p>}
@@ -5773,6 +5806,7 @@ export const ChatPage: React.FC = () => {
                                     {ev.recurring && (
                                       <p className="text-[11px] text-cyan-300">Ismétlődés: {ev.recurringInterval} / {ev.recurringType}</p>
                                     )}
+                                    <p className="text-[11px] text-gray-400">Láthatóság: {ev.scope === 'both' ? 'Mindkettőnknél' : 'Csak nálam'}</p>
                                   </div>
                                 ))
                               )}
