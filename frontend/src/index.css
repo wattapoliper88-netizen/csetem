@@ -136,7 +136,7 @@
 
 .particles-bg::before {
   content: '';
-  position: absolute;
+  position: fixed;
   inset: 0;
   background-image: 
     linear-gradient(135deg, rgba(5, 8, 12, 0.98) 0%, rgba(9, 14, 20, 0.96) 40%, rgba(6, 10, 16, 0.98) 100%),
