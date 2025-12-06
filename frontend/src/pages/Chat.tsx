@@ -3259,6 +3259,158 @@ export const ChatPage: React.FC = () => {
         </div>
       )}
 
+      {/* Naptár esemény modal */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur" onClick={() => setShowCalendarModal(false)}>
+          <div className="w-[90vw] max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-cyan-200">📆 Esemény a naptárba</h3>
+              <button onClick={() => setShowCalendarModal(false)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Cím</label>
+                <input
+                  value={calendarForm.title}
+                  onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  placeholder="Esemény címe"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Láthatóság</label>
+                <div className="grid grid-cols-2 gap-2 text-sm text-gray-200">
+                  <button
+                    onClick={() => setCalendarForm({ ...calendarForm, scope: 'self' })}
+                    className={`px-2 py-2 rounded-lg border ${calendarForm.scope === 'self' ? 'border-cyan-400 bg-cyan-600/30 text-white' : 'border-gray-700 bg-gray-800 hover:bg-gray-700'}`}
+                  >
+                    Csak nálam
+                  </button>
+                  <button
+                    onClick={() => setCalendarForm({ ...calendarForm, scope: 'both' })}
+                    className={`px-2 py-2 rounded-lg border ${calendarForm.scope === 'both' ? 'border-sky-400 bg-sky-600/30 text-white' : 'border-gray-700 bg-gray-800 hover:bg-gray-700'}`}
+                  >
+                    Mindkettőnknél
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Dátum</label>
+                <input
+                  type="date"
+                  value={calendarForm.date}
+                  onChange={(e) => setCalendarForm({ ...calendarForm, date: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Idő</label>
+                <input
+                  type="time"
+                  value={calendarForm.time}
+                  onChange={(e) => setCalendarForm({ ...calendarForm, time: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Ismétlődés</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={calendarForm.recurring}
+                    onChange={(e) => setCalendarForm({ ...calendarForm, recurring: e.target.checked })}
+                  />
+                  <span className="text-sm text-gray-200">Visszatérő esemény</span>
+                </div>
+              </div>
+            </div>
+            {calendarForm.recurring && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400">Típus</label>
+                  <select
+                    value={calendarForm.recurringType}
+                    onChange={(e) => setCalendarForm({ ...calendarForm, recurringType: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  >
+                    <option value="daily">Napi</option>
+                    <option value="weekly">Heti</option>
+                    <option value="monthly">Havi</option>
+                    <option value="yearly">Éves</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400">Gyakoriság</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={calendarForm.recurringInterval}
+                    onChange={(e) => setCalendarForm({ ...calendarForm, recurringInterval: Number(e.target.value) || 1 })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    placeholder="pl. 2 (2 naponta)"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400">Leírás</label>
+              <textarea
+                value={calendarForm.description}
+                onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                rows={3}
+                placeholder="Részletek, linkek..."
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>Csatolt üzenetek: {selectedMessages.size}</span>
+              <span>{calendarForm.date} {calendarForm.time}</span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                className="px-3 py-2 text-sm bg-gray-800 text-gray-200 rounded-lg border border-gray-700 hover:bg-gray-700"
+              >
+                Mégse
+              </button>
+              <button
+                onClick={() => {
+                  const messageIds = Array.from(selectedMessages);
+                  const firstSelectedId = messageIds[0];
+                  const message = messages.find(m => m.id === firstSelectedId);
+                  const messagePreview = message?.content || message?.fileName || 'Üzenet';
+                  const newEvent = {
+                    id: `ev-${Date.now()}`,
+                    title: calendarForm.title || 'Esemény',
+                    description: calendarForm.description,
+                    date: calendarForm.date,
+                    time: calendarForm.time || '00:00',
+                    recurring: calendarForm.recurring,
+                    recurringType: calendarForm.recurringType,
+                    recurringInterval: calendarForm.recurringInterval,
+                    scope: calendarForm.scope,
+                    messageIds,
+                    messagePreview
+                  };
+                  setCalendarEvents(prev => [...prev, newEvent]);
+                  setSelectedCalendarDate(calendarForm.date);
+                  setSelectedCalendarEvents(prev => {
+                    if (calendarForm.date === selectedCalendarDate) return [...prev, newEvent];
+                    return [newEvent];
+                  });
+                  setShowCalendarModal(false);
+                }}
+                className="px-3 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg shadow-lg"
+              >
+                Mentés
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row bg-gray-900 overflow-hidden" style={{ height: 'calc(var(--app-vh) * 100)' }}>
       {me?.isAdmin && (
         <>
@@ -3297,158 +3449,6 @@ export const ChatPage: React.FC = () => {
               <div>
                 <h2 className="font-bold text-xl">💬 Beszélgetések</h2>
                 <p className="text-sm opacity-90">Admin panel</p>
-          
-            {/* Naptár esemény modal */}
-            {showCalendarModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur" onClick={() => setShowCalendarModal(false)}>
-                <div className="w-[90vw] max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-cyan-200">📆 Esemény a naptárba</h3>
-                    <button onClick={() => setShowCalendarModal(false)} className="text-gray-400 hover:text-white">✕</button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Cím</label>
-                      <input
-                        value={calendarForm.title}
-                        onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                        placeholder="Esemény címe"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Láthatóság</label>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-200">
-                        <button
-                          onClick={() => setCalendarForm({ ...calendarForm, scope: 'self' })}
-                          className={`px-2 py-2 rounded-lg border ${calendarForm.scope === 'self' ? 'border-cyan-400 bg-cyan-600/30 text-white' : 'border-gray-700 bg-gray-800 hover:bg-gray-700'}`}
-                        >
-                          Csak nálam
-                        </button>
-                        <button
-                          onClick={() => setCalendarForm({ ...calendarForm, scope: 'both' })}
-                          className={`px-2 py-2 rounded-lg border ${calendarForm.scope === 'both' ? 'border-sky-400 bg-sky-600/30 text-white' : 'border-gray-700 bg-gray-800 hover:bg-gray-700'}`}
-                        >
-                          Mindkettőnknél
-                        </button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Dátum</label>
-                      <input
-                        type="date"
-                        value={calendarForm.date}
-                        onChange={(e) => setCalendarForm({ ...calendarForm, date: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Idő</label>
-                      <input
-                        type="time"
-                        value={calendarForm.time}
-                        onChange={(e) => setCalendarForm({ ...calendarForm, time: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400">Ismétlődés</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={calendarForm.recurring}
-                          onChange={(e) => setCalendarForm({ ...calendarForm, recurring: e.target.checked })}
-                        />
-                        <span className="text-sm text-gray-200">Visszatérő esemény</span>
-                      </div>
-                    </div>
-                  </div>
-                  {calendarForm.recurring && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs text-gray-400">Típus</label>
-                        <select
-                          value={calendarForm.recurringType}
-                          onChange={(e) => setCalendarForm({ ...calendarForm, recurringType: e.target.value })}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                        >
-                          <option value="daily">Napi</option>
-                          <option value="weekly">Heti</option>
-                          <option value="monthly">Havi</option>
-                          <option value="yearly">Éves</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-gray-400">Gyakoriság</label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={calendarForm.recurringInterval}
-                          onChange={(e) => setCalendarForm({ ...calendarForm, recurringInterval: Number(e.target.value) || 1 })}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          placeholder="pl. 2 (2 naponta)"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400">Leírás</label>
-                    <textarea
-                      value={calendarForm.description}
-                      onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      rows={3}
-                      placeholder="Részletek, linkek..."
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>Csatolt üzenetek: {selectedMessages.size}</span>
-                    <span>{calendarForm.date} {calendarForm.time}</span>
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setShowCalendarModal(false)}
-                      className="px-3 py-2 text-sm bg-gray-800 text-gray-200 rounded-lg border border-gray-700 hover:bg-gray-700"
-                    >
-                      Mégse
-                    </button>
-                    <button
-                      onClick={() => {
-                        const messageIds = Array.from(selectedMessages);
-                        const firstSelectedId = messageIds[0];
-                        const message = messages.find(m => m.id === firstSelectedId);
-                        const messagePreview = message?.content || message?.fileName || 'Üzenet';
-                        const newEvent = {
-                          id: `ev-${Date.now()}`,
-                          title: calendarForm.title || 'Esemény',
-                          description: calendarForm.description,
-                          date: calendarForm.date,
-                          time: calendarForm.time || '00:00',
-                          recurring: calendarForm.recurring,
-                          recurringType: calendarForm.recurringType,
-                          recurringInterval: calendarForm.recurringInterval,
-                          scope: calendarForm.scope,
-                          messageIds,
-                          messagePreview
-                        };
-                        setCalendarEvents(prev => [...prev, newEvent]);
-                        setSelectedCalendarDate(calendarForm.date);
-                        setSelectedCalendarEvents(prev => {
-                          if (calendarForm.date === selectedCalendarDate) return [...prev, newEvent];
-                          return [newEvent];
-                        });
-                        setShowCalendarModal(false);
-                      }}
-                      className="px-3 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg shadow-lg"
-                    >
-                      Mentés
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
               </div>
               {isMobile && (
                 <button
