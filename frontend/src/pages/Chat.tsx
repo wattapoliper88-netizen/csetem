@@ -5817,35 +5817,51 @@ export const ChatPage: React.FC = () => {
                               {selectedCalendarEvents.length === 0 ? (
                                 <div className="text-gray-400 text-xs">Nincs esemény ezen a napon.</div>
                               ) : (
-                                selectedCalendarEvents.map(ev => (
-                                  <div key={ev.id} className="p-2 rounded-lg bg-gray-900/70 border border-gray-700/60 text-xs text-gray-100 space-y-1">
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-semibold text-cyan-200 flex items-center gap-2">
-                                        <span className={`w-2.5 h-2.5 rounded-full ${ev.scope === 'both' ? 'bg-sky-400' : 'bg-cyan-300'}`}></span>
-                                        {ev.title || 'Esemény'}
-                                      </span>
-                                      <span className="text-[11px] text-gray-400">{ev.time}</span>
+                                selectedCalendarEvents
+                                  .filter(ev => occursOnDate(ev, selectedCalendarDate))
+                                  .map(ev => (
+                                    <div key={ev.id} className="p-2 rounded-lg bg-gray-900/70 border border-gray-700/60 text-xs text-gray-100 space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-cyan-200 flex items-center gap-2">
+                                          <span className={`w-2.5 h-2.5 rounded-full ${ev.scope === 'both' ? 'bg-sky-400' : 'bg-cyan-300'}`}></span>
+                                          {ev.title || 'Esemény'}
+                                        </span>
+                                        <span className="text-[11px] text-gray-400">{ev.time}</span>
+                                      </div>
+                                      {ev.description && <p className="text-[11px] text-gray-300 whitespace-pre-wrap">{ev.description}</p>}
+                                      {ev.messagePreview && (
+                                        <p className="text-[11px] text-gray-400">Csatolt üzenet: "{ev.messagePreview}"</p>
+                                      )}
+                                      {ev.recurring && (
+                                        <p className="text-[11px] text-cyan-300">Ismétlődés: {ev.recurringInterval} / {ev.recurringType}</p>
+                                      )}
+                                      <p className="text-[11px] text-gray-400">Láthatóság: {ev.scope === 'both' ? 'Mindkettőnknél' : 'Csak nálam'}</p>
                                     </div>
-                                    {ev.description && <p className="text-[11px] text-gray-300 whitespace-pre-wrap">{ev.description}</p>}
-                                    {ev.messagePreview && (
-                                      <p className="text-[11px] text-gray-400">Csatolt üzenet: "{ev.messagePreview}"</p>
-                                    )}
-                                    {ev.recurring && (
-                                      <p className="text-[11px] text-cyan-300">Ismétlődés: {ev.recurringInterval} / {ev.recurringType}</p>
-                                    )}
-                                    <p className="text-[11px] text-gray-400">Láthatóság: {ev.scope === 'both' ? 'Mindkettőnknél' : 'Csak nálam'}</p>
-                                  </div>
-                                ))
+                                  ))
                               )}
                             </div>
                           )}
 
-                          <div className="flex justify-center pt-1">
+                          <div className="flex justify-center gap-2 pt-1">
                             <button
                               onClick={() => setShowCalendarMenu(false)}
                               className="px-3 py-1 text-xs text-cyan-200 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
                             >
                               Vissza
+                            </button>
+                            <button
+                              onClick={() => {
+                                const sortedAll = [...calendarEvents].sort((a, b) => {
+                                  const aDateTime = `${a.date}T${a.time || '00:00'}`;
+                                  const bDateTime = `${b.date}T${b.time || '00:00'}`;
+                                  return aDateTime.localeCompare(bDateTime);
+                                });
+                                setSelectedCalendarDate('Összes esemény');
+                                setSelectedCalendarEvents(sortedAll);
+                              }}
+                              className="px-3 py-1 text-xs text-cyan-100 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
+                            >
+                              Összes
                             </button>
                           </div>
                         </div>
