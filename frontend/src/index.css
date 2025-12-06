@@ -131,7 +131,6 @@
 .particles-bg {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
 }
 
 .particles-bg::before {
