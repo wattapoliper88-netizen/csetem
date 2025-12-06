@@ -1240,6 +1240,7 @@ export const ChatPage: React.FC = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const calendarTouchStartX = useRef<number | null>(null);
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
   // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
@@ -5489,38 +5490,62 @@ export const ChatPage: React.FC = () => {
                       setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
                     };
 
-                    return (
-                      <div className="absolute z-30 bottom-full mb-2 w-72 bg-gray-900/70 backdrop-blur-xl border border-gray-700/60 rounded-lg shadow-2xl p-3 space-y-3">
-                        <div className="flex items-center justify-between text-cyan-200 text-sm font-semibold">
-                          <button
-                            onClick={() => goMonth(-1)}
-                            className="px-2 py-1 rounded hover:bg-gray-800 border border-gray-700 text-cyan-200"
-                          >
-                            ◀
-                          </button>
-                          <span className="capitalize">{monthName}</span>
-                          <button
-                            onClick={() => goMonth(1)}
-                            className="px-2 py-1 rounded hover:bg-gray-800 border border-gray-700 text-cyan-200"
-                          >
-                            ▶
-                          </button>
-                        </div>
+                    const handleTouchStart = (e: React.TouchEvent) => {
+                      calendarTouchStartX.current = e.touches[0].clientX;
+                    };
+                    const handleTouchEnd = (e: React.TouchEvent) => {
+                      if (calendarTouchStartX.current === null) return;
+                      const delta = e.changedTouches[0].clientX - calendarTouchStartX.current;
+                      const threshold = 40;
+                      if (delta > threshold) goMonth(-1);
+                      else if (delta < -threshold) goMonth(1);
+                      calendarTouchStartX.current = null;
+                    };
 
-                        <div className="grid grid-cols-7 gap-1 text-center text-xs text-cyan-200">
-                          {['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'].map(d => (
-                            <div key={d} className="font-semibold opacity-80">{d}</div>
-                          ))}
-                          {cells.map((day, idx) => (
-                            <div
-                              key={idx}
-                              className={`h-8 flex items-center justify-center rounded ${
-                                day ? 'bg-gray-800/70 hover:bg-cyan-700/60 text-cyan-100 cursor-pointer' : 'opacity-30'
-                              }`}
+                    return (
+                      <div
+                        className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-xl"
+                        onClick={() => setShowCalendarMenu(false)}
+                      >
+                        <div
+                          className="relative w-[90vw] max-w-lg bg-gray-900/70 border border-gray-700/60 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-4 space-y-3 animate-[fadeInUp_200ms_ease-out]"
+                          onClick={(e) => e.stopPropagation()}
+                          onTouchStart={handleTouchStart}
+                          onTouchEnd={handleTouchEnd}
+                        >
+                          <div className="flex items-center justify-between text-cyan-200 text-sm font-semibold">
+                            <button
+                              onClick={() => goMonth(-1)}
+                              className="px-2 py-1 rounded hover:bg-gray-800 border border-gray-700 text-cyan-200"
                             >
-                              {day || ''}
-                            </div>
-                          ))}
+                              ◀
+                            </button>
+                            <span className="capitalize tracking-wide">{monthName}</span>
+                            <button
+                              onClick={() => goMonth(1)}
+                              className="px-2 py-1 rounded hover:bg-gray-800 border border-gray-700 text-cyan-200"
+                            >
+                              ▶
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-7 gap-1 text-center text-xs text-cyan-200">
+                            {['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'].map(d => (
+                              <div key={d} className="font-semibold opacity-80">{d}</div>
+                            ))}
+                            {cells.map((day, idx) => (
+                              <div
+                                key={idx}
+                                className={`h-10 flex items-center justify-center rounded transition-all ${
+                                  day ? 'bg-gray-800/70 hover:bg-cyan-700/60 text-cyan-100 cursor-pointer hover:scale-105' : 'opacity-30'
+                                }`}
+                              >
+                                {day || ''}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="text-center text-[11px] text-gray-400">Suhintással is lapozhatsz</div>
                         </div>
                       </div>
                     );
