@@ -5435,7 +5435,7 @@ export const ChatPage: React.FC = () => {
               )}
             </div>
 
-            <div className="sticky bottom-0 z-20 border-t border-gray-700 bg-gray-800 shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0 relative">
+            <div className="sticky bottom-0 z-20 border-t border-gray-700 bg-[#0d121a] shadow-2xl p-1.5 sm:p-2 md:p-4 flex-shrink-0 relative">
               {/* Typing indicator - fixed position above input */}
               {isTyping && (() => {
                 const otherUserMessage = messages.find((m: any) => m.sender?.id !== me?.id);
