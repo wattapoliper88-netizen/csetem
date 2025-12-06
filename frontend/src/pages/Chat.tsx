@@ -5366,7 +5366,7 @@ export const ChatPage: React.FC = () => {
                 </button>
 
                 {showFilterMenu && (
-                  <div className="absolute z-30 bottom-full mb-2 w-64 sm:w-72 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-3 space-y-2 max-h-80 overflow-y-auto">
+                  <div className="absolute z-30 bottom-full mb-2 w-64 sm:w-72 bg-gray-900/60 backdrop-blur-xl border border-gray-700/60 rounded-lg shadow-2xl p-3 space-y-2 max-h-80 overflow-y-auto">
                     <button
                       onClick={() => {
                         setFilterLinks(!filterLinks);
