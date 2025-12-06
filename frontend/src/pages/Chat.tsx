@@ -1244,7 +1244,16 @@ export const ChatPage: React.FC = () => {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [selectedCalendarEvents, setSelectedCalendarEvents] = useState<any[]>([]);
-  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('calendarEvents_v1') : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch {}
+    return [];
+  });
   const [calendarForm, setCalendarForm] = useState({
     title: '',
     description: '',
@@ -1263,6 +1272,13 @@ export const ChatPage: React.FC = () => {
     recurringInterval: 1,
     scope: 'self' as 'self' | 'both'
   });
+
+  // Persist calendar events so they survive user switches / remounts
+  useEffect(() => {
+    try {
+      localStorage.setItem('calendarEvents_v1', JSON.stringify(calendarEvents));
+    } catch {}
+  }, [calendarEvents]);
 
   // Check if a recurring event occurs on a given date string (YYYY-MM-DD)
   const occursOnDate = useCallback((ev: any, dateStr: string) => {
