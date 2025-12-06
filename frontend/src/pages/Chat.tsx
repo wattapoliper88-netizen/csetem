@@ -3546,7 +3546,7 @@ export const ChatPage: React.FC = () => {
         </aside>
         </>
       )}
-      <main className="flex-1 flex flex-col min-w-0 overflow-visible pb-0">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-visible pb-0">
         {!activeConversationId ? (
           <div className="flex-1 flex items-center justify-center bg-gray-850">
             <div className="text-center">
@@ -4561,7 +4561,7 @@ export const ChatPage: React.FC = () => {
             )}
 
             <div 
-              className="flex-1 overflow-y-auto p-2 md:p-4 pb-4 md:pb-6 bg-gray-850 particles-bg relative"
+              className="flex-1 overflow-y-auto p-2 md:p-4 pb-4 md:pb-6 bg-gray-850 particles-bg relative z-0"
               ref={messagesContainerRef}
               onScroll={handleScroll}
               style={{ userSelect: selectedMessages.size > 0 ? 'none' : 'auto' }}
