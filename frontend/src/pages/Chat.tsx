@@ -296,21 +296,20 @@ const CustomAudioPlayer: React.FC<AudioPlayerProps> = ({
 }) => {
   // Provide a local handler to toggle mobile controls if parent passed the setter
   const toggleMobileControls = () => setShowMobileControls && setShowMobileControls(!showMobileControls);
-  // Reference it to avoid unused variable errors while the feature is wired in elsewhere
-  useEffect(() => { void toggleMobileControls; }, [toggleMobileControls]);
-  // Normalize incoming MIME or extension to a browser supported MIME
-  const normalizeMime = (raw?: string): string | undefined => {
-    if (!raw) return undefined;
-    const lower = raw.toLowerCase();
-    if (lower.includes('audio/mp3') || lower.endsWith('.mp3')) return 'audio/mpeg';
-    if (lower.includes('audio/mpeg')) return 'audio/mpeg';
-    if (lower.includes('audio/x-m4a') || lower.endsWith('.m4a') || lower.endsWith('.mp4')) return 'audio/mp4';
-    if (lower.includes('audio/aac') || lower.endsWith('.aac')) return 'audio/aac';
-    return undefined; // Let browser sniff if unknown
-  };
-  const [fallbackMode, setFallbackMode] = useState(false);
-  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
-  const effectiveSrc = playlist && playlist.length > 0 ? playlist[currentPlaylistIndex].url : src;
+              <div>
+                <h2 className="font-bold text-xl">💬 Beszélgetések</h2>
+                <p className="text-sm opacity-90">Admin panel</p>
+              </div>
+              {isMobile && (
+                <button
+                  onClick={() => setShowSidebar(false)}
+                  className="p-1 hover:bg-white/20 rounded transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
   const effectiveMime = normalizeMime(type);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
