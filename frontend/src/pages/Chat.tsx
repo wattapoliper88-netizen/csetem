@@ -5730,11 +5730,11 @@ export const ChatPage: React.FC = () => {
 
                     return (
                       <div
-                        className="fixed inset-0 z-[70] flex items-start justify-center pt-24 md:pt-28 pb-10 px-3 bg-black/70 backdrop-blur-xl overflow-y-auto"
+                        className="fixed inset-0 z-[90] flex items-start justify-center pt-36 md:pt-44 pb-12 px-3 bg-black/75 backdrop-blur-xl overflow-y-auto"
                         onClick={() => setShowCalendarMenu(false)}
                       >
                         <div
-                          className="relative w-full max-w-lg bg-gray-900/80 border border-gray-700/60 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-4 space-y-3 animate-[fadeInUp_200ms_ease-out]"
+                          className="relative w-full max-w-xl bg-gray-900/85 border border-gray-700/60 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-4 space-y-3 animate-[fadeInUp_200ms_ease-out]"
                           onClick={(e) => e.stopPropagation()}
                           onTouchStart={handleTouchStart}
                           onTouchEnd={handleTouchEnd}
