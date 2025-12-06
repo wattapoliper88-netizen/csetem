@@ -3557,7 +3557,7 @@ export const ChatPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="border-b border-gray-700 bg-[#0d121a] shadow-lg p-2 sm:p-3 md:p-4 flex-shrink-0 relative z-20 overflow-visible">
+            <div className="border-b border-gray-700 bg-[#0d121a] shadow-lg p-2 sm:p-3 md:p-4 flex-shrink-0 relative z-[35] overflow-visible">
               <div className="flex items-center justify-between gap-1 sm:gap-2">
                 <div className="flex items-center gap-1 sm:gap-2 md:gap-3 min-w-0">
                   {me?.isAdmin && isMobile && (
