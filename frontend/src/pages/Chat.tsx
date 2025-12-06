@@ -1234,6 +1234,7 @@ export const ChatPage: React.FC = () => {
   const [filterTikTok, setFilterTikTok] = useState(false);
   const [showCustomFilter, setShowCustomFilter] = useState(false);
   const [customFilterDomain, setCustomFilterDomain] = useState<string>('');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
   // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
@@ -5350,93 +5351,106 @@ export const ChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
-              {/* Filter buttons */}
-              <div className="flex gap-1 sm:gap-1.5 md:gap-2 mb-1.5 sm:mb-2 md:mb-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-1">
+              {/* Filter dropdown */}
+              <div className="relative mb-1.5 sm:mb-2 md:mb-3">
                 <button
-                  onClick={() => {
-                    setFilterLinks(!filterLinks);
-                    setFilterYouTube(false);
-                    setFilterTikTok(false);
-                    setCustomFilterDomain('');
-                  }}
-                  className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    filterLinks
-                      ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-500/30'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
+                  onClick={() => setShowFilterMenu(!showFilterMenu)}
+                  className="px-3 py-1.5 bg-gray-800/70 hover:bg-gray-700 text-gray-100 rounded-lg border border-gray-700 shadow-lg flex items-center gap-2 text-sm"
                 >
-                  🔗 {filterLinks ? 'Csak linkek' : 'Linkek szűrése'}
+                  <span>🧹 Szűrők</span>
+                  {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
+                    <span className="text-xs bg-cyan-600 text-white px-2 py-0.5 rounded-full">
+                      Aktív
+                    </span>
+                  )}
                 </button>
-                <button
-                  onClick={() => {
-                    setFilterVideos(!filterVideos);
-                    setFilterLinks(false);
-                    setFilterYouTube(false);
-                    setFilterTikTok(false);
-                    setCustomFilterDomain('');
-                  }}
-                  className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    filterVideos
-                      ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-500/30'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}
-                </button>
-                <button
-                  onClick={() => {
-                    setFilterYouTube(!filterYouTube);
-                    setFilterLinks(false);
-                    setFilterTikTok(false);
-                    setCustomFilterDomain('');
-                  }}
-                  className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    filterYouTube
-                      ? 'bg-red-600 text-white shadow-lg shadow-red-500/30'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🎥 {filterYouTube ? 'Csak YouTube' : 'YouTube szűrése'}
-                </button>
-                <button
-                  onClick={() => {
-                    setFilterTikTok(!filterTikTok);
-                    setFilterLinks(false);
-                    setFilterYouTube(false);
-                    setCustomFilterDomain('');
-                  }}
-                  className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    filterTikTok
-                      ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/30'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🎵 {filterTikTok ? 'Csak TikTok' : 'TikTok szűrése'}
-                </button>
-                <button
-                  onClick={() => setShowCustomFilter(!showCustomFilter)}
-                  className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    showCustomFilter || customFilterDomain
-                      ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}
-                </button>
-                {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
-                  <button
-                    onClick={() => {
-                      setFilterLinks(false);
-                      setFilterVideos(false);
-                      setFilterYouTube(false);
-                      setFilterTikTok(false);
-                      setCustomFilterDomain('');
-                    }}
-                    className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs font-medium bg-gray-600 text-white hover:bg-gray-500 transition-all whitespace-nowrap"
-                  >
-                    <span className="md:hidden">✕</span>
-                    <span className="hidden md:inline">✕ Szűrő törlése</span>
-                  </button>
+
+                {showFilterMenu && (
+                  <div className="absolute z-30 mt-2 w-64 sm:w-72 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-3 space-y-2">
+                    <button
+                      onClick={() => {
+                        setFilterLinks(!filterLinks);
+                        setFilterYouTube(false);
+                        setFilterTikTok(false);
+                        setCustomFilterDomain('');
+                        setShowFilterMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                        filterLinks ? 'bg-cyan-600 text-white shadow-cyan-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                      }`}
+                    >
+                      🔗 {filterLinks ? 'Csak linkek' : 'Linkek szűrése'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFilterVideos(!filterVideos);
+                        setFilterLinks(false);
+                        setFilterYouTube(false);
+                        setFilterTikTok(false);
+                        setCustomFilterDomain('');
+                        setShowFilterMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                        filterVideos ? 'bg-yellow-600 text-white shadow-yellow-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                      }`}
+                    >
+                      🎞️ {filterVideos ? 'Csak videók' : 'Videók szűrése'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFilterYouTube(!filterYouTube);
+                        setFilterLinks(false);
+                        setFilterTikTok(false);
+                        setCustomFilterDomain('');
+                        setShowFilterMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                        filterYouTube ? 'bg-red-600 text-white shadow-red-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                      }`}
+                    >
+                      🎥 {filterYouTube ? 'Csak YouTube' : 'YouTube szűrése'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFilterTikTok(!filterTikTok);
+                        setFilterLinks(false);
+                        setFilterYouTube(false);
+                        setCustomFilterDomain('');
+                        setShowFilterMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                        filterTikTok ? 'bg-pink-600 text-white shadow-pink-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                      }`}
+                    >
+                      🎵 {filterTikTok ? 'Csak TikTok' : 'TikTok szűrése'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCustomFilter(!showCustomFilter);
+                        setShowFilterMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition ${
+                        showCustomFilter || customFilterDomain ? 'bg-purple-600 text-white shadow-purple-500/30 shadow-lg' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'
+                      }`}
+                    >
+                      🔍 {showCustomFilter ? 'Bezárás' : (customFilterDomain ? customFilterDomain : 'Szűrőszerkesztő')}
+                    </button>
+                    {(filterLinks || filterVideos || filterYouTube || filterTikTok || customFilterDomain) && (
+                      <button
+                        onClick={() => {
+                          setFilterLinks(false);
+                          setFilterVideos(false);
+                          setFilterYouTube(false);
+                          setFilterTikTok(false);
+                          setCustomFilterDomain('');
+                          setShowFilterMenu(false);
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-sm text-left bg-gray-700 text-white hover:bg-gray-600 transition"
+                      >
+                        ✕ Szűrő törlése
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
               
