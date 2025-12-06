@@ -4574,7 +4574,7 @@ export const ChatPage: React.FC = () => {
                 WebkitOverflowScrolling: 'touch',
                 touchAction: 'pan-y',
                 paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-                paddingTop: 'calc(env(safe-area-inset-top, 0px) + 104px)'
+                paddingTop: 'calc(env(safe-area-inset-top, 0px) + 72px)'
               }}
             >
               {filteredMessages.length === 0 && searchQuery && (
@@ -5631,7 +5631,7 @@ export const ChatPage: React.FC = () => {
               {/* Filter + Calendar dropdowns */}
               <div
                 className="flex items-center gap-2 mb-1.5 sm:mb-2 md:mb-3 sticky z-30 rounded-xl px-2 py-1"
-                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)', background: 'rgba(17,24,39,0.9)', backdropFilter: 'blur(12px)' }}
+                style={{ top: '0px', background: 'rgba(17,24,39,0.9)', backdropFilter: 'blur(12px)' }}
               >
                 <div className="relative">
                   <button
