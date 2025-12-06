@@ -1263,6 +1263,33 @@ export const ChatPage: React.FC = () => {
     recurringInterval: 1,
     scope: 'self' as 'self' | 'both'
   });
+
+  // Check if a recurring event occurs on a given date string (YYYY-MM-DD)
+  const occursOnDate = useCallback((ev: any, dateStr: string) => {
+    if (!ev.recurring) return ev.date === dateStr;
+    const start = new Date(ev.date);
+    const target = new Date(dateStr);
+    if (target < start) return false;
+    const diffDays = Math.floor((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    switch (ev.recurringType) {
+      case 'daily':
+        return diffDays % ev.recurringInterval === 0;
+      case 'weekly': {
+        const weeks = Math.floor(diffDays / 7);
+        return diffDays % 7 === 0 && weeks % ev.recurringInterval === 0;
+      }
+      case 'monthly': {
+        const monthDiff = (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth());
+        return target.getDate() === start.getDate() && monthDiff >= 0 && monthDiff % ev.recurringInterval === 0;
+      }
+      case 'yearly': {
+        const yearDiff = target.getFullYear() - start.getFullYear();
+        return target.getMonth() === start.getMonth() && target.getDate() === start.getDate() && yearDiff % ev.recurringInterval === 0;
+      }
+      default:
+        return false;
+    }
+  }, []);
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
   // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
@@ -5703,11 +5730,11 @@ export const ChatPage: React.FC = () => {
 
                     return (
                       <div
-                        className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-xl"
+                        className="fixed inset-0 z-[60] flex items-start justify-center pt-12 px-3 bg-black/60 backdrop-blur-xl overflow-y-auto"
                         onClick={() => setShowCalendarMenu(false)}
                       >
                         <div
-                          className="relative w-[90vw] max-w-lg bg-gray-900/70 border border-gray-700/60 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-4 space-y-3 animate-[fadeInUp_200ms_ease-out]"
+                          className="relative w-full max-w-lg bg-gray-900/70 border border-gray-700/60 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-4 space-y-3 animate-[fadeInUp_200ms_ease-out]"
                           onClick={(e) => e.stopPropagation()}
                           onTouchStart={handleTouchStart}
                           onTouchEnd={handleTouchEnd}
@@ -5736,7 +5763,7 @@ export const ChatPage: React.FC = () => {
                               const dateStr = day
                                 ? `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                                 : null;
-                              const dayEvents = dateStr ? calendarEvents.filter(ev => ev.date === dateStr) : [];
+                              const dayEvents = dateStr ? calendarEvents.filter(ev => occursOnDate(ev, dateStr)) : [];
                               const hasEvents = dayEvents.length > 0;
                               const hasShared = dayEvents.some(ev => ev.scope === 'both');
                               return (
