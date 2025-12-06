@@ -3472,10 +3472,7 @@ export const ChatPage: React.FC = () => {
         </div>
       )}
 
-      <div
-        className="flex flex-col md:flex-row bg-gray-900 overflow-hidden"
-        style={{ height: 'calc((var(--app-vh, 1vh)) * 100)', minHeight: '100vh' }}
-      >
+      <div className="flex flex-col md:flex-row bg-gray-900 overflow-hidden" style={{ height: 'calc(var(--app-vh) * 100)' }}>
       {me?.isAdmin && (
         <>
           {/* Mobile hamburger button */}
@@ -3550,7 +3547,7 @@ export const ChatPage: React.FC = () => {
         </aside>
         </>
       )}
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden pb-0">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-0">
         {!activeConversationId ? (
           <div className="flex-1 flex items-center justify-center bg-gray-850">
             <div className="text-center">
