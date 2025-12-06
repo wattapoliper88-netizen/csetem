@@ -132,6 +132,7 @@
 .particles-bg {
   position: relative;
   isolation: isolate; /* keep background layer behind content */
+  background-color: #0d121a;
 }
 
 .particles-bg::before {
