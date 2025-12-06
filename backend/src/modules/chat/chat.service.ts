@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uploadsService: UploadsService
+  ) {}
 
   async getOrCreateUserConversation(userId: string, adminId: string) {
     let conv = await this.prisma.conversation.findFirst({
@@ -375,6 +379,14 @@ export class ChatService {
       
       // If both users have deleted this message, permanently delete it
       if (deletedBy.length >= 2 && bothUserIds.every(id => deletedBy.includes(id))) {
+        // Delete file if exists
+        if (message.fileUrl) {
+          await this.uploadsService.deleteFile(message.fileUrl);
+        }
+        if (message.audioThumbnail) {
+           await this.uploadsService.deleteFile(message.audioThumbnail);
+        }
+
         return this.prisma.message.delete({
           where: { id: messageId }
         });

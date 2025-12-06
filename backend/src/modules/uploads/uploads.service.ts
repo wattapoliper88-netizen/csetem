@@ -188,4 +188,59 @@ export class UploadsService {
     
     return results;
   }
+
+  async deleteFile(path: string) {
+    try {
+      this.initAdmin();
+      const fallbackBucket = 'web-chat-data.appspot.com';
+      const bucketName = process.env.FIREBASE_STORAGE_BUCKET || fallbackBucket;
+      const bucket = admin.storage().bucket(bucketName);
+      
+      // Normalize path
+      let normalizedPath = path;
+      if (path.startsWith('http')) {
+        try {
+          const parsed = new URL(path);
+          if (parsed.hostname.includes('firebasestorage.googleapis.com')) {
+            const matches = parsed.pathname.match(/\/o\/(.+)/);
+            if (matches && matches[1]) normalizedPath = decodeURIComponent(matches[1]);
+          } else if (parsed.hostname.includes('storage.googleapis.com')) {
+            const splits = parsed.pathname.split('/').filter(Boolean);
+            if (splits.length >= 2) {
+              normalizedPath = splits.slice(1).join('/');
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      
+      if (normalizedPath.startsWith('/')) normalizedPath = normalizedPath.slice(1);
+
+      // If it's a local file (starts with uploads/), try to delete from disk
+      if (normalizedPath.startsWith('uploads/')) {
+        try {
+          if (fs.existsSync(normalizedPath)) {
+            fs.unlinkSync(normalizedPath);
+            this.logger.log(`Deleted local file: ${normalizedPath}`);
+          }
+        } catch (err) {
+          this.logger.error(`Failed to delete local file: ${normalizedPath}`, err);
+        }
+        return;
+      }
+      
+      const file = bucket.file(normalizedPath);
+      const [exists] = await file.exists();
+      if (exists) {
+        await file.delete();
+        this.logger.log(`Deleted file from Firebase: ${normalizedPath}`);
+      } else {
+        this.logger.warn(`File not found in Firebase for deletion: ${normalizedPath}`);
+      }
+    } catch (e) {
+      this.logger.error(`Failed to delete file: ${path}`, e);
+      // Don't throw, just log error so message deletion can proceed
+    }
+  }
 }
