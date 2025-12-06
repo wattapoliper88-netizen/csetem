@@ -128,17 +128,16 @@
 }
 
 /* Particle background */
+
 .particles-bg {
   position: relative;
+  isolation: isolate; /* keep background layer behind content */
 }
 
 .particles-bg::before {
   content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: absolute;
+  inset: 0;
   background-image: 
     linear-gradient(135deg, rgba(5, 8, 12, 0.98) 0%, rgba(9, 14, 20, 0.96) 40%, rgba(6, 10, 16, 0.98) 100%),
     radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
@@ -146,7 +145,7 @@
     radial-gradient(circle at 40% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 52%);
   animation: none;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 @keyframes particle-float {
