@@ -5545,7 +5545,14 @@ export const ChatPage: React.FC = () => {
                             ))}
                           </div>
 
-                          <div className="text-center text-[11px] text-gray-400">Suhintással is lapozhatsz</div>
+                          <div className="flex justify-center pt-1">
+                            <button
+                              onClick={() => setShowCalendarMenu(false)}
+                              className="px-3 py-1 text-xs text-cyan-200 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
+                            >
+                              Vissza
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
