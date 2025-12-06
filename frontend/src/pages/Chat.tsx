@@ -1241,6 +1241,27 @@ export const ChatPage: React.FC = () => {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const calendarTouchStartX = useRef<number | null>(null);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const [selectedCalendarEvents, setSelectedCalendarEvents] = useState<any[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [calendarForm, setCalendarForm] = useState({
+    title: '',
+    description: '',
+    date: (() => {
+      const d = new Date();
+      return d.toISOString().slice(0, 10);
+    })(),
+    time: (() => {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    })(),
+    recurring: false,
+    recurringType: 'daily',
+    recurringInterval: 1
+  });
   const [avatarImage, setAvatarImage] = useState<string>('');
   const [resolvedAvatarImage, setResolvedAvatarImage] = useState<string | undefined>(undefined);
   // Kanonizáló helper YouTube linkekhez (egységes kulcs a cache-ben)
@@ -3275,6 +3296,140 @@ export const ChatPage: React.FC = () => {
               <div>
                 <h2 className="font-bold text-xl">💬 Beszélgetések</h2>
                 <p className="text-sm opacity-90">Admin panel</p>
+          
+            {/* Naptár esemény modal */}
+            {showCalendarModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur" onClick={() => setShowCalendarModal(false)}>
+                <div className="w-[90vw] max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-cyan-200">📆 Esemény a naptárba</h3>
+                    <button onClick={() => setShowCalendarModal(false)} className="text-gray-400 hover:text-white">✕</button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">Cím</label>
+                      <input
+                        value={calendarForm.title}
+                        onChange={(e) => setCalendarForm({ ...calendarForm, title: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        placeholder="Esemény címe"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">Dátum</label>
+                      <input
+                        type="date"
+                        value={calendarForm.date}
+                        onChange={(e) => setCalendarForm({ ...calendarForm, date: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">Idő</label>
+                      <input
+                        type="time"
+                        value={calendarForm.time}
+                        onChange={(e) => setCalendarForm({ ...calendarForm, time: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">Ismétlődés</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={calendarForm.recurring}
+                          onChange={(e) => setCalendarForm({ ...calendarForm, recurring: e.target.checked })}
+                        />
+                        <span className="text-sm text-gray-200">Visszatérő esemény</span>
+                      </div>
+                    </div>
+                  </div>
+                  {calendarForm.recurring && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-400">Típus</label>
+                        <select
+                          value={calendarForm.recurringType}
+                          onChange={(e) => setCalendarForm({ ...calendarForm, recurringType: e.target.value })}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        >
+                          <option value="daily">Napi</option>
+                          <option value="weekly">Heti</option>
+                          <option value="monthly">Havi</option>
+                          <option value="yearly">Éves</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-400">Gyakoriság</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={calendarForm.recurringInterval}
+                          onChange={(e) => setCalendarForm({ ...calendarForm, recurringInterval: Number(e.target.value) || 1 })}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          placeholder="pl. 2 (2 naponta)"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Leírás</label>
+                    <textarea
+                      value={calendarForm.description}
+                      onChange={(e) => setCalendarForm({ ...calendarForm, description: e.target.value })}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      rows={3}
+                      placeholder="Részletek, linkek..."
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>Csatolt üzenetek: {selectedMessages.size}</span>
+                    <span>{calendarForm.date} {calendarForm.time}</span>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowCalendarModal(false)}
+                      className="px-3 py-2 text-sm bg-gray-800 text-gray-200 rounded-lg border border-gray-700 hover:bg-gray-700"
+                    >
+                      Mégse
+                    </button>
+                    <button
+                      onClick={() => {
+                        const messageIds = Array.from(selectedMessages);
+                        const firstSelectedId = messageIds[0];
+                        const message = messages.find(m => m.id === firstSelectedId);
+                        const messagePreview = message?.content || message?.fileName || 'Üzenet';
+                        const newEvent = {
+                          id: `ev-${Date.now()}`,
+                          title: calendarForm.title || 'Esemény',
+                          description: calendarForm.description,
+                          date: calendarForm.date,
+                          time: calendarForm.time || '00:00',
+                          recurring: calendarForm.recurring,
+                          recurringType: calendarForm.recurringType,
+                          recurringInterval: calendarForm.recurringInterval,
+                          messageIds,
+                          messagePreview
+                        };
+                        setCalendarEvents(prev => [...prev, newEvent]);
+                        setSelectedCalendarDate(calendarForm.date);
+                        setSelectedCalendarEvents(prev => {
+                          if (calendarForm.date === selectedCalendarDate) return [...prev, newEvent];
+                          return [newEvent];
+                        });
+                        setShowCalendarModal(false);
+                      }}
+                      className="px-3 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg shadow-lg"
+                    >
+                      Mentés
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
               </div>
               {isMobile && (
                 <button
@@ -5256,6 +5411,30 @@ export const ChatPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
+                        const firstSelectedId = Array.from(selectedMessages)[0];
+                        const message = messages.find(m => m.id === firstSelectedId);
+                        const snippet = message?.content || message?.fileName || 'Kijelölt üzenet';
+                        const now = new Date();
+                        const hh = String(now.getHours()).padStart(2, '0');
+                        const mm = String(now.getMinutes()).padStart(2, '0');
+                        setCalendarForm(prev => ({
+                          ...prev,
+                          title: snippet.slice(0, 60),
+                          description: '',
+                          date: now.toISOString().slice(0, 10),
+                          time: `${hh}:${mm}`
+                        }));
+                        setShowCalendarModal(true);
+                        setShowCalendarMenu(false);
+                        setShowFilterMenu(false);
+                      }}
+                      className="px-2 md:px-4 py-1.5 md:py-2 bg-gray-800/60 hover:bg-gray-700/60 text-cyan-200 text-xs md:text-sm rounded-lg transition-all border border-gray-700/40 flex items-center gap-1 md:gap-2 whitespace-nowrap"
+                    >
+                      <span className="md:hidden">📆</span>
+                      <span className="hidden md:inline">📆 Naptárba</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         const allMessageIds = filteredMessages.map(m => m.id);
                         const allSelected = allMessageIds.every(id => selectedMessages.has(id)) && selectedMessages.size === allMessageIds.length;
                         if (allSelected) {
@@ -5533,17 +5712,72 @@ export const ChatPage: React.FC = () => {
                             {['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'].map(d => (
                               <div key={d} className="font-semibold opacity-80">{d}</div>
                             ))}
-                            {cells.map((day, idx) => (
-                              <div
-                                key={idx}
-                                className={`h-10 flex items-center justify-center rounded transition-all ${
-                                  day ? 'bg-gray-800/70 hover:bg-cyan-700/60 text-cyan-100 cursor-pointer hover:scale-105' : 'opacity-30'
-                                }`}
-                              >
-                                {day || ''}
-                              </div>
-                            ))}
+                            {cells.map((day, idx) => {
+                              const dateStr = day
+                                ? `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                                : null;
+                              const dayEvents = dateStr ? calendarEvents.filter(ev => ev.date === dateStr) : [];
+                              const hasEvents = dayEvents.length > 0;
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    if (!day || !dateStr) return;
+                                    setSelectedCalendarDate(dateStr);
+                                    setSelectedCalendarEvents(dayEvents);
+                                  }}
+                                  className={`h-10 flex items-center justify-center rounded transition-all ${
+                                    day
+                                      ? hasEvents
+                                        ? 'bg-cyan-700/50 text-white ring-2 ring-cyan-400/60 cursor-pointer hover:scale-105'
+                                        : 'bg-gray-800/70 hover:bg-cyan-700/60 text-cyan-100 cursor-pointer hover:scale-105'
+                                      : 'opacity-30'
+                                  }`}
+                                >
+                                  <div className="flex flex-col items-center gap-0.5 leading-none">
+                                    <span>{day || ''}</span>
+                                    {hasEvents && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300"></span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
+
+                          {selectedCalendarDate && (
+                            <div className="bg-gray-800/70 border border-gray-700/60 rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+                              <div className="flex items-center justify-between text-xs text-cyan-200">
+                                <span>{selectedCalendarDate}</span>
+                                <button
+                                  onClick={() => {
+                                    setSelectedCalendarDate(null);
+                                    setSelectedCalendarEvents([]);
+                                  }}
+                                  className="px-2 py-1 rounded border border-gray-700 hover:bg-gray-700 text-gray-300"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              {selectedCalendarEvents.length === 0 ? (
+                                <div className="text-gray-400 text-xs">Nincs esemény ezen a napon.</div>
+                              ) : (
+                                selectedCalendarEvents.map(ev => (
+                                  <div key={ev.id} className="p-2 rounded-lg bg-gray-900/70 border border-gray-700/60 text-xs text-gray-100 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-semibold text-cyan-200">{ev.title || 'Esemény'}</span>
+                                      <span className="text-[11px] text-gray-400">{ev.time}</span>
+                                    </div>
+                                    {ev.description && <p className="text-[11px] text-gray-300 whitespace-pre-wrap">{ev.description}</p>}
+                                    {ev.messagePreview && (
+                                      <p className="text-[11px] text-gray-400">Csatolt üzenet: "{ev.messagePreview}"</p>
+                                    )}
+                                    {ev.recurring && (
+                                      <p className="text-[11px] text-cyan-300">Ismétlődés: {ev.recurringInterval} / {ev.recurringType}</p>
+                                    )}
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
 
                           <div className="flex justify-center pt-1">
                             <button
