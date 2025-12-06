@@ -4565,6 +4565,7 @@ export const ChatPage: React.FC = () => {
               className="flex-1 overflow-y-auto p-2 md:p-4 pb-4 md:pb-6 bg-gray-850 particles-bg relative"
               ref={messagesContainerRef}
               onScroll={handleScroll}
+              style={{ userSelect: selectedMessages.size > 0 ? 'none' : 'auto' }}
             >
               {filteredMessages.length === 0 && searchQuery && (
                 <div className="text-center text-gray-400 mt-8">
