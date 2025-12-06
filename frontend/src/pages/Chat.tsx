@@ -5618,7 +5618,10 @@ export const ChatPage: React.FC = () => {
                 </div>
               )}
               {/* Filter + Calendar dropdowns */}
-              <div className="flex items-center gap-2 mb-1.5 sm:mb-2 md:mb-3">
+              <div
+                className="flex items-center gap-2 mb-1.5 sm:mb-2 md:mb-3 rounded-xl px-2 py-1"
+                style={{ background: 'rgba(6,10,16,0.92)', border: '1px solid rgba(31,41,55,0.6)' }}
+              >
                 <div className="relative">
                   <button
                     onClick={() => {
