@@ -3546,7 +3546,7 @@ export const ChatPage: React.FC = () => {
         </aside>
         </>
       )}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-0">
+      <main className="flex-1 flex flex-col min-w-0 overflow-visible pb-0">
         {!activeConversationId ? (
           <div className="flex-1 flex items-center justify-center bg-gray-850">
             <div className="text-center">
