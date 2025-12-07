@@ -1197,6 +1197,32 @@ export const ChatPage: React.FC = () => {
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [showRichTextEditor, setShowRichTextEditor] = useState(false);
   const richTextEditorRef = useRef<HTMLDivElement>(null);
+
+  // Handle back button for Rich Text Editor
+  useEffect(() => {
+    const handleBackButton = (e: PopStateEvent) => {
+      if (showRichTextEditor) {
+        e.preventDefault();
+        const shouldClose = confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.');
+        if (shouldClose) {
+          setShowRichTextEditor(false);
+        } else {
+          // User wants to stay, push state back
+          window.history.pushState(null, '', window.location.pathname);
+        }
+      }
+    };
+
+    if (showRichTextEditor) {
+      // Push a new state when editor opens
+      window.history.pushState(null, '', window.location.pathname);
+      window.addEventListener('popstate', handleBackButton);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [showRichTextEditor]);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({});
