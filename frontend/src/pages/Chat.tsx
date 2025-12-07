@@ -6375,6 +6375,20 @@ export const ChatPage: React.FC = () => {
             contentEditable
             className="w-full min-h-full outline-none text-gray-100 text-lg max-w-4xl mx-auto p-8 bg-gray-800 shadow-2xl rounded-xl prose prose-invert prose-lg max-w-none"
             data-placeholder="Írj ide valamit..."
+            onPaste={(e) => {
+              // Allow pasting with formatting
+              e.preventDefault();
+              const html = e.clipboardData.getData('text/html');
+              const text = e.clipboardData.getData('text/plain');
+              
+              if (html) {
+                // If HTML is available, use it to preserve formatting
+                document.execCommand('insertHTML', false, html);
+              } else if (text) {
+                // Fallback to plain text
+                document.execCommand('insertText', false, text);
+              }
+            }}
             onKeyDown={() => {
               // Allow standard shortcuts
             }}
