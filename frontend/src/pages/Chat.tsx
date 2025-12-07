@@ -1195,6 +1195,8 @@ export const ChatPage: React.FC = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [showRichTextEditor, setShowRichTextEditor] = useState(false);
+  const richTextEditorRef = useRef<HTMLDivElement>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({});
@@ -4997,25 +4999,34 @@ export const ChatPage: React.FC = () => {
                                 
                                 {/* Don't show content text for audio files - filename is shown in player */}
                                 {!m.fileType?.startsWith('audio/') && (
-                                  <p className={`whitespace-pre-wrap ${group.senderId === me?.id ? 'text-cyan-100' : 'text-red-400'} font-light ${isLastMessage && msgIndex === group.messages.length - 1 ? `typewriter-text ${isScrolling ? 'hidden-text' : ''}` : ''}`}>
-                                    {isLastMessage && msgIndex === group.messages.length - 1 ? (
-                                      (extractLinks(m.content).length > 0 
-                                        ? m.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
-                                        : m.content
-                                      ).split('').map((char: string, charIndex: number) => (
-                                        <span 
-                                          key={charIndex} 
-                                          style={{ animationDelay: `${charIndex * 0.05}s` }}
-                                        >
-                                          {char}
-                                        </span>
-                                      ))
+                                  <>
+                                    {/<[a-z][\s\S]*>/i.test(m.content) ? (
+                                      <div 
+                                        className={`prose prose-invert max-w-none ${group.senderId === me?.id ? 'text-cyan-100' : 'text-red-400'} font-light`}
+                                        dangerouslySetInnerHTML={{ __html: m.content }}
+                                      />
                                     ) : (
-                                      extractLinks(m.content).length > 0 
-                                        ? m.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
-                                        : m.content
+                                      <p className={`whitespace-pre-wrap ${group.senderId === me?.id ? 'text-cyan-100' : 'text-red-400'} font-light ${isLastMessage && msgIndex === group.messages.length - 1 ? `typewriter-text ${isScrolling ? 'hidden-text' : ''}` : ''}`}>
+                                        {isLastMessage && msgIndex === group.messages.length - 1 ? (
+                                          (extractLinks(m.content).length > 0 
+                                            ? m.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
+                                            : m.content
+                                          ).split('').map((char: string, charIndex: number) => (
+                                            <span 
+                                              key={charIndex} 
+                                              style={{ animationDelay: `${charIndex * 0.05}s` }}
+                                            >
+                                              {char}
+                                            </span>
+                                          ))
+                                        ) : (
+                                          extractLinks(m.content).length > 0 
+                                            ? m.content.replace(/(https?:\/\/[^\s]+)/g, '').trim()
+                                            : m.content
+                                        )}
+                                      </p>
                                     )}
-                                  </p>
+                                  </>
                                 )}
                               </div>
                             )}
@@ -6220,6 +6231,13 @@ export const ChatPage: React.FC = () => {
                     )}
                   </div>
                   <button
+                    onClick={() => setShowRichTextEditor(true)}
+                    className="p-1.5 sm:p-2 md:p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-base sm:text-lg md:text-xl shadow-lg flex-shrink-0 mx-1"
+                    title="Szerkesztett üzenet írása"
+                  >
+                    📝
+                  </button>
+                  <button
                     onClick={selectedFile ? handleSendWithFile : handleSend}
                     disabled={(!input.trim() && !selectedFile) || mutation.isLoading || isUploadingFile}
                     className="px-2 sm:px-3 md:px-6 py-1.5 sm:py-2 md:py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-lg hover:from-cyan-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl font-semibold text-xs sm:text-sm md:text-base whitespace-nowrap flex-shrink-0"
@@ -6233,6 +6251,130 @@ export const ChatPage: React.FC = () => {
         )}
       </main>
     </div>
+
+    {/* Rich Text Editor Modal */}
+    {showRichTextEditor && (
+      <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col animate-in fade-in duration-200">
+        {/* Toolbar */}
+        <div className="p-2 md:p-4 bg-gray-800 border-b border-gray-700 flex flex-wrap gap-2 items-center shadow-lg z-10">
+          <button 
+            onClick={() => setShowRichTextEditor(false)} 
+            className="mr-2 md:mr-4 px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors text-sm font-medium"
+          >
+            ✕ Bezárás
+          </button>
+          
+          <div className="h-6 w-px bg-gray-600 mx-1 md:mx-2"></div>
+
+          {/* Formatting buttons */}
+          {[
+            { cmd: 'bold', icon: 'B', title: 'Félkövér', style: 'font-bold' },
+            { cmd: 'italic', icon: 'I', title: 'Dőlt', style: 'italic' },
+            { cmd: 'underline', icon: 'U', title: 'Aláhúzott', style: 'underline' },
+            { cmd: 'strikeThrough', icon: 'S', title: 'Áthúzott', style: 'line-through' },
+          ].map(btn => (
+            <button
+              key={btn.cmd}
+              onClick={() => document.execCommand(btn.cmd)}
+              className={`w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white ${btn.style} transition-colors`}
+              title={btn.title}
+            >
+              {btn.icon}
+            </button>
+          ))}
+
+          <div className="h-6 w-px bg-gray-600 mx-1 md:mx-2 hidden sm:block"></div>
+
+          {/* Alignment */}
+          <div className="flex gap-1">
+            {[
+              { cmd: 'justifyLeft', icon: '⬅️', title: 'Balra' },
+              { cmd: 'justifyCenter', icon: '↔️', title: 'Középre' },
+              { cmd: 'justifyRight', icon: '➡️', title: 'Jobbra' },
+            ].map(btn => (
+              <button
+                key={btn.cmd}
+                onClick={() => document.execCommand(btn.cmd)}
+                className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors"
+                title={btn.title}
+              >
+                {btn.icon}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-6 w-px bg-gray-600 mx-1 md:mx-2 hidden sm:block"></div>
+
+          {/* Lists */}
+          <div className="flex gap-1">
+            <button onClick={() => document.execCommand('insertUnorderedList')} className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors" title="Felsorolás">
+              •
+            </button>
+            <button onClick={() => document.execCommand('insertOrderedList')} className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors" title="Számozás">
+              1.
+            </button>
+          </div>
+
+          <div className="h-6 w-px bg-gray-600 mx-1 md:mx-2"></div>
+
+          {/* Font size */}
+          <select 
+            onChange={(e) => document.execCommand('fontSize', false, e.target.value)}
+            className="bg-gray-700 text-white rounded px-2 py-1 text-sm border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          >
+            <option value="3">Normál</option>
+            <option value="1">Kicsi</option>
+            <option value="2">Közepes</option>
+            <option value="4">Nagyobb</option>
+            <option value="5">Nagy</option>
+            <option value="6">Hatalmas</option>
+            <option value="7">Óriás</option>
+          </select>
+
+          {/* Color */}
+          <div className="relative w-8 h-8 overflow-hidden rounded-full border border-gray-600 hover:border-cyan-500 transition-colors cursor-pointer">
+            <input 
+              type="color" 
+              onChange={(e) => document.execCommand('foreColor', false, e.target.value)}
+              className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer p-0 border-0"
+              title="Szín"
+            />
+          </div>
+        </div>
+
+        {/* Editor Area */}
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-100 cursor-text" onClick={() => richTextEditorRef.current?.focus()}>
+          <div
+            ref={richTextEditorRef}
+            contentEditable
+            className="w-full min-h-full outline-none text-gray-900 text-lg max-w-4xl mx-auto p-8 bg-white shadow-2xl rounded-xl prose prose-lg max-w-none"
+            data-placeholder="Írj ide valamit..."
+            onKeyDown={() => {
+              // Allow standard shortcuts
+            }}
+          ></div>
+        </div>
+
+        {/* Footer with Send Button */}
+        <div className="p-4 bg-gray-800 border-t border-gray-700 flex justify-center z-10">
+          <button
+            onClick={() => {
+              if (richTextEditorRef.current) {
+                const content = richTextEditorRef.current.innerHTML;
+                if (content.trim() && activeConversationId) {
+                  sendMessage(activeConversationId, content);
+                  setShowRichTextEditor(false);
+                  if (richTextEditorRef.current) richTextEditorRef.current.innerHTML = '';
+                }
+              }
+            }}
+            className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-full hover:from-cyan-700 hover:to-teal-700 transition-all shadow-lg shadow-cyan-500/30 font-bold text-lg flex items-center gap-2 transform hover:scale-105 active:scale-95"
+          >
+            📤 Küldés
+          </button>
+        </div>
+      </div>
+    )}
 
     {/* Username change modal */}
     {showUsernameModal && (
