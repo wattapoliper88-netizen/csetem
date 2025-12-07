@@ -1214,12 +1214,16 @@ export const ChatPage: React.FC = () => {
         }
 
         // User pressed back button
+        // Restore state immediately to prevent navigation
+        window.history.pushState({ richTextEditor: true }, '');
+
         if (window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.')) {
-          setShowRichTextEditor(false);
-        } else {
-          // User wants to stay, restore state
-          window.history.pushState({ richTextEditor: true }, '');
-        }
+          // User wants to leave
+          isClosingRichTextEditor.current = true;
+          window.history.back(); // Go back to previous state (before editor)
+          // The popstate from this back() will be caught, but isClosingRichTextEditor is true, so it will close the editor
+        } 
+        // If user cancels, we are already in the correct state (pushed back)
       };
 
       window.addEventListener('popstate', onPopState);
