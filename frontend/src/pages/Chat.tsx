@@ -1202,34 +1202,30 @@ export const ChatPage: React.FC = () => {
   // Handle back button for Rich Text Editor
   useEffect(() => {
     if (showRichTextEditor) {
-      // Push a unique state marker
-      const editorStateId = Date.now();
-      window.history.pushState({ richTextEditor: true, id: editorStateId }, '');
+      window.history.pushState({ richTextEditor: true }, '');
       isClosingRichTextEditor.current = false;
 
-      const onPopState = (e: PopStateEvent) => {
-        // Only handle if this is our editor state and not initiated by us
-        if (!isClosingRichTextEditor.current && e.state?.richTextEditor) {
-          // Prevent navigation by pushing state back
-          e.preventDefault?.();
-          window.history.pushState({ richTextEditor: true, id: editorStateId }, '');
-          
-          if (window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.')) {
-            isClosingRichTextEditor.current = true;
-            setShowRichTextEditor(false);
-            // Go back without the pushState
-            setTimeout(() => window.history.go(-1), 10);
-          }
-        } else if (isClosingRichTextEditor.current) {
+      const onPopState = () => {
+        if (isClosingRichTextEditor.current) {
           setShowRichTextEditor(false);
+          return;
+        }
+
+        // Immediately push back to prevent actual navigation
+        window.history.pushState({ richTextEditor: true }, '');
+        
+        // Show confirm dialog
+        const shouldClose = window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.');
+        
+        if (shouldClose) {
+          isClosingRichTextEditor.current = true;
+          setShowRichTextEditor(false);
+          window.history.back();
         }
       };
 
       window.addEventListener('popstate', onPopState);
       return () => window.removeEventListener('popstate', onPopState);
-    } else {
-      // When editor closes, ensure we clean up any pushed states
-      isClosingRichTextEditor.current = false;
     }
   }, [showRichTextEditor]);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
