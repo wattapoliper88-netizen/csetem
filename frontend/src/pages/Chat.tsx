@@ -1198,53 +1198,38 @@ export const ChatPage: React.FC = () => {
   const [showRichTextEditor, setShowRichTextEditor] = useState(false);
   const richTextEditorRef = useRef<HTMLDivElement>(null);
   const isClosingRichTextEditor = useRef(false);
-  const backButtonHandled = useRef(false);
 
   // Handle back button for Rich Text Editor
   useEffect(() => {
     if (showRichTextEditor) {
-      // Push state to allow back button interception
-      window.history.pushState({ richTextEditor: true }, '');
+      // Push a unique state marker
+      const editorStateId = Date.now();
+      window.history.pushState({ richTextEditor: true, id: editorStateId }, '');
       isClosingRichTextEditor.current = false;
-      backButtonHandled.current = false;
 
       const onPopState = (e: PopStateEvent) => {
-        // If we initiated the closing via code (Close button or Send), just let it happen
-        if (isClosingRichTextEditor.current) {
-          setShowRichTextEditor(false);
-          backButtonHandled.current = false;
-          return;
-        }
-
-        // Prevent double handling
-        if (backButtonHandled.current) {
-          return;
-        }
-
-        backButtonHandled.current = true;
-
-        // User pressed back button - restore state first
-        window.history.pushState({ richTextEditor: true }, '');
-
-        // Use setTimeout to ensure state is restored before showing confirm
-        setTimeout(() => {
+        // Only handle if this is our editor state and not initiated by us
+        if (!isClosingRichTextEditor.current && e.state?.richTextEditor) {
+          // Prevent navigation by pushing state back
+          e.preventDefault?.();
+          window.history.pushState({ richTextEditor: true, id: editorStateId }, '');
+          
           if (window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.')) {
-            // User wants to leave
             isClosingRichTextEditor.current = true;
             setShowRichTextEditor(false);
-            window.history.back();
-          } else {
-            // User wants to stay - reset the flag
-            backButtonHandled.current = false;
+            // Go back without the pushState
+            setTimeout(() => window.history.go(-1), 10);
           }
-        }, 0);
+        } else if (isClosingRichTextEditor.current) {
+          setShowRichTextEditor(false);
+        }
       };
 
       window.addEventListener('popstate', onPopState);
-      return () => {
-        window.removeEventListener('popstate', onPopState);
-        backButtonHandled.current = false;
-      };
+      return () => window.removeEventListener('popstate', onPopState);
+    } else {
+      // When editor closes, ensure we clean up any pushed states
+      isClosingRichTextEditor.current = false;
     }
   }, [showRichTextEditor]);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
