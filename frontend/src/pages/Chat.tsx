@@ -1197,6 +1197,35 @@ export const ChatPage: React.FC = () => {
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [showRichTextEditor, setShowRichTextEditor] = useState(false);
   const richTextEditorRef = useRef<HTMLDivElement>(null);
+  const isClosingRichTextEditor = useRef(false);
+
+  // Handle back button for Rich Text Editor
+  useEffect(() => {
+    if (showRichTextEditor) {
+      // Push state to allow back button interception
+      window.history.pushState({ richTextEditor: true }, '');
+      isClosingRichTextEditor.current = false;
+
+      const onPopState = () => {
+        // If we initiated the closing via code (Close button or Send), just let it happen
+        if (isClosingRichTextEditor.current) {
+          setShowRichTextEditor(false);
+          return;
+        }
+
+        // User pressed back button
+        if (window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.')) {
+          setShowRichTextEditor(false);
+        } else {
+          // User wants to stay, restore state
+          window.history.pushState({ richTextEditor: true }, '');
+        }
+      };
+
+      window.addEventListener('popstate', onPopState);
+      return () => window.removeEventListener('popstate', onPopState);
+    }
+  }, [showRichTextEditor]);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({});
@@ -6258,7 +6287,10 @@ export const ChatPage: React.FC = () => {
         {/* Toolbar */}
         <div className="p-2 md:p-4 bg-gray-800 border-b border-gray-700 flex flex-wrap gap-2 items-center shadow-lg z-10">
           <button 
-            onClick={() => setShowRichTextEditor(false)} 
+            onClick={() => {
+              isClosingRichTextEditor.current = true;
+              window.history.back();
+            }} 
             className="mr-2 md:mr-4 px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors text-sm font-medium"
           >
             ✕ Bezárás
@@ -6363,7 +6395,8 @@ export const ChatPage: React.FC = () => {
                 const content = richTextEditorRef.current.innerHTML;
                 if (content.trim() && activeConversationId) {
                   sendMessage(activeConversationId, content);
-                  setShowRichTextEditor(false);
+                  isClosingRichTextEditor.current = true;
+                  window.history.back();
                   if (richTextEditorRef.current) richTextEditorRef.current.innerHTML = '';
                 }
               }
