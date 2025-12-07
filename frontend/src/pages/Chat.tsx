@@ -6343,11 +6343,11 @@ export const ChatPage: React.FC = () => {
         </div>
 
         {/* Editor Area */}
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-100 cursor-text" onClick={() => richTextEditorRef.current?.focus()}>
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-900 cursor-text" onClick={() => richTextEditorRef.current?.focus()}>
           <div
             ref={richTextEditorRef}
             contentEditable
-            className="w-full min-h-full outline-none text-gray-900 text-lg max-w-4xl mx-auto p-8 bg-white shadow-2xl rounded-xl prose prose-lg max-w-none"
+            className="w-full min-h-full outline-none text-gray-100 text-lg max-w-4xl mx-auto p-8 bg-gray-800 shadow-2xl rounded-xl prose prose-invert prose-lg max-w-none"
             data-placeholder="Írj ide valamit..."
             onKeyDown={() => {
               // Allow standard shortcuts
