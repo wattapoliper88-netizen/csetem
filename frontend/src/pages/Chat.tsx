@@ -1198,6 +1198,7 @@ export const ChatPage: React.FC = () => {
   const [showRichTextEditor, setShowRichTextEditor] = useState(false);
   const richTextEditorRef = useRef<HTMLDivElement>(null);
   const isClosingRichTextEditor = useRef(false);
+  const backButtonHandled = useRef(false);
 
   // Handle back button for Rich Text Editor
   useEffect(() => {
@@ -1205,29 +1206,45 @@ export const ChatPage: React.FC = () => {
       // Push state to allow back button interception
       window.history.pushState({ richTextEditor: true }, '');
       isClosingRichTextEditor.current = false;
+      backButtonHandled.current = false;
 
-      const onPopState = () => {
+      const onPopState = (e: PopStateEvent) => {
         // If we initiated the closing via code (Close button or Send), just let it happen
         if (isClosingRichTextEditor.current) {
           setShowRichTextEditor(false);
+          backButtonHandled.current = false;
           return;
         }
 
-        // User pressed back button
-        // Restore state immediately to prevent navigation
+        // Prevent double handling
+        if (backButtonHandled.current) {
+          return;
+        }
+
+        backButtonHandled.current = true;
+
+        // User pressed back button - restore state first
         window.history.pushState({ richTextEditor: true }, '');
 
-        if (window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.')) {
-          // User wants to leave
-          isClosingRichTextEditor.current = true;
-          window.history.back(); // Go back to previous state (before editor)
-          // The popstate from this back() will be caught, but isClosingRichTextEditor is true, so it will close the editor
-        } 
-        // If user cancels, we are already in the correct state (pushed back)
+        // Use setTimeout to ensure state is restored before showing confirm
+        setTimeout(() => {
+          if (window.confirm('Biztosan ki szeretnél lépni a szerkesztőből? A nem mentett változtatások elvesznek.')) {
+            // User wants to leave
+            isClosingRichTextEditor.current = true;
+            setShowRichTextEditor(false);
+            window.history.back();
+          } else {
+            // User wants to stay - reset the flag
+            backButtonHandled.current = false;
+          }
+        }, 0);
       };
 
       window.addEventListener('popstate', onPopState);
-      return () => window.removeEventListener('popstate', onPopState);
+      return () => {
+        window.removeEventListener('popstate', onPopState);
+        backButtonHandled.current = false;
+      };
     }
   }, [showRichTextEditor]);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
