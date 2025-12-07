@@ -6333,10 +6333,24 @@ export const ChatPage: React.FC = () => {
 
           {/* Lists */}
           <div className="flex gap-1">
-            <button onClick={() => document.execCommand('insertUnorderedList')} className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors" title="Felsorolás">
-              •
+            <button 
+              onClick={() => {
+                richTextEditorRef.current?.focus();
+                document.execCommand('insertUnorderedList', false);
+              }} 
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors text-xl" 
+              title="Felsorolás"
+            >
+              ≡
             </button>
-            <button onClick={() => document.execCommand('insertOrderedList')} className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors" title="Számozás">
+            <button 
+              onClick={() => {
+                richTextEditorRef.current?.focus();
+                document.execCommand('insertOrderedList', false);
+              }} 
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700 text-white transition-colors" 
+              title="Számozás"
+            >
               1.
             </button>
           </div>
